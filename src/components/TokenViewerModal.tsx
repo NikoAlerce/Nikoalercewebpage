@@ -99,17 +99,17 @@ export default function TokenViewerModal() {
       });
       return;
     }
-    const left = listing.amount_left ?? 0;
-    const editions =
-      typeof left === "number" && left > 0
-        ? Math.min(Math.floor(left), 100)
-        : 1;
+    // fulfill_ask %amount / editions is HOW MANY editions to buy, not "max left".
+    // We were wrongly passing amount_left (e.g. 50) while only attaching one
+    // edition's worth of XTZ → M_TEZ_AMOUNT_MISMATCH on-chain.
+    // Single BUY button = purchase 1 edition per click (Objkt UX matches this).
+    const editionsToBuy = 1;
     const res = await buy({
       marketplaceContract: listing.marketplace_contract!,
       bigmapKey,
       priceMutez: mutez,
       currencyId: listing.currency_id ?? 1,
-      editions,
+      editions: editionsToBuy,
       sellerAddress: listing.seller_address,
     });
     if (res.ok) {

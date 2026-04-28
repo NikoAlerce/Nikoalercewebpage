@@ -439,6 +439,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
       }
       const editionsBuy = Math.max(1, Math.floor(Number(editions)));
+      // priceMutez from Objkt indexers is per edition for XTZ listings; the
+      // contract expects attach_amount == unit_price_mutez * editions_buy.
+      const totalMutez = Math.floor(amt * editionsBuy);
+      if (!Number.isFinite(totalMutez) || totalMutez <= 0) {
+        return {
+          ok: false,
+          error: "INVALID TOTAL PRICE. RELOAD AND TRY AGAIN OR USE OBJKT.",
+        };
+      }
       try {
         const { Tezos, wallet } = await getOrInitWallet();
         const active = await wallet.client.getActiveAccount();
@@ -460,7 +469,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         const contract = await Tezos.wallet.at(marketplaceContract);
-        const sendOpts = { amount: amt, mutez: true as const };
+        const sendOpts = { amount: totalMutez, mutez: true as const };
 
         // Objkt v4 (and variants): use entrypoint schema so optional %amount is set when required.
         if ("fulfill_ask" in contract.methodsObject) {
@@ -519,6 +528,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (/M_NO_SELF_FULFILL/.test(blob)) {
           message =
             "This is your own listing. Connect a different wallet to collect it.";
+        } else if (/M_TEZ_AMOUNT_MISMATCH/.test(blob)) {
+          message =
+            "XTZ amount does not match listing price (per edition × quantity). Reload the page or buy on Objkt.";
         } else if (/M_INSUFFICIENT_AMOUNT/.test(blob) || /amount.*too.*low/i.test(blob)) {
           message = "Listing price has changed. Reload and try again.";
         } else if (/M_NO_OFFER/.test(blob) || /M_NO_ASK/.test(blob)) {
