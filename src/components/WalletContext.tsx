@@ -216,11 +216,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         const contract = await Tezos.wallet.at(marketplaceContract);
 
-        // Objkt marketplace v4: `fulfill_ask` takes `{ ask_id, proxy? }`, not a bare nat.
-        // Older contracts use `collect(ask_id)` (single nat).
+        // Objkt marketplace v4: parameter is (pair nat (option address)) with %ask_id / %proxy.
+        // `contract.methods` = flattened args only; objects belong in `methodsObject`.
         const op =
-          "fulfill_ask" in contract.methods
-            ? await contract.methods
+          "fulfill_ask" in contract.methodsObject
+            ? await contract.methodsObject
                 .fulfill_ask({ ask_id: bigmapKey, proxy: null })
                 .send({ amount: priceMutez, mutez: true })
             : await contract.methods.collect(bigmapKey).send({
