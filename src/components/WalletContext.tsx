@@ -8,6 +8,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  Regions,
+  type NodeDistributions,
+} from "@airgap/beacon-types";
 
 type WalletState = {
   address: string | null;
@@ -129,6 +133,40 @@ const RPC_URL =
 const APP_NAME = "Niko Alerce // The Void";
 
 /**
+ * Beacon SDK 4.5.1 still ships bundle defaults that point at retired hosts
+ * (`beacon-node-1.beacon-server-*.papers.tech` → NXDOMAIN) and others that
+ * answer Synapse without browser CORS (`hope-*.papers.tech`). The Matrix client
+ * probes `/…/beacon/info` via XHR first — every dead host burns latency and the
+ * UI ends up at "No server responded." before a live relay is tried.
+ *
+ * Octez-hosted relays expose `Access-Control-Allow-Origin: *` and stay online.
+ * Use them exclusively for every geographic bucket so init always resolves.
+ *
+ * Optional override (comma-separated hostnames, no scheme): set
+ * NEXT_PUBLIC_BEACON_MATRIX_NODES on Vercel if these defaults ever move.
+ */
+const OCTEZ_MATRIX_RELAYS = [
+  "beacon-node-1.octez.io",
+  "beacon-node-2.octez.io",
+  "beacon-node-3.octez.io",
+  "beacon-node-4.octez.io",
+  "beacon-node-5.octez.io",
+  "beacon-node-6.octez.io",
+  "beacon-node-7.octez.io",
+  "beacon-node-8.octez.io",
+];
+
+function matrixNodesForAllRegions(): NodeDistributions {
+  const raw = process.env.NEXT_PUBLIC_BEACON_MATRIX_NODES?.trim();
+  const relays = raw
+    ? raw.split(",").map((h) => h.trim()).filter(Boolean)
+    : [...OCTEZ_MATRIX_RELAYS];
+  return Object.fromEntries(
+    Object.values(Regions).map((region) => [region, relays]),
+  ) as NodeDistributions;
+}
+
+/**
  * Lazy-loaded modules de Taquito + Beacon. Se cargan solo cuando hace falta
  * para no inflar el bundle inicial.
  */
@@ -173,10 +211,6 @@ async function getOrInitWallet() {
       ? window.location.origin
       : (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "");
   const wcProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-  // Do NOT override matrixNodes: Beacon's bundled list is the same one Kukai/
-  // Temple ship with, so dapp ↔ wallet pick a federated relay during pairing.
-  // Overriding it here used to leave the dapp on octez relays while the wallet
-  // sat on papers.tech (or vice-versa), so requests reached "no answer yet".
   const walletOptions = {
     name: APP_NAME,
     description: "Niko Alerce // The Void — Objkt gallery & collect.",
@@ -184,6 +218,7 @@ async function getOrInitWallet() {
     ...(process.env.NEXT_PUBLIC_BEACON_ICON_URL
       ? { iconUrl: process.env.NEXT_PUBLIC_BEACON_ICON_URL }
       : {}),
+    matrixNodes: matrixNodesForAllRegions(),
     preferredNetwork: beaconSdk.NetworkType.MAINNET,
     ...(wcProjectId
       ? { walletConnectOptions: { projectId: wcProjectId } }
