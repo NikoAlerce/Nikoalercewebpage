@@ -56,8 +56,8 @@ export default function TokenViewerModal() {
   const handleBuy = useCallback(async () => {
     if (!listing) return;
     if (!address) {
-      await connect();
-      return;
+      const pkh = await connect();
+      if (!pkh) return;
     }
     setBuyState({ kind: "signing" });
     const res = await buy({

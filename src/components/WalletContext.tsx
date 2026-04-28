@@ -27,7 +27,8 @@ type BuyResult =
   | { ok: false; error: string };
 
 type Ctx = WalletState & {
-  connect: () => Promise<void>;
+  /** Resolves to tz1… after a successful permission request; null if user cancelled or error. */
+  connect: () => Promise<string | null>;
   disconnect: () => Promise<void>;
   buy: (args: BuyArgs) => Promise<BuyResult>;
 };
@@ -59,9 +60,22 @@ async function getOrInitWallet() {
     return { Tezos: cachedTezos, wallet: cachedWallet };
   }
   const { TezosToolkit, BeaconWallet, beaconSdk } = await loadTezos();
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "");
+  const wcProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
   const wallet = new BeaconWallet({
     name: APP_NAME,
+    description: "Niko Alerce // The Void — Objkt gallery & collect.",
+    appUrl: origin || undefined,
+    ...(process.env.NEXT_PUBLIC_BEACON_ICON_URL
+      ? { iconUrl: process.env.NEXT_PUBLIC_BEACON_ICON_URL }
+      : {}),
     preferredNetwork: beaconSdk.NetworkType.MAINNET,
+    ...(wcProjectId
+      ? { walletConnectOptions: { projectId: wcProjectId } }
+      : {}),
   });
   const Tezos = new TezosToolkit(RPC_URL);
   Tezos.setWalletProvider(wallet);
@@ -92,19 +106,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (): Promise<string | null> => {
     setConnecting(true);
     setError(null);
     try {
       const { wallet } = await getOrInitWallet();
-      const { NetworkType } = await import("@airgap/beacon-sdk");
+      const { NetworkType, PermissionScope } = await import(
+        "@airgap/beacon-sdk"
+      );
       await wallet.requestPermissions({
         network: { type: NetworkType.MAINNET },
+        scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
       });
       const pkh = await wallet.getPKH();
       setAddress(pkh);
+      return pkh;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error conectando wallet");
+      setError(err instanceof Error ? err.message : "Wallet connection failed");
+      return null;
     } finally {
       setConnecting(false);
     }
@@ -136,8 +155,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
       }
       try {
-        const { Tezos } = await getOrInitWallet();
-        if (!address) {
+        const { Tezos, wallet } = await getOrInitWallet();
+        const active = await wallet.client.getActiveAccount();
+        if (!active?.address) {
           return { ok: false, error: "WALLET NOT CONNECTED" };
         }
 
@@ -167,7 +187,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: message };
       }
     },
-    [address],
+    [],
   );
 
   return (
