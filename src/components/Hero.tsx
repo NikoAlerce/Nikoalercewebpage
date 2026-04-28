@@ -19,35 +19,56 @@ export default function Hero() {
       id="top"
       className="relative min-h-[100svh] w-full overflow-hidden bg-void"
     >
-      <div className="absolute inset-0 bg-grid opacity-30" />
+      <div className="absolute inset-0 bg-grid opacity-20" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,0,64,0.05),transparent_70%)]" />
       <div className="absolute inset-0">
         <Scene3D className="absolute inset-0" />
       </div>
 
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-24 left-6 md:left-10 text-[10px] tracking-[0.4em] text-ash">
-          <div>// SYS / VOID v0.1</div>
-          <div>// LAT -38.0 / LON -71.5</div>
-          <div className="text-glitch-lime">// ONLINE</div>
+      {/* TOP META - MORE AGGRESSIVE */}
+      <div className="absolute inset-x-0 top-32 px-6 md:px-12 flex justify-between items-start pointer-events-none z-20">
+        <div className="flex flex-col gap-1 text-[9px] tracking-[0.5em] text-ash/40 uppercase">
+          <div className="flex items-center gap-4">
+            <span className="text-glitch-red">//</span>
+            <span>SYSTEM_ORIGIN::PATAGONIA_VOID</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-glitch-cyan">//</span>
+            <span>COORD_MAPPING::S_38.000_W_71.500</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="w-1 h-1 bg-glitch-lime rounded-full animate-pulse" />
+            <span className="text-glitch-lime/60">NODE_STATUS::SYNCHRONIZED</span>
+          </div>
         </div>
 
-        <div className="absolute top-24 right-6 md:right-10 text-right text-[10px] tracking-[0.4em] text-ash">
-          <div>NIKO_ALERCE.SYS</div>
-          <div>3D / GLITCH / TEZOS</div>
-          <div className="text-glitch-red">▌█▌▌█ {new Date().getFullYear()}</div>
+        <div className="hidden md:flex flex-col items-end gap-1 text-[9px] tracking-[0.5em] text-ash/40 uppercase">
+          <div className="font-mono text-bone/60">[{new Date().getFullYear()} // v2.0.4]</div>
+          <div className="flex items-center gap-4">
+            <span>PROTOCOL::TEZOS_L1</span>
+            <span className="text-glitch-red">▌</span>
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10 max-w-[1600px] mx-auto px-6 md:px-10 pt-40 md:pt-48 pb-24">
-        <p className="text-xs md:text-sm tracking-[0.5em] text-ash mb-6">
-          [ VISUAL ARTIST // 3D // GLITCH ]
-        </p>
+      <div className="relative z-10 max-w-[1800px] mx-auto px-6 md:px-12 pt-56 md:pt-64 pb-32">
+        <div className="inline-block relative mb-8">
+          <span className="absolute -left-4 top-0 w-1 h-full bg-glitch-red/40" />
+          <p className="text-[10px] md:text-xs tracking-[0.6em] text-ash uppercase pl-4">
+            Visual Artist <span className="text-glitch-red mx-2">/</span> 3D Sculpting <span className="text-glitch-cyan mx-2">/</span> Glitch Theory
+          </p>
+        </div>
 
-        <h1 className="font-display font-bold leading-[0.85] tracking-tight text-bone uppercase">
-          <span className="block text-[clamp(3rem,12vw,12rem)]">
+        <h1 className="font-display font-black leading-[0.8] tracking-tighter text-bone uppercase relative group">
+          {/* Background large text outline */}
+          <div className="absolute -top-12 -left-4 text-[15vw] opacity-5 pointer-events-none select-none font-black text-transparent stroke-white stroke-1" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}>
+            THE_VOID
+          </div>
+          
+          <span className="block text-[clamp(4rem,15vw,14rem)] relative">
             <GlitchText>NIKO</GlitchText>
           </span>
-          <span className="block text-[clamp(3rem,12vw,12rem)] text-glitch-red">
+          <span className="block text-[clamp(4rem,15vw,14rem)] text-glitch-red -mt-[2vw] relative">
             <GlitchText>ALERCE</GlitchText>
           </span>
         </h1>
@@ -76,22 +97,35 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-wrap gap-4">
+        <div className="mt-14 flex flex-wrap items-center gap-8">
           <Link
             href="/works"
-            className="group relative inline-flex items-center gap-3 px-6 py-3 bg-bone text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-glitch-red hover:text-bone transition-colors"
+            className="group relative inline-flex items-center gap-4 px-10 py-5 bg-bone text-void text-[11px] tracking-[0.4em] uppercase font-black hover:bg-glitch-red hover:text-bone transition-all duration-300"
           >
-            ENTER THE VOID
-            <span className="group-hover:translate-x-1 transition-transform">
+            <span className="absolute inset-0 bg-glitch-cyan -translate-x-1 -translate-y-1 -z-10 opacity-0 group-hover:opacity-40 transition-all" />
+            ENTER_GALLERY
+            <span className="group-hover:translate-x-2 transition-transform font-bold">
               →
             </span>
           </Link>
           <Link
             href="/sidequest"
-            className="inline-flex items-center gap-3 px-6 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-ash hover:border-glitch-cyan hover:text-glitch-cyan transition-colors"
+            className="group inline-flex items-center gap-4 px-10 py-5 border border-white/10 text-[11px] tracking-[0.4em] uppercase text-ash hover:border-bone hover:text-bone transition-all"
           >
             SIDEQUEST_MODE
           </Link>
+
+          {/* New aesthetic scroll indicator */}
+          <div className="hidden xl:flex items-center gap-4 ml-auto opacity-30 hover:opacity-100 transition-opacity">
+            <div className="w-12 h-[1px] bg-white/20" />
+            <div className="text-[9px] tracking-[0.5em] flex flex-col items-end">
+              <span>SCROLL_TO</span>
+              <span className="text-glitch-red">EXPLORE</span>
+            </div>
+            <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center p-1">
+              <div className="w-1 h-1 bg-bone rounded-full animate-bounce" />
+            </div>
+          </div>
         </div>
       </div>
 

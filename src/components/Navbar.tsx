@@ -57,41 +57,61 @@ export default function Navbar() {
   return (
     <header
       className={clsx(
-        "fixed top-0 left-0 right-0 z-40 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-[60] transition-all duration-500",
         scrolled
-          ? "backdrop-blur-md bg-void/70 border-b border-white/5"
-          : "bg-transparent",
+          ? "backdrop-blur-xl bg-void/60 border-b border-white/5 py-2"
+          : "bg-transparent py-4",
       )}
     >
-      <nav className="max-w-[1600px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between text-xs uppercase tracking-[0.2em]">
-        <Link href="/" className="flex items-center gap-2 group">
-          <span className="w-2 h-2 bg-glitch-red animate-pulse" />
-          <GlitchText className="font-bold text-bone group-hover:text-glitch-red transition-colors">
-            NIKO_ALERCE
-          </GlitchText>
+      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between text-[10px] md:text-[11px] uppercase tracking-[0.3em]">
+        <Link href="/" className="flex items-center gap-3 group relative">
+          <div className="relative w-3 h-3 overflow-hidden">
+            <span className="absolute inset-0 bg-glitch-red animate-pulse" />
+            <span className="absolute inset-0 bg-glitch-cyan translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="font-display font-black text-bone tracking-tighter text-lg leading-none group-hover:text-glitch-red transition-colors flex flex-col">
+            <span>NIKO</span>
+            <span className="text-[10px] tracking-[0.5em] -mt-1 opacity-60 group-hover:opacity-100">ALERCE</span>
+          </div>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-8">
+        <ul className="hidden md:flex items-center gap-12">
           {links.map((l) => (
-            <li key={l.href}>
+            <li key={l.href} className="relative group">
               <Link
                 href={l.href}
                 className={clsx(
-                  "glitch-hover transition-colors",
+                  "transition-all duration-300",
                   isActive(l.href)
-                    ? "text-glitch-red"
-                    : "text-ash hover:text-bone",
+                    ? "text-bone"
+                    : "text-ash/60 hover:text-bone",
                 )}
               >
                 {l.label}
               </Link>
+              <span className={clsx(
+                "absolute -bottom-1 left-0 h-[1px] bg-glitch-red transition-all duration-500",
+                isActive(l.href) ? "w-full" : "w-0 group-hover:w-1/2"
+              )} />
             </li>
           ))}
         </ul>
 
-        <div className="hidden md:flex items-center gap-3 text-[10px] text-ash">
-          <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full animate-pulse" />
-          <span>LIVE :: TEZOS</span>
+        <div className="hidden lg:flex items-center gap-6">
+          <div className="flex flex-col items-end gap-0.5 opacity-40 hover:opacity-100 transition-opacity">
+            <span className="text-[8px] tracking-[0.6em] text-ash">NETWORK_STATUS</span>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-1 bg-glitch-lime rounded-full shadow-[0_0_8px_#39ff14]" />
+              <span className="text-bone">TEZOS_MAINNET</span>
+            </div>
+          </div>
+          <div className="w-[1px] h-8 bg-white/10" />
+          <Link 
+            href="/works"
+            className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all"
+          >
+            COLLECT_ART
+          </Link>
         </div>
 
         <button
