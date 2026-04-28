@@ -63,8 +63,8 @@ export default function Navbar() {
           : "bg-transparent py-4",
       )}
     >
-      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between text-[10px] md:text-[11px] uppercase tracking-[0.3em]">
-        <Link href="/" className="flex items-center gap-3 group relative">
+      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between text-xs md:text-sm uppercase tracking-[0.4em] font-bold">
+        <Link href="/" className="flex items-center gap-4 group relative py-4">
           <div className="relative w-3 h-3 overflow-hidden">
             <span className="absolute inset-0 bg-glitch-red animate-pulse" />
             <span className="absolute inset-0 bg-glitch-cyan translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -75,13 +75,13 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-12">
+        <ul className="hidden md:flex items-center gap-14">
           {links.map((l) => (
             <li key={l.href} className="relative group">
               <Link
                 href={l.href}
                 className={clsx(
-                  "transition-all duration-300",
+                  "transition-all duration-300 py-2 inline-block",
                   isActive(l.href)
                     ? "text-bone"
                     : "text-ash/60 hover:text-bone",
@@ -90,8 +90,8 @@ export default function Navbar() {
                 {l.label}
               </Link>
               <span className={clsx(
-                "absolute -bottom-1 left-0 h-[1px] bg-glitch-red transition-all duration-500",
-                isActive(l.href) ? "w-full" : "w-0 group-hover:w-1/2"
+                "absolute -bottom-1 left-0 h-0.5 bg-glitch-red transition-all duration-500",
+                isActive(l.href) ? "w-full" : "w-0 group-hover:w-full"
               )} />
             </li>
           ))}

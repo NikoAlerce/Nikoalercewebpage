@@ -147,15 +147,18 @@ export default function NFTGallery({
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
-        <div>
-          <div className={clsx("text-[10px] tracking-[0.5em] mb-3", accentClass)}>
-            // OBJKT://{alias.toUpperCase()}
+        <div className="relative">
+          <div className="absolute -top-16 -left-8 text-[12rem] font-black text-white/[0.03] select-none pointer-events-none leading-none z-0">
+            {title.toUpperCase()}
           </div>
-          <h2 className="font-display font-bold text-bone uppercase leading-[0.9] text-[clamp(2.5rem,8vw,7rem)]">
+          <div className={clsx("text-[11px] tracking-[0.8em] mb-4 font-black relative z-10", accentClass)}>
+            // OBJKT_DATA_STREAM::{alias.toUpperCase()}
+          </div>
+          <h2 className="font-display font-black text-bone uppercase leading-[0.8] text-[clamp(3.5rem,12vw,10rem)] relative z-10">
             <GlitchText>{title}</GlitchText>
           </h2>
           {subtitle && (
-            <p className="mt-4 max-w-xl text-sm text-ash">{subtitle}</p>
+            <p className="mt-6 max-w-xl text-base text-ash/80 relative z-10 leading-relaxed">{subtitle}</p>
           )}
         </div>
 

@@ -53,14 +53,17 @@ export default function Shop() {
       className="relative py-24 md:py-32 px-6 md:px-10 max-w-[1600px] mx-auto border-t border-white/5"
     >
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
-        <div>
-          <div className="text-[10px] tracking-[0.5em] mb-3 text-glitch-lime">
-            // PHYSICAL_GOODS
+        <div className="relative">
+          <div className="absolute -top-16 -left-8 text-[12rem] font-black text-white/[0.03] select-none pointer-events-none leading-none z-0">
+            SHOP
           </div>
-          <h2 className="font-display font-bold text-bone uppercase leading-[0.9] text-[clamp(2.5rem,8vw,7rem)]">
+          <div className="text-[11px] tracking-[0.8em] mb-4 font-black text-glitch-lime relative z-10 uppercase">
+            // PHYSICAL_GOODS_SYNC
+          </div>
+          <h2 className="font-display font-black text-bone uppercase leading-[0.8] text-[clamp(3.5rem,12vw,10rem)] relative z-10">
             <GlitchText>SHOP</GlitchText>
           </h2>
-          <p className="mt-4 max-w-xl text-sm text-ash">
+          <p className="mt-6 max-w-xl text-base text-ash/80 relative z-10 leading-relaxed">
             Physical objects from the NIKO_ALERCE universe. Limited editions
             that extend the glitch into the analog world.
           </p>
