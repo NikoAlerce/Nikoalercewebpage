@@ -359,6 +359,22 @@ export default function TokenViewerModal() {
                   </div>
                 )}
 
+                {canBuyOnSite && !address && !connecting && (
+                  <div className="mt-4 p-3 border border-white/15 bg-white/5 text-[10px] tracking-[0.25em] text-ash leading-relaxed">
+                    // KUKAI WILL OPEN IN A NEW TAB. IF NOTHING APPEARS,
+                    YOUR BROWSER IS BLOCKING POPUPS — CHECK THE ADDRESS BAR
+                    FOR A &quot;BLOCKED&quot; ICON OR ALLOW POPUPS FOR THIS
+                    SITE AND CLICK CONNECT AGAIN.
+                  </div>
+                )}
+
+                {canBuyOnSite && connecting && (
+                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan animate-pulse">
+                    ⟳ OPENING WALLET... PICK KUKAI / TEMPLE / UMAMI ON THE
+                    BEACON DIALOG.
+                  </div>
+                )}
+
                 {canBuyOnSite && isOwnListing && (
                   <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
                     <div>

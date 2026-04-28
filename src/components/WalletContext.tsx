@@ -145,6 +145,13 @@ async function loadTezos() {
 
 let cachedTezos: import("@taquito/taquito").TezosToolkit | null = null;
 let cachedWallet: import("@taquito/beacon-wallet").BeaconWallet | null = null;
+/**
+ * Cache the beacon-sdk module too: `connect()` runs in the user-gesture path
+ * for the popup, so we cannot afford another `await import(...)` after the
+ * click. The first call (during pre-warm on mount) loads the chunk; every
+ * later call reads from this cache synchronously.
+ */
+let cachedBeaconSdk: typeof import("@airgap/beacon-sdk") | null = null;
 /** Avoid duplicate BeaconWallet / DAppClient init (e.g. React Strict Mode double mount). */
 let walletInitInFlight: Promise<{
   Tezos: import("@taquito/taquito").TezosToolkit;
@@ -160,6 +167,7 @@ async function getOrInitWallet() {
   }
   walletInitInFlight = (async () => {
   const { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent } = await loadTezos();
+  cachedBeaconSdk = beaconSdk;
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
@@ -194,6 +202,18 @@ async function getOrInitWallet() {
       notifyActiveAccountListeners(acc?.address ?? null);
     },
   );
+  // Eagerly resolve transports + key generation. WITHOUT this, the very first
+  // `requestPermissions()` call awaits init() internally — which means by the
+  // time the user picks "Kukai" in the wallet selection modal, the user-gesture
+  // budget is gone and `window.open(kukaiUrl)` gets silently blocked by
+  // Brave/Safari/strict Firefox. Pre-warming makes the click → window.open
+  // path fully synchronous from the browser's POV.
+  try {
+    await wallet.client.init();
+  } catch {
+    // init() can throw if the transport list is unreachable; we still want
+    // the wallet usable for postMessage (Temple) so swallow and continue.
+  }
   const Tezos = new TezosToolkit(RPC_URL);
   Tezos.setWalletProvider(wallet);
   cachedTezos = Tezos;
@@ -239,10 +259,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setConnecting(true);
     setError(null);
     try {
-      const { wallet } = await getOrInitWallet();
-      const { NetworkType, PermissionScope } = await import(
-        "@airgap/beacon-sdk"
-      );
+      // Try to grab a pre-warmed wallet *and* SDK without awaiting. If the
+      // user clicked fast enough that pre-warm hasn't finished, fall back to
+      // awaiting — the modal will still open but the popup may be blocked.
+      const { wallet } =
+        cachedTezos && cachedWallet
+          ? { wallet: cachedWallet }
+          : await getOrInitWallet();
+      const sdk =
+        cachedBeaconSdk ?? (await import("@airgap/beacon-sdk"));
+      const { NetworkType, PermissionScope } = sdk;
       await wallet.requestPermissions({
         network: { type: NetworkType.MAINNET },
         scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
@@ -251,7 +277,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setAddress(pkh);
       return pkh;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Wallet connection failed");
+      let msg = err instanceof Error ? err.message : "Wallet connection failed";
+      // Beacon raises "Connection timeout" / "NO_PEER" when the user picked a
+      // wallet but the popup never returned a response. The most common
+      // off-platform cause is a popup blocker; surface that explicitly.
+      if (
+        /timeout|NO_PEER|aborted|user closed|cancelled/i.test(msg) ||
+        /no answer/i.test(msg)
+      ) {
+        msg =
+          "Wallet did not respond. Make sure popups from this site are allowed and Kukai/Temple finished loading, then try again.";
+      }
+      setError(msg);
       return null;
     } finally {
       setConnecting(false);
@@ -311,6 +348,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     cachedTezos = null;
     cachedWallet = null;
+    cachedBeaconSdk = null;
     walletInitInFlight = null;
     setAddress(null);
     setError(null);
