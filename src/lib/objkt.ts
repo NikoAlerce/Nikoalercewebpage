@@ -1,5 +1,5 @@
 import { GraphQLClient, gql } from "graphql-request";
-import type { ObjktHolder, ObjktToken } from "./types";
+import type { ObjktHolder, ObjktListing, ObjktToken } from "./types";
 
 export const OBJKT_GRAPHQL =
   process.env.NEXT_PUBLIC_OBJKT_GRAPHQL ?? "https://data.objkt.com/v3/graphql";
@@ -287,12 +287,36 @@ export function tokenStatus(token: Token): Status {
   return "in_collection";
 }
 
+/**
+ * Listing price in mutez for Tezos `send({ amount, mutez: true })`.
+ * Objkt exposes `price` in listing currency and `price_xtz` (mutez) for XTZ-equivalent;
+ * either may be present depending on indexer shape.
+ */
+export function listingPriceMutez(
+  listing: ObjktListing | null | undefined,
+): number | null {
+  if (!listing) return null;
+  const p =
+    typeof listing.price === "number" && Number.isFinite(listing.price)
+      ? listing.price
+      : typeof listing.price_xtz === "number" &&
+          Number.isFinite(listing.price_xtz)
+        ? listing.price_xtz
+        : null;
+  if (p == null || p <= 0) return null;
+  return Math.floor(p);
+}
+
 /** Price in XTZ of the creator's lowest active listing. */
 export function lowestPriceXtz(token: Token): number | null {
-  const ask =
-    token.listings_active?.[0]?.price_xtz ?? token.lowest_ask ?? null;
-  if (typeof ask !== "number") return null;
-  return ask / 1_000_000;
+  const listing = token.listings_active?.[0];
+  const mutez =
+    listingPriceMutez(listing) ??
+    (typeof token.lowest_ask === "number" && Number.isFinite(token.lowest_ask)
+      ? token.lowest_ask
+      : null);
+  if (mutez === null) return null;
+  return mutez / 1_000_000;
 }
 
 /**

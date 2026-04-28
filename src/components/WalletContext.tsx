@@ -201,6 +201,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           error: "THIS LISTING USES AN FA TOKEN. BUY IT FROM OBJKT.",
         };
       }
+      if (!Number.isFinite(priceMutez) || priceMutez <= 0) {
+        return {
+          ok: false,
+          error: "LISTING PRICE IS INVALID. TRY AGAIN OR USE OBJKT.",
+        };
+      }
       try {
         const { Tezos, wallet } = await getOrInitWallet();
         const active = await wallet.client.getActiveAccount();
@@ -210,16 +216,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         const contract = await Tezos.wallet.at(marketplaceContract);
 
-        // The standard method in Objkt v3/v4 marketplaces is
-        // `fulfill_ask` y recibe el ask_id (= bigmap_key del listing).
-        // Algunos contratos lo llaman `collect`, hacemos un fallback.
-        const methodName =
-          "fulfill_ask" in contract.methods ? "fulfill_ask" : "collect";
-
-        const op = await contract.methods[methodName](bigmapKey).send({
-          amount: priceMutez,
-          mutez: true,
-        });
+        // Objkt marketplace v4: `fulfill_ask` takes `{ ask_id, proxy? }`, not a bare nat.
+        // Older contracts use `collect(ask_id)` (single nat).
+        const op =
+          "fulfill_ask" in contract.methods
+            ? await contract.methods
+                .fulfill_ask({ ask_id: bigmapKey, proxy: null })
+                .send({ amount: priceMutez, mutez: true })
+            : await contract.methods.collect(bigmapKey).send({
+                amount: priceMutez,
+                mutez: true,
+              });
 
         return { ok: true, opHash: op.opHash };
       } catch (err) {

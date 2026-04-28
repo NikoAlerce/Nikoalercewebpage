@@ -13,6 +13,7 @@ import {
   editionsLabel,
   creatorHoldsQuantity,
   activeListingAmountLeft,
+  listingPriceMutez,
 } from "@/lib/objkt";
 import { useTokenViewer } from "./TokenViewerContext";
 import { useWallet } from "./WalletContext";
@@ -60,10 +61,18 @@ export default function TokenViewerModal() {
       if (!pkh) return;
     }
     setBuyState({ kind: "signing" });
+    const mutez = listingPriceMutez(listing);
+    if (mutez === null) {
+      setBuyState({
+        kind: "error",
+        message: "Could not read listing price. Open this piece on Objkt.",
+      });
+      return;
+    }
     const res = await buy({
       marketplaceContract: listing.marketplace_contract!,
       bigmapKey: listing.bigmap_key!,
-      priceMutez: listing.price!,
+      priceMutez: mutez,
       currencyId: listing.currency_id ?? 1,
     });
     if (res.ok) {
@@ -102,7 +111,7 @@ export default function TokenViewerModal() {
     status === "for_sale" &&
     !!listing?.marketplace_contract &&
     typeof listing?.bigmap_key === "number" &&
-    typeof listing?.price === "number" &&
+    listingPriceMutez(listing) !== null &&
     listing.currency_id === 1;
 
   return (
