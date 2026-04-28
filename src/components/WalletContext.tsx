@@ -171,14 +171,18 @@ function matrixNodesForAllRegions(): NodeDistributions {
  * para no inflar el bundle inicial.
  */
 async function loadTezos() {
-  const [{ TezosToolkit }, { BeaconWallet }, beaconSdk, { BeaconEvent }] =
-    await Promise.all([
-      import("@taquito/taquito"),
-      import("@taquito/beacon-wallet"),
-      import("@airgap/beacon-sdk"),
-      import("@airgap/beacon-dapp"),
-    ]);
-  return { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent };
+  const [
+    { TezosToolkit },
+    { BeaconWallet },
+    beaconSdk,
+    { BeaconEvent, getDAppClientInstance },
+  ] = await Promise.all([
+    import("@taquito/taquito"),
+    import("@taquito/beacon-wallet"),
+    import("@airgap/beacon-sdk"),
+    import("@airgap/beacon-dapp"),
+  ]);
+  return { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent, getDAppClientInstance };
 }
 
 let cachedTezos: import("@taquito/taquito").TezosToolkit | null = null;
@@ -204,7 +208,8 @@ async function getOrInitWallet() {
     return walletInitInFlight;
   }
   walletInitInFlight = (async () => {
-  const { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent } = await loadTezos();
+  const { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent, getDAppClientInstance } =
+    await loadTezos();
   cachedBeaconSdk = beaconSdk;
   const origin =
     typeof window !== "undefined" && window.location?.origin
@@ -224,9 +229,22 @@ async function getOrInitWallet() {
       ? { walletConnectOptions: { projectId: wcProjectId } }
       : {}),
   };
-  // Do not call getDAppClientInstance(..., true): reset runs disconnect() on the
-  // singleton, which throws "No transport available." when the transport was never
-  // resolved (first paint, HMR). BeaconWallet already calls getDAppClientInstance(options).
+  /**
+   * `@taquito/beacon-wallet` uses `getDAppClientInstance(options)` — a **module
+   * singleton**. Whichever code path constructs the client **first** wins; later
+   * calls ignore `matrixNodes`. If the first construction happened with an empty
+   * config (or before our relays existed), `Client.matrixNodes` becomes `{}` and
+   * P2P merges `{}` onto defaults → you keep probing dead `beacon-server-*.papers.tech`.
+   *
+   * Always `reset` before `new BeaconWallet` so THIS page load applies
+   * `matrixNodes` (octez relays). disconnect() inside reset may throw if nothing
+   * was connected — swallow.
+   */
+  try {
+    getDAppClientInstance(walletOptions, true);
+  } catch {
+    /* ignore */
+  }
   const wallet = new BeaconWallet(walletOptions);
   // Subscribe before any other async work so restored accounts do not warn
   // "no active subscription for ACTIVE_ACCOUNT_SET" (Beacon 4.x).
