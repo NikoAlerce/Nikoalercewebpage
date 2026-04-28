@@ -9,11 +9,12 @@ export type ObjktCreator = {
 
 export type ObjktListing = {
   id?: number | null;
-  bigmap_key?: number | null;
+  /** GraphQL may return this as a number or numeric string. */
+  bigmap_key?: number | string | null;
   marketplace_contract?: string | null;
   currency_id?: number | null;
-  price?: number | null;
-  price_xtz?: number | null;
+  price?: number | string | null;
+  price_xtz?: number | string | null;
   amount?: number | null;
   amount_left?: number | null;
   seller_address?: string | null;

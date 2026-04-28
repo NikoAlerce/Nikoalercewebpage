@@ -292,19 +292,36 @@ export function tokenStatus(token: Token): Status {
  * Objkt exposes `price` in listing currency and `price_xtz` (mutez) for XTZ-equivalent;
  * either may be present depending on indexer shape.
  */
+function finitePositiveMutez(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return Math.floor(v);
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  return null;
+}
+
 export function listingPriceMutez(
   listing: ObjktListing | null | undefined,
 ): number | null {
   if (!listing) return null;
   const p =
-    typeof listing.price === "number" && Number.isFinite(listing.price)
-      ? listing.price
-      : typeof listing.price_xtz === "number" &&
-          Number.isFinite(listing.price_xtz)
-        ? listing.price_xtz
-        : null;
-  if (p == null || p <= 0) return null;
-  return Math.floor(p);
+    finitePositiveMutez(listing.price) ??
+    finitePositiveMutez(listing.price_xtz);
+  return p;
+}
+
+/** Bigmap key for on-chain fulfill_ask / collect; Objkt may return a string. */
+export function listingBigmapKey(
+  listing: ObjktListing | null | undefined,
+): number | null {
+  if (!listing || listing.bigmap_key == null) return null;
+  const n =
+    typeof listing.bigmap_key === "number"
+      ? listing.bigmap_key
+      : Number(listing.bigmap_key);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
 }
 
 /** Price in XTZ of the creator's lowest active listing. */

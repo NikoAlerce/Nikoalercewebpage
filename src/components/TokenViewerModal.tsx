@@ -14,6 +14,7 @@ import {
   creatorHoldsQuantity,
   activeListingAmountLeft,
   listingPriceMutez,
+  listingBigmapKey,
 } from "@/lib/objkt";
 import { useTokenViewer } from "./TokenViewerContext";
 import { useWallet } from "./WalletContext";
@@ -36,15 +37,36 @@ type BuyState =
 
 export default function TokenViewerModal() {
   const { token, close } = useTokenViewer();
-  const { address, connecting, connect, disconnect, buy } = useWallet();
+  const { address, connecting, connect, disconnect, resetConnection, buy } =
+    useWallet();
   const [imgGw, setImgGw] = useState(0);
   const [buyState, setBuyState] = useState<BuyState>({ kind: "idle" });
+  const [showStuckHint, setShowStuckHint] = useState(false);
 
   // Reset image state when the token changes (avoids stale imgGw)
   useEffect(() => {
     setImgGw(0);
     setBuyState({ kind: "idle" });
+    setShowStuckHint(false);
   }, [token?.fa_contract, token?.token_id]);
+
+  // After ~25s of "signing", suggest resetting the wallet pairing — the most
+  // common cause of a request that "never arrives" in Kukai/Temple is a stale
+  // matrix peer cached in localStorage from a previous session.
+  useEffect(() => {
+    if (buyState.kind !== "signing") {
+      setShowStuckHint(false);
+      return;
+    }
+    const t = setTimeout(() => setShowStuckHint(true), 25_000);
+    return () => clearTimeout(t);
+  }, [buyState.kind]);
+
+  const handleResetWallet = useCallback(async () => {
+    await resetConnection();
+    setBuyState({ kind: "idle" });
+    setShowStuckHint(false);
+  }, [resetConnection]);
 
   const onImgError = useCallback(() => {
     setImgGw((i) => Math.min(i + 1, IPFS_GATEWAYS.length - 1));
@@ -69,11 +91,26 @@ export default function TokenViewerModal() {
       });
       return;
     }
+    const bigmapKey = listingBigmapKey(listing);
+    if (bigmapKey === null) {
+      setBuyState({
+        kind: "error",
+        message: "Invalid listing id. Open this piece on Objkt.",
+      });
+      return;
+    }
+    const left = listing.amount_left ?? 0;
+    const editions =
+      typeof left === "number" && left > 0
+        ? Math.min(Math.floor(left), 100)
+        : 1;
     const res = await buy({
       marketplaceContract: listing.marketplace_contract!,
-      bigmapKey: listing.bigmap_key!,
+      bigmapKey,
       priceMutez: mutez,
       currencyId: listing.currency_id ?? 1,
+      editions,
+      sellerAddress: listing.seller_address,
     });
     if (res.ok) {
       setBuyState({ kind: "pending", opHash: res.opHash });
@@ -110,9 +147,18 @@ export default function TokenViewerModal() {
   const canBuyOnSite =
     status === "for_sale" &&
     !!listing?.marketplace_contract &&
-    typeof listing?.bigmap_key === "number" &&
+    listingBigmapKey(listing) !== null &&
     listingPriceMutez(listing) !== null &&
     listing.currency_id === 1;
+
+  // Objkt's marketplace contract throws M_NO_SELF_FULFILL if the buyer is the
+  // seller — disable the button preemptively when the connected wallet is the
+  // listing's seller_address (case-insensitive: tz1 addresses are case-sensitive,
+  // but normalize anyway in case the indexer ever returns mixed case).
+  const isOwnListing =
+    !!address &&
+    !!listing?.seller_address &&
+    address.toLowerCase() === listing.seller_address.toLowerCase();
 
   return (
     <div
@@ -287,8 +333,45 @@ export default function TokenViewerModal() {
                 ) : null}
 
                 {buyState.kind === "error" && (
-                  <div className="mt-4 p-3 border border-glitch-red/50 bg-glitch-red/5 text-[11px] tracking-[0.2em] text-glitch-red">
-                    ✕ {buyState.message.toUpperCase()}
+                  <div className="mt-4 p-3 border border-glitch-red/50 bg-glitch-red/5 text-[11px] tracking-[0.2em] text-glitch-red space-y-2">
+                    <div>✕ {buyState.message.toUpperCase()}</div>
+                    <button
+                      onClick={handleResetWallet}
+                      className="w-full px-3 py-2 border border-glitch-red/60 text-glitch-red hover:bg-glitch-red/10 transition-colors"
+                    >
+                      RESET WALLET CONNECTION ↻
+                    </button>
+                  </div>
+                )}
+
+                {buyState.kind === "signing" && showStuckHint && (
+                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                    <div>
+                      // KUKAI / TEMPLE NOT SHOWING THE REQUEST? RESET PAIRING
+                      AND TRY AGAIN.
+                    </div>
+                    <button
+                      onClick={handleResetWallet}
+                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                    >
+                      RESET WALLET CONNECTION ↻
+                    </button>
+                  </div>
+                )}
+
+                {canBuyOnSite && isOwnListing && (
+                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                    <div>
+                      // YOU ARE CONNECTED WITH THE SELLER WALLET
+                      ({address?.slice(0, 6)}…{address?.slice(-4)}). OBJKT
+                      WON&apos;T LET YOU FULFILL YOUR OWN ASK.
+                    </div>
+                    <button
+                      onClick={disconnect}
+                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                    >
+                      DISCONNECT &amp; USE A DIFFERENT WALLET
+                    </button>
                   </div>
                 )}
 
@@ -298,13 +381,21 @@ export default function TokenViewerModal() {
                     disabled={
                       buyState.kind === "signing" ||
                       buyState.kind === "pending" ||
-                      connecting
+                      connecting ||
+                      isOwnListing
+                    }
+                    title={
+                      isOwnListing
+                        ? "Connected wallet is the seller. Switch wallets to collect."
+                        : undefined
                     }
                     className="mt-4 group flex items-center justify-between gap-3 w-full px-5 py-3 bg-glitch-lime text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <span>
                       {!address
                         ? "CONNECT WALLET TO BUY"
+                        : isOwnListing
+                        ? "CAN'T BUY YOUR OWN LISTING"
                         : buyState.kind === "signing"
                         ? "SIGN IN YOUR WALLET..."
                         : buyState.kind === "pending"

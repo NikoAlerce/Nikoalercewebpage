@@ -10,11 +10,16 @@ const nextConfig = {
     ];
   },
   /**
-   * Beacon / WalletConnect use patterns that hit `eval` unless script-src allows it.
-   * If the browser still reports CSP blocks, check Vercel → Project → Security
-   * for a second CSP header (multiple policies are combined; all must allow eval).
+   * Beacon / WalletConnect / webpack dev chunks may use eval(); wasm needs
+   * 'wasm-unsafe-eval'. Chrome also consults script-src-elem for some script loads.
+   *
+   * If eval is STILL blocked: another policy may be layered (browser extension,
+   * reverse proxy, or Vercel → Project → Security / Firewall with a CSP — remove
+   * or align it so script-src also includes 'unsafe-eval').
    */
   async headers() {
+    const script =
+      "'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https: blob: data:";
     return [
       {
         source: "/:path*",
@@ -23,11 +28,14 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https: blob:",
+              `script-src ${script}`,
+              // Explicit elem line avoids some Chromium code paths defaulting stricter
+              `script-src-elem ${script}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https:",
-              "connect-src 'self' https: wss: ws:",
+              // blob: — GLTFLoader / FileLoader fetch embedded textures as blob: URLs
+              "connect-src 'self' https: wss: ws: blob:",
               "media-src 'self' https: blob: data:",
               "frame-src https:",
               "worker-src 'self' blob:",
