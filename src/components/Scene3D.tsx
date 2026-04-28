@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Canvas, useFrame, extend, useThree } from "@react-three/fiber";
 import { Environment, Float, shaderMaterial, Text } from "@react-three/drei";
 import {
@@ -263,41 +263,105 @@ function Rings() {
 }
 
 // =============================================================
-//  TextCarousel — 3D interactive links
+//  TextCarousel — 3D interactive navigation carousel
+//  Rotates around the orb, responds to mouse, clickable links
 // =============================================================
+
+interface CarouselItemProps {
+  label: string;
+  href: string;
+  color: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  fontSize: number;
+  onNavigate: (href: string) => void;
+}
+
+function CarouselItem({ label, href, color, position, rotation, fontSize, onNavigate }: CarouselItemProps) {
+  const [hovered, setHovered] = useState(false);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  
+  useFrame((_state, delta) => {
+    if (!matRef.current) return;
+    // Smooth emissive intensity transition
+    const target = hovered ? 8 : 1.2;
+    matRef.current.emissiveIntensity += (target - matRef.current.emissiveIntensity) * delta * 8;
+  });
+
+  return (
+    <Text
+      position={position}
+      rotation={rotation}
+      fontSize={fontSize}
+      letterSpacing={0.08}
+      anchorX="center"
+      anchorY="middle"
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = "auto";
+      }}
+      onClick={() => onNavigate(href)}
+    >
+      {label}
+      <meshStandardMaterial
+        ref={matRef}
+        color={hovered ? color : "#ffffff"}
+        emissive={color}
+        emissiveIntensity={1.2}
+        toneMapped={false}
+        transparent
+        opacity={hovered ? 1 : 0.85}
+      />
+    </Text>
+  );
+}
 
 function TextCarousel() {
   const { viewport } = useThree();
   const isMobile = viewport.width < 5;
   const groupRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
-  
+  const rotationY = useRef(0);
+
   const items = [
     { label: "WORKS", href: "/works", color: "#ff0040" },
     { label: "SIDEQUEST", href: "/sidequest", color: "#00fff0" },
-    { label: "SHOP", href: "/shop", color: "#ffffff" },
-    { label: "BIO", href: "/#about", color: "#ff0040" },
+    { label: "BIO", href: "/#about", color: "#a3ff00" },
+    { label: "CONTACT", href: "/#about", color: "#ffffff" },
   ];
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    groupRef.current.rotation.y += delta * 0.2;
-    const s = 1 + Math.sin(state.clock.getElapsedTime() * 1.5) * 0.015;
-    groupRef.current.scale.set(s, s, s);
+
+    // Mouse-driven rotation: mouse.x influences speed & direction
+    const mouseInfluence = state.mouse.x * 0.4;
+    rotationY.current += delta * (0.15 + mouseInfluence);
+    groupRef.current.rotation.y = rotationY.current;
+
+    // Slight vertical tilt from mouse Y
+    groupRef.current.rotation.x += (state.mouse.y * 0.08 - groupRef.current.rotation.x) * 0.05;
   });
 
-  const handleNavigate = (href: string) => {
+  const handleNavigate = useCallback((href: string) => {
+    if (href.startsWith("/#")) {
+      const el = document.getElementById(href.slice(2));
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
     window.location.href = href;
-  };
+  }, []);
 
-  // Adjust radius and position based on viewport
-  const radius = isMobile ? viewport.width * 0.35 : 1.6;
-  const xOffset = isMobile ? 0 : viewport.width * 0.22;
-  const yOffset = isMobile ? -viewport.height * 0.25 : 0;
-  const fontSize = isMobile ? 0.25 : 0.32;
+  const radius = isMobile ? 1.6 : 2.4;
+  const fontSize = isMobile ? 0.28 : 0.48;
 
   return (
-    <group ref={groupRef} position={[xOffset, yOffset, 0]}>
+    <group ref={groupRef}>
       {items.map((item, i) => {
         const angle = (i / items.length) * Math.PI * 2;
         const x = Math.cos(angle) * radius;
@@ -305,33 +369,15 @@ function TextCarousel() {
 
         return (
           <Suspense key={item.label} fallback={null}>
-            <Text
-              position={[x, (i - 1.5) * (isMobile ? 0.45 : 0.55), z]}
+            <CarouselItem
+              label={item.label}
+              href={item.href}
+              color={item.color}
+              position={[x, 0, z]}
               rotation={[0, -angle + Math.PI / 2, 0]}
               fontSize={fontSize}
-              color={hovered === item.label ? item.color : "#ffffff"}
-              anchorX="center"
-              anchorY="middle"
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                setHovered(item.label);
-                document.body.style.cursor = 'pointer';
-              }}
-              onPointerOut={() => {
-                setHovered(null);
-                document.body.style.cursor = 'auto';
-              }}
-              onClick={() => handleNavigate(item.href)}
-            >
-              {item.label}
-              <meshStandardMaterial 
-                emissive={hovered === item.label ? item.color : "#111111"} 
-                emissiveIntensity={hovered === item.label ? 6 : 0.5} 
-                toneMapped={false}
-                transparent
-                opacity={0.9}
-              />
-            </Text>
+              onNavigate={handleNavigate}
+            />
           </Suspense>
         );
       })}
@@ -488,6 +534,9 @@ export default function Scene3D({ className }: { className?: string }) {
           <Rings />
           <Particles />
         </Suspense>
+
+        {/* 3D Text Carousel — loaded independently so it doesn't
+            block the shader if font takes a moment */}
         <TextCarousel />
 
         {/* Trimmed postFX chain: Bloom + Glitch + Noise + Vignette.
