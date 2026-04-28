@@ -129,7 +129,7 @@ function fulfillAskParamsFromExtractedSchema(
 }
 
 const RPC_URL =
-  process.env.NEXT_PUBLIC_TEZOS_RPC ?? "https://mainnet.api.tez.ie";
+  process.env.NEXT_PUBLIC_TEZOS_RPC ?? "https://rpc.tzkt.io/mainnet";
 const APP_NAME = "Niko Alerce // The Void";
 
 /**
@@ -174,26 +174,18 @@ async function loadTezos() {
   const [
     { TezosToolkit },
     { BeaconWallet },
-    beaconSdk,
     { BeaconEvent, getDAppClientInstance },
   ] = await Promise.all([
     import("@taquito/taquito"),
     import("@taquito/beacon-wallet"),
-    import("@airgap/beacon-sdk"),
     import("@airgap/beacon-dapp"),
   ]);
-  return { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent, getDAppClientInstance };
+  return { TezosToolkit, BeaconWallet, BeaconEvent, getDAppClientInstance };
 }
 
 let cachedTezos: import("@taquito/taquito").TezosToolkit | null = null;
 let cachedWallet: import("@taquito/beacon-wallet").BeaconWallet | null = null;
-/**
- * Cache the beacon-sdk module too: `connect()` runs in the user-gesture path
- * for the popup, so we cannot afford another `await import(...)` after the
- * click. The first call (during pre-warm on mount) loads the chunk; every
- * later call reads from this cache synchronously.
- */
-let cachedBeaconSdk: typeof import("@airgap/beacon-sdk") | null = null;
+// cachedBeaconSdk removed as we use string literals for Beacon enums now.
 /** Avoid duplicate BeaconWallet / DAppClient init (e.g. React Strict Mode double mount). */
 let walletInitInFlight: Promise<{
   Tezos: import("@taquito/taquito").TezosToolkit;
@@ -208,9 +200,8 @@ async function getOrInitWallet() {
     return walletInitInFlight;
   }
   walletInitInFlight = (async () => {
-  const { TezosToolkit, BeaconWallet, beaconSdk, BeaconEvent, getDAppClientInstance } =
+  const { TezosToolkit, BeaconWallet, BeaconEvent, getDAppClientInstance } =
     await loadTezos();
-  cachedBeaconSdk = beaconSdk;
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
@@ -224,7 +215,7 @@ async function getOrInitWallet() {
       ? { iconUrl: process.env.NEXT_PUBLIC_BEACON_ICON_URL }
       : {}),
     matrixNodes: matrixNodesForAllRegions(),
-    preferredNetwork: beaconSdk.NetworkType.MAINNET,
+    preferredNetwork: "mainnet" as any,
     ...(wcProjectId
       ? { walletConnectOptions: { projectId: wcProjectId } }
       : {}),
@@ -237,15 +228,16 @@ async function getOrInitWallet() {
    * P2P merges `{}` onto defaults → you keep probing dead `beacon-server-*.papers.tech`.
    *
    * Always `reset` before `new BeaconWallet` so THIS page load applies
-   * `matrixNodes` (octez relays). disconnect() inside reset may throw if nothing
-   * was connected — swallow.
+   * `matrixNodes` (octez relays).
    */
+  let client;
   try {
-    getDAppClientInstance(walletOptions, true);
-  } catch {
-    /* ignore */
+    client = getDAppClientInstance(walletOptions, true);
+  } catch (err) {
+    // fallback if singleton factory fails
+    console.warn("Beacon getDAppClientInstance failed, falling back to new client", err);
   }
-  const wallet = new BeaconWallet(walletOptions);
+  const wallet = new BeaconWallet({ ...walletOptions, client } as any);
   // Subscribe before any other async work so restored accounts do not warn
   // "no active subscription for ACTIVE_ACCOUNT_SET" (Beacon 4.x).
   await wallet.client.subscribeToEvent(
@@ -319,12 +311,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         cachedTezos && cachedWallet
           ? { wallet: cachedWallet }
           : await getOrInitWallet();
-      const sdk =
-        cachedBeaconSdk ?? (await import("@airgap/beacon-sdk"));
-      const { NetworkType, PermissionScope } = sdk;
+      
+      // Use string literals for NetworkType to avoid dependency on beacon-sdk being loaded/correctly destructured here
       await wallet.requestPermissions({
-        network: { type: NetworkType.MAINNET },
-        scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
+        network: { type: "mainnet" as any },
+        scopes: ["operation_request" as any, "sign" as any],
       });
       const pkh = await wallet.getPKH();
       setAddress(pkh);
@@ -401,7 +392,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     cachedTezos = null;
     cachedWallet = null;
-    cachedBeaconSdk = null;
     walletInitInFlight = null;
     setAddress(null);
     setError(null);
