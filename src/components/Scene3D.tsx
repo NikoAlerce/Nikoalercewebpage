@@ -1,12 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, extend } from "@react-three/fiber";
 import { Environment, Float, shaderMaterial } from "@react-three/drei";
 import {
   EffectComposer,
   Bloom,
-  ChromaticAberration,
   Noise,
   Vignette,
   Glitch,
@@ -227,7 +226,9 @@ function GlitchOrb() {
   return (
     <Float speed={1.0} rotationIntensity={0.2} floatIntensity={0.6}>
       <mesh ref={meshRef}>
-        <icosahedronGeometry args={[1.4, 64]} />
+        {/* detail 24 instead of 64: ~7× fewer vertices, fbm shader runs per
+            vertex so this is the single biggest perf win for the hero scene. */}
+        <icosahedronGeometry args={[1.4, 24]} />
         <voidMaterial ref={matRef} />
       </mesh>
     </Float>
@@ -265,7 +266,7 @@ function Rings() {
 //  Particles — nube de puntos que orbita lentamente
 // =============================================================
 
-function Particles({ count = 800 }: { count?: number }) {
+function Particles({ count = 380 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null);
 
   const { positions, sizes } = useMemo(() => {
@@ -323,21 +324,87 @@ function Particles({ count = 800 }: { count?: number }) {
 // =============================================================
 
 export default function Scene3D({ className }: { className?: string }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // `frameloop="never"` halts the render loop entirely → no shader work, no
+  // postFX passes, no battery drain when the user has scrolled past the hero
+  // or hidden the tab. Resumed via IntersectionObserver + visibilitychange.
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    const node = wrapRef.current;
+    if (!node) return;
+
+    let inView = true;
+    let pageVisible =
+      typeof document !== "undefined" ? !document.hidden : true;
+    const update = () => setActive(inView && pageVisible);
+
+    const obs =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              for (const e of entries) {
+                inView = e.isIntersecting;
+              }
+              update();
+            },
+            { rootMargin: "100px 0px" },
+          )
+        : null;
+    obs?.observe(node);
+
+    const onVis = () => {
+      pageVisible = !document.hidden;
+      update();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      obs?.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  // Reduced motion: skip the shader entirely, render a static gradient instead.
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mql.matches);
+    update();
+    mql.addEventListener?.("change", update);
+    return () => mql.removeEventListener?.("change", update);
+  }, []);
+
+  if (reducedMotion) {
+    return (
+      <div
+        className={className}
+        style={{
+          background:
+            "radial-gradient(ellipse at center, #1a0205 0%, #000 60%)",
+        }}
+      />
+    );
+  }
+
   return (
-    <div className={className}>
+    <div ref={wrapRef} className={className}>
       <Canvas
         camera={{ position: [0, 0, 4.4], fov: 42 }}
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: true,
           powerPreference: "high-performance",
+          stencil: false,
+          depth: true,
         }}
-        dpr={[1, 1.6]}
+        dpr={[1, 1.25]}
+        frameloop={active ? "always" : "never"}
       >
         <color attach="background" args={["#000000"]} />
         <fog attach="fog" args={["#000000", 5, 12]} />
 
-        {/* IBL only: no luces direccionales que rompan el shader custom */}
         <Suspense fallback={null}>
           <Environment preset="night" />
           <GlitchOrb />
@@ -345,29 +412,26 @@ export default function Scene3D({ className }: { className?: string }) {
           <Particles />
         </Suspense>
 
+        {/* Trimmed postFX chain: Bloom + Glitch + Noise + Vignette.
+            Removed ChromaticAberration (Glitch already does pixel splitting)
+            and lowered Bloom radius to keep mipmap blur passes cheap. */}
         <EffectComposer multisampling={0}>
           <Bloom
-            intensity={0.95}
-            luminanceThreshold={0.18}
-            luminanceSmoothing={0.7}
+            intensity={0.85}
+            luminanceThreshold={0.22}
+            luminanceSmoothing={0.65}
             mipmapBlur
-            radius={0.7}
-          />
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.0014, 0.0011)}
-            radialModulation={false}
-            modulationOffset={0}
+            radius={0.55}
           />
           <Glitch
-            delay={new THREE.Vector2(2.5, 7.0)}
-            duration={new THREE.Vector2(0.05, 0.18)}
-            strength={new THREE.Vector2(0.06, 0.18)}
+            delay={new THREE.Vector2(3.5, 8.0)}
+            duration={new THREE.Vector2(0.05, 0.16)}
+            strength={new THREE.Vector2(0.05, 0.15)}
             mode={GlitchMode.SPORADIC}
             ratio={0.85}
             active
           />
-          <Noise opacity={0.05} premultiply blendFunction={BlendFunction.SCREEN} />
+          <Noise opacity={0.04} premultiply blendFunction={BlendFunction.SCREEN} />
           <Vignette eskil={false} offset={0.22} darkness={0.85} />
         </EffectComposer>
       </Canvas>

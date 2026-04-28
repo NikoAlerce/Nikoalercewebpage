@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { detectKind, ipfsToUrl, ipfsWithGateway, IPFS_GATEWAYS } from "@/lib/objkt";
 import type { ObjktToken } from "@/lib/types";
 
@@ -8,6 +8,36 @@ type Props = {
   token: ObjktToken;
   active?: boolean;
 };
+
+/**
+ * Pause videos that aren't on screen. Without this, a Works gallery with 30+
+ * video tokens decodes every video in parallel — that's the dominant cost on
+ * mid-range laptops & phones.
+ */
+function useInView<T extends Element>(rootMargin = "150px 0px"): [
+  React.RefObject<T>,
+  boolean,
+] {
+  const ref = useRef<T>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) setInView(e.isIntersecting);
+      },
+      { rootMargin },
+    );
+    obs.observe(node);
+    return () => obs.disconnect();
+  }, [rootMargin]);
+  return [ref, inView];
+}
 
 /**
  * Decide which URI to use as the image/video source:
@@ -76,6 +106,52 @@ function IpfsImage({
   );
 }
 
+function VideoTile({
+  src,
+  poster,
+  active,
+  alt,
+}: {
+  src: string;
+  poster?: string;
+  active: boolean;
+  alt: string;
+}) {
+  const [ref, inView] = useInView<HTMLVideoElement>();
+  const shouldPlay = inView && active;
+
+  // Manually toggle play/pause: <video autoPlay /> alone keeps decoding even
+  // when paused via DOM removal. Calling .play()/.pause() releases the decoder.
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (shouldPlay) {
+      const p = v.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          /* autoplay may be blocked when not muted; we are muted, ignore */
+        });
+      }
+    } else {
+      v.pause();
+    }
+  }, [shouldPlay, ref]);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      loop
+      muted
+      playsInline
+      preload="none"
+      aria-label={alt}
+      className="w-full h-full object-cover"
+    />
+  );
+}
+
 export default function MediaRenderer({ token, active = true }: Props) {
   const kind = detectKind(token.mime);
 
@@ -83,15 +159,11 @@ export default function MediaRenderer({ token, active = true }: Props) {
 
   if (kind === "video" && artifact) {
     return (
-      <video
+      <VideoTile
         src={artifact}
         poster={resolveDisplayUri(token) ?? undefined}
-        autoPlay={active}
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        className="w-full h-full object-cover"
+        active={active}
+        alt={token.name ?? "untitled"}
       />
     );
   }

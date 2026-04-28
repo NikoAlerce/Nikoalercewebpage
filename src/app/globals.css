@@ -64,6 +64,9 @@ body {
     background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   }
 
+  /* Scanlines & vignette: dropped mix-blend-mode (was the #1 scroll-perf
+     killer on Firefox / Safari / integrated GPUs). will-change: transform
+     promotes to its own layer so scrolling doesn't repaint them. */
   .scanlines::before {
     content: "";
     position: fixed;
@@ -74,10 +77,11 @@ body {
       to bottom,
       transparent 0,
       transparent 2px,
-      rgba(255, 255, 255, 0.025) 3px,
+      rgba(255, 255, 255, 0.04) 3px,
       transparent 4px
     );
-    mix-blend-mode: overlay;
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   .crt-vignette::after {
@@ -91,6 +95,8 @@ body {
       transparent 55%,
       rgba(0, 0, 0, 0.65) 100%
     );
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   .glitch-hover {
@@ -158,5 +164,22 @@ body {
   }
   100% {
     clip-path: polygon(0 10%, 100% 10%, 100% 15%, 0 15%);
+  }
+}
+
+/* Honor user's OS-level reduced-motion preference: kills the per-frame
+   clip-path animations (which were the #1 CPU-side cost beyond the canvas)
+   and slows down the marquee. Also short-circuits the WebGL hero in JS. */
+@media (prefers-reduced-motion: reduce) {
+  .glitch-text::before,
+  .glitch-text::after {
+    animation: none !important;
+  }
+  .glitch-hover:hover {
+    animation: none !important;
+  }
+  .animate-pulse,
+  .animate-marquee {
+    animation: none !important;
   }
 }

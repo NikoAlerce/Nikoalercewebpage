@@ -19,10 +19,28 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    let raf = 0;
+    let last = scrolled;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const next = window.scrollY > 12;
+        // Avoid setState (and the ensuing re-render) when the boolean state
+        // hasn't actually changed — without this, every wheel tick re-renders.
+        if (next !== last) {
+          last = next;
+          setScrolled(next);
+        }
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close the mobile menu when the route changes.
