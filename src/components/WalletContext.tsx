@@ -40,6 +40,36 @@ const RPC_URL =
 const APP_NAME = "Niko Alerce // The Void";
 
 /**
+ * Beacon 4.5.1 still assigns `beacon-node-1.beacon-server-*.papers.tech` to
+ * several regions; those hosts no longer resolve (NXDOMAIN), which yields
+ * "No server responded." Override every region to the current relay pool.
+ * @see https://github.com/airgap-it/beacon-sdk/blob/master/packages/beacon-transport-matrix/src/communication-client/P2PCommunicationClient.ts
+ */
+const WORKING_BEACON_RELAYS: string[] = [
+  "beacon-node-1.diamond.papers.tech",
+  "beacon-node-1.sky.papers.tech",
+  "beacon-node-2.sky.papers.tech",
+  "beacon-node-1.hope.papers.tech",
+  "beacon-node-1.hope-2.papers.tech",
+  "beacon-node-1.hope-3.papers.tech",
+  "beacon-node-1.hope-4.papers.tech",
+  "beacon-node-1.hope-5.papers.tech",
+  "beacon-node-1.octez.io",
+  "beacon-node-2.octez.io",
+  "beacon-node-3.octez.io",
+  "beacon-node-4.octez.io",
+];
+
+function matrixNodesForAllRegions(
+  Regions: typeof import("@airgap/beacon-sdk").Regions,
+): import("@airgap/beacon-types").NodeDistributions {
+  const relays = [...WORKING_BEACON_RELAYS];
+  return Object.fromEntries(
+    Object.values(Regions).map((region) => [region, relays]),
+  );
+}
+
+/**
  * Lazy-loaded modules de Taquito + Beacon. Se cargan solo cuando hace falta
  * para no inflar el bundle inicial.
  */
@@ -72,6 +102,7 @@ async function getOrInitWallet() {
     ...(process.env.NEXT_PUBLIC_BEACON_ICON_URL
       ? { iconUrl: process.env.NEXT_PUBLIC_BEACON_ICON_URL }
       : {}),
+    matrixNodes: matrixNodesForAllRegions(beaconSdk.Regions),
     preferredNetwork: beaconSdk.NetworkType.MAINNET,
     ...(wcProjectId
       ? { walletConnectOptions: { projectId: wcProjectId } }
