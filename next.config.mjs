@@ -1,12 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async redirects() {
+  async rewrites() {
     return [
       {
         source: "/favicon.ico",
         destination: "/icon",
-        permanent: false,
       },
     ];
   },

@@ -40,12 +40,20 @@ const RPC_URL =
 const APP_NAME = "Niko Alerce // The Void";
 
 /**
- * Beacon 4.5.1 still assigns `beacon-node-1.beacon-server-*.papers.tech` to
- * several regions; those hosts no longer resolve (NXDOMAIN), which yields
- * "No server responded." Override every region to the current relay pool.
- * @see https://github.com/airgap-it/beacon-sdk/blob/master/packages/beacon-transport-matrix/src/communication-client/P2PCommunicationClient.ts
+ * Beacon 4.5.1 still maps some regions to retired `beacon-server-*.papers.tech`
+ * (NXDOMAIN). Several `*.papers.tech` nodes also return 403/CORS from the
+ * browser; `*.octez.io` relays respond with `Access-Control-Allow-Origin: *`.
+ * Keep papers nodes only as fallback after octez.
  */
 const WORKING_BEACON_RELAYS: string[] = [
+  "beacon-node-1.octez.io",
+  "beacon-node-2.octez.io",
+  "beacon-node-3.octez.io",
+  "beacon-node-4.octez.io",
+  "beacon-node-5.octez.io",
+  "beacon-node-6.octez.io",
+  "beacon-node-7.octez.io",
+  "beacon-node-8.octez.io",
   "beacon-node-1.diamond.papers.tech",
   "beacon-node-1.sky.papers.tech",
   "beacon-node-2.sky.papers.tech",
@@ -53,11 +61,6 @@ const WORKING_BEACON_RELAYS: string[] = [
   "beacon-node-1.hope-2.papers.tech",
   "beacon-node-1.hope-3.papers.tech",
   "beacon-node-1.hope-4.papers.tech",
-  "beacon-node-1.hope-5.papers.tech",
-  "beacon-node-1.octez.io",
-  "beacon-node-2.octez.io",
-  "beacon-node-3.octez.io",
-  "beacon-node-4.octez.io",
 ];
 
 function matrixNodesForAllRegions(
@@ -90,12 +93,13 @@ async function getOrInitWallet() {
     return { Tezos: cachedTezos, wallet: cachedWallet };
   }
   const { TezosToolkit, BeaconWallet, beaconSdk } = await loadTezos();
+  const { getDAppClientInstance } = await import("@airgap/beacon-dapp");
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "");
   const wcProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-  const wallet = new BeaconWallet({
+  const walletOptions = {
     name: APP_NAME,
     description: "Niko Alerce // The Void — Objkt gallery & collect.",
     appUrl: origin || undefined,
@@ -107,7 +111,11 @@ async function getOrInitWallet() {
     ...(wcProjectId
       ? { walletConnectOptions: { projectId: wcProjectId } }
       : {}),
-  });
+  };
+  // Taquito uses a process-wide DAppClient singleton; a previous init (HMR,
+  // extension, or older bundle) can leave stale config that ignores matrixNodes.
+  getDAppClientInstance(walletOptions, true);
+  const wallet = new BeaconWallet(walletOptions);
   const Tezos = new TezosToolkit(RPC_URL);
   Tezos.setWalletProvider(wallet);
   cachedTezos = Tezos;
@@ -120,15 +128,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore session on mount (Beacon persists in localStorage)
+  // Restore session + subscribe so ACTIVE_ACCOUNT_SET is handled (Beacon 4.x).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const { wallet } = await getOrInitWallet();
+        const { BeaconEvent } = await import("@airgap/beacon-dapp");
+        await wallet.client.subscribeToEvent(
+          BeaconEvent.ACTIVE_ACCOUNT_SET,
+          async () => {
+            const acc = await wallet.client.getActiveAccount();
+            if (!cancelled) setAddress(acc?.address ?? null);
+          },
+        );
         const active = await wallet.client.getActiveAccount();
         if (!cancelled && active?.address) setAddress(active.address);
-      } catch (err) {
+      } catch {
         // ignore: user never connected
       }
     })();
