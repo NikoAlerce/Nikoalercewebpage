@@ -75,7 +75,10 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-14">
+        <ul className={clsx(
+          "hidden md:flex items-center gap-14 transition-opacity duration-500",
+          pathname === "/" && !scrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
           {links.map((l) => (
             <li key={l.href} className="relative group">
               <Link

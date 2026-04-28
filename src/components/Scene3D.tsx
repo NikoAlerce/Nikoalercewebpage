@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, extend } from "@react-three/fiber";
-import { Environment, Float, shaderMaterial } from "@react-three/drei";
+import { Canvas, useFrame, extend, useThree } from "@react-three/fiber";
+import { Environment, Float, shaderMaterial, Text } from "@react-three/drei";
 import {
   EffectComposer,
   Bloom,
@@ -263,6 +263,83 @@ function Rings() {
 }
 
 // =============================================================
+//  TextCarousel — 3D interactive links
+// =============================================================
+
+function TextCarousel() {
+  const { viewport } = useThree();
+  const isMobile = viewport.width < 5;
+  const groupRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  
+  const items = [
+    { label: "WORKS", href: "/works", color: "#ff0040" },
+    { label: "SIDEQUEST", href: "/sidequest", color: "#00fff0" },
+    { label: "SHOP", href: "/shop", color: "#ffffff" },
+    { label: "BIO", href: "/#about", color: "#ff0040" },
+  ];
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y += delta * 0.2;
+    const s = 1 + Math.sin(state.clock.getElapsedTime() * 1.5) * 0.015;
+    groupRef.current.scale.set(s, s, s);
+  });
+
+  const handleNavigate = (href: string) => {
+    window.location.href = href;
+  };
+
+  // Adjust radius and position based on viewport
+  const radius = isMobile ? viewport.width * 0.35 : 1.6;
+  const xOffset = isMobile ? 0 : viewport.width * 0.22;
+  const yOffset = isMobile ? -viewport.height * 0.25 : 0;
+  const fontSize = isMobile ? 0.25 : 0.32;
+
+  return (
+    <group ref={groupRef} position={[xOffset, yOffset, 0]}>
+      {items.map((item, i) => {
+        const angle = (i / items.length) * Math.PI * 2;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+
+        return (
+          <Text
+            key={item.label}
+            position={[x, (i - 1.5) * (isMobile ? 0.45 : 0.55), z]}
+            rotation={[0, -angle + Math.PI / 2, 0]}
+            fontSize={fontSize}
+            font="https://fonts.gstatic.com/s/spacegrotesk/v13/V8mQoQDjQSkFtoMM3T6rjS3F9_P5S-AJJWC6.woff"
+            color={hovered === item.label ? item.color : "#ffffff"}
+            anchorX="center"
+            anchorY="middle"
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              setHovered(item.label);
+              document.body.style.cursor = 'pointer';
+            }}
+            onPointerOut={() => {
+              setHovered(null);
+              document.body.style.cursor = 'auto';
+            }}
+            onClick={() => handleNavigate(item.href)}
+          >
+            {item.label}
+            <meshStandardMaterial 
+              emissive={hovered === item.label ? item.color : "#111111"} 
+              emissiveIntensity={hovered === item.label ? 6 : 0.5} 
+              toneMapped={false}
+              transparent
+              opacity={0.9}
+            />
+          </Text>
+        );
+      })}
+    </group>
+  );
+}
+
+// =============================================================
 //  Particles — nube de puntos que orbita lentamente
 // =============================================================
 
@@ -410,6 +487,7 @@ export default function Scene3D({ className }: { className?: string }) {
           <GlitchOrb />
           <Rings />
           <Particles />
+          <TextCarousel />
         </Suspense>
 
         {/* Trimmed postFX chain: Bloom + Glitch + Noise + Vignette.
