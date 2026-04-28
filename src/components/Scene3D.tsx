@@ -304,9 +304,8 @@ function TextCarousel() {
         const z = Math.sin(angle) * radius;
 
         return (
-          <Suspense fallback={null}>
+          <Suspense key={item.label} fallback={null}>
             <Text
-              key={item.label}
               position={[x, (i - 1.5) * (isMobile ? 0.45 : 0.55), z]}
               rotation={[0, -angle + Math.PI / 2, 0]}
               fontSize={fontSize}
