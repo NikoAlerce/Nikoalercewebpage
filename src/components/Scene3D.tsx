@@ -304,35 +304,36 @@ function TextCarousel() {
         const z = Math.sin(angle) * radius;
 
         return (
-          <Text
-            key={item.label}
-            position={[x, (i - 1.5) * (isMobile ? 0.45 : 0.55), z]}
-            rotation={[0, -angle + Math.PI / 2, 0]}
-            fontSize={fontSize}
-            font="https://fonts.gstatic.com/s/spacegrotesk/v13/V8mQoQDjQSkFtoMM3T6rjS3F9_P5S-AJJWC6.woff"
-            color={hovered === item.label ? item.color : "#ffffff"}
-            anchorX="center"
-            anchorY="middle"
-            onPointerOver={(e) => {
-              e.stopPropagation();
-              setHovered(item.label);
-              document.body.style.cursor = 'pointer';
-            }}
-            onPointerOut={() => {
-              setHovered(null);
-              document.body.style.cursor = 'auto';
-            }}
-            onClick={() => handleNavigate(item.href)}
-          >
-            {item.label}
-            <meshStandardMaterial 
-              emissive={hovered === item.label ? item.color : "#111111"} 
-              emissiveIntensity={hovered === item.label ? 6 : 0.5} 
-              toneMapped={false}
-              transparent
-              opacity={0.9}
-            />
-          </Text>
+          <Suspense fallback={null}>
+            <Text
+              key={item.label}
+              position={[x, (i - 1.5) * (isMobile ? 0.45 : 0.55), z]}
+              rotation={[0, -angle + Math.PI / 2, 0]}
+              fontSize={fontSize}
+              color={hovered === item.label ? item.color : "#ffffff"}
+              anchorX="center"
+              anchorY="middle"
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                setHovered(item.label);
+                document.body.style.cursor = 'pointer';
+              }}
+              onPointerOut={() => {
+                setHovered(null);
+                document.body.style.cursor = 'auto';
+              }}
+              onClick={() => handleNavigate(item.href)}
+            >
+              {item.label}
+              <meshStandardMaterial 
+                emissive={hovered === item.label ? item.color : "#111111"} 
+                emissiveIntensity={hovered === item.label ? 6 : 0.5} 
+                toneMapped={false}
+                transparent
+                opacity={0.9}
+              />
+            </Text>
+          </Suspense>
         );
       })}
     </group>
@@ -487,8 +488,8 @@ export default function Scene3D({ className }: { className?: string }) {
           <GlitchOrb />
           <Rings />
           <Particles />
-          <TextCarousel />
         </Suspense>
+        <TextCarousel />
 
         {/* Trimmed postFX chain: Bloom + Glitch + Noise + Vignette.
             Removed ChromaticAberration (Glitch already does pixel splitting)
