@@ -390,7 +390,7 @@ function CapturedGLB({ urls }: { urls: string[] }) {
 //  TextCarousel — subtle, deep, editorial 3D navigation
 // =============================================================
 
-const MONO_FONT = "https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff";
+// Uses drei's built-in default font (Roboto) — no external URL needed
 
 interface CarouselItemProps {
   label: string;
@@ -444,7 +444,6 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
         <Text
           position={[0.008, -0.008, -0.04]}
           fontSize={fontSize}
-          font={MONO_FONT}
           letterSpacing={0.35}
           anchorX="center"
           anchorY="middle"
@@ -456,7 +455,6 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
         {/* Main label */}
         <Text
           fontSize={fontSize}
-          font={MONO_FONT}
           letterSpacing={0.35}
           anchorX="center"
           anchorY="middle"
@@ -480,7 +478,6 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
         <Text
           position={[0, -fontSize * 0.75, 0]}
           fontSize={fontSize * 0.16}
-          font={MONO_FONT}
           letterSpacing={0.4}
           anchorX="center"
           anchorY="middle"
