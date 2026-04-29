@@ -387,11 +387,12 @@ function CapturedGLB({ urls }: { urls: string[] }) {
 }
 
 // =============================================================
-//  TextCarousel — 3D interactive navigation orbiting the orb
+//  TextCarousel — premium holographic 3D navigation
 // =============================================================
 
 interface CarouselItemProps {
   label: string;
+  tag: string;
   href: string;
   color: string;
   position: [number, number, number];
@@ -400,39 +401,65 @@ interface CarouselItemProps {
   onNavigate: (href: string) => void;
 }
 
-function CarouselItem({ label, href, color, position, rotation, fontSize, onNavigate }: CarouselItemProps) {
+function CarouselItem({ label, tag, href, color, position, rotation, fontSize, onNavigate }: CarouselItemProps) {
   const [hovered, setHovered] = useState(false);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const outlineRef = useRef<{ outlineWidth: number; outlineColor: string }>(null);
 
   useFrame((_state, delta) => {
     if (!matRef.current) return;
-    const target = hovered ? 8 : 1.2;
-    matRef.current.emissiveIntensity += (target - matRef.current.emissiveIntensity) * delta * 8;
+    const targetEmissive = hovered ? 10 : 2;
+    matRef.current.emissiveIntensity += (targetEmissive - matRef.current.emissiveIntensity) * delta * 6;
   });
 
   return (
-    <Text
-      position={position}
-      rotation={rotation}
-      fontSize={fontSize}
-      letterSpacing={0.08}
-      anchorX="center"
-      anchorY="middle"
-      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
-      onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
-      onClick={() => onNavigate(href)}
-    >
-      {label}
-      <meshStandardMaterial
-        ref={matRef}
-        color={hovered ? color : "#ffffff"}
-        emissive={color}
-        emissiveIntensity={1.2}
-        toneMapped={false}
-        transparent
-        opacity={hovered ? 1 : 0.85}
-      />
-    </Text>
+    <Float speed={1.5 + Math.random()} rotationIntensity={0} floatIntensity={0.15}>
+      <group
+        position={position}
+        rotation={rotation}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
+        onClick={() => onNavigate(href)}
+      >
+        {/* Main label */}
+        <Text
+          fontSize={fontSize}
+          letterSpacing={0.22}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={hovered ? fontSize * 0.06 : fontSize * 0.025}
+          outlineColor={color}
+          outlineOpacity={hovered ? 0.9 : 0.4}
+        >
+          {label}
+          <meshStandardMaterial
+            ref={matRef}
+            color={hovered ? "#ffffff" : "#e0e0e0"}
+            emissive={color}
+            emissiveIntensity={2}
+            toneMapped={false}
+          />
+        </Text>
+
+        {/* Tag line underneath */}
+        <Text
+          position={[0, -fontSize * 0.85, 0]}
+          fontSize={fontSize * 0.2}
+          letterSpacing={0.5}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {tag}
+          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.9 : 0.35} toneMapped={false} />
+        </Text>
+
+        {/* Decorative line above */}
+        <mesh position={[0, fontSize * 0.6, 0]}>
+          <planeGeometry args={[fontSize * 1.8, 0.003]} />
+          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.7 : 0.15} toneMapped={false} />
+        </mesh>
+      </group>
+    </Float>
   );
 }
 
@@ -443,15 +470,14 @@ function TextCarousel() {
   const rotationY = useRef(0);
 
   const items = [
-    { label: "WORKS", href: "/works", color: "#ff0040" },
-    { label: "SIDEQUEST", href: "/sidequest", color: "#00fff0" },
-    { label: "BIO", href: "/#about", color: "#a3ff00" },
-    { label: "CONTACT", href: "/#about", color: "#ffffff" },
+    { label: "WORKS", tag: "// 001_GALLERY", href: "/works", color: "#ff0040" },
+    { label: "SIDEQUEST", tag: "// 002_ALTER_EGO", href: "/sidequest", color: "#00fff0" },
+    { label: "BIO", tag: "// 003_IDENTITY", href: "/#about", color: "#a3ff00" },
+    { label: "CONTACT", tag: "// 004_CONNECT", href: "/#about", color: "#ffffff" },
   ];
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    // Mouse strongly drives rotation — feels like dragging
     const mouseInfluence = state.mouse.x * 1.2;
     rotationY.current += delta * (0.08 + mouseInfluence);
     groupRef.current.rotation.y = rotationY.current;
@@ -466,8 +492,8 @@ function TextCarousel() {
     window.location.href = href;
   }, []);
 
-  const radius = isMobile ? 2.0 : 2.8;
-  const fontSize = isMobile ? 0.28 : 0.42;
+  const radius = isMobile ? 2.2 : 3.0;
+  const fontSize = isMobile ? 0.32 : 0.55;
 
   return (
     <group ref={groupRef}>
@@ -477,6 +503,7 @@ function TextCarousel() {
           <Suspense key={item.label} fallback={null}>
             <CarouselItem
               label={item.label}
+              tag={item.tag}
               href={item.href}
               color={item.color}
               position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]}
