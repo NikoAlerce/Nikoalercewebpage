@@ -563,21 +563,56 @@ function TextCarousel() {
 
 
 // =============================================================
-//  CenterGroup — GLB + Energy Orb move together with mouse
+//  CenterGroup — GLB + Energy Orb + orbiting lights
 // =============================================================
+
+function OrbitingLights() {
+  const redRef = useRef<THREE.PointLight>(null);
+  const cyanRef = useRef<THREE.PointLight>(null);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    // Red light orbits clockwise
+    if (redRef.current) {
+      redRef.current.position.set(
+        Math.cos(t * 0.5) * 2.2,
+        Math.sin(t * 0.7) * 1.0,
+        Math.sin(t * 0.5) * 2.2,
+      );
+      redRef.current.intensity = 1.5 + Math.sin(t * 1.5) * 0.5;
+    }
+    // Cyan light orbits counter-clockwise
+    if (cyanRef.current) {
+      cyanRef.current.position.set(
+        Math.cos(-t * 0.4 + 2) * 2.5,
+        Math.sin(-t * 0.6 + 1) * 0.8,
+        Math.sin(-t * 0.4 + 2) * 2.5,
+      );
+      cyanRef.current.intensity = 1.0 + Math.sin(t * 1.2 + 1) * 0.4;
+    }
+  });
+
+  return (
+    <>
+      <pointLight ref={redRef} color="#ff0040" intensity={1.5} distance={6} decay={2} />
+      <pointLight ref={cyanRef} color="#00fff0" intensity={1.0} distance={6} decay={2} />
+    </>
+  );
+}
 
 function CenterGroup({ glbUrls }: { glbUrls: string[] }) {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    // Follow mouse gently (parallax)
     groupRef.current.position.x += (state.mouse.x * 0.5 - groupRef.current.position.x) * 0.04;
     groupRef.current.position.y += (state.mouse.y * 0.35 - groupRef.current.position.y) * 0.04;
   });
 
   return (
     <group ref={groupRef}>
+      {/* Orbiting colored lights for epic rim lighting */}
+      <OrbitingLights />
       {/* GLB model inside — renders first */}
       <CapturedGLB urls={glbUrls} />
       {/* Transparent energy shield on top */}
@@ -643,16 +678,22 @@ export default function Scene3D({
         frameloop={active ? "always" : "never"}
       >
         <color attach="background" args={["#000000"]} />
-        <fog attach="fog" args={["#000000", 6, 16]} />
+        <fog attach="fog" args={["#000000", 7, 18]} />
 
-        {/* Ambient + directional light for the GLB models inside */}
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[3, 2, 5]} intensity={1.2} color="#ffffff" />
-        <pointLight position={[-2, -1, -3]} intensity={0.5} color="#ff0040" />
+        {/* Epic three-point lighting for the GLB */}
+        <ambientLight intensity={0.15} color="#1a1a2e" />
+        {/* Key light — warm white from upper right */}
+        <directionalLight position={[4, 3, 5]} intensity={1.8} color="#fff5e6" />
+        {/* Fill light — cool blue from lower left */}
+        <directionalLight position={[-3, -1, 2]} intensity={0.6} color="#4a90d9" />
+        {/* Back/rim light — strong from behind for silhouette separation */}
+        <pointLight position={[0, 2, -4]} intensity={1.2} color="#ff0040" distance={10} decay={2} />
+        {/* Bottom dramatic uplight */}
+        <pointLight position={[0, -3, 0]} intensity={0.4} color="#00fff0" distance={6} decay={2} />
 
         <Suspense fallback={null}>
-          <Environment preset="night" />
-          {/* Central composition: GLB inside + Energy Orb wrapping it */}
+          <Environment preset="city" />
+          {/* Central composition: GLB inside + Energy Orb + orbiting lights */}
           <CenterGroup glbUrls={glbUrls} />
           <Rings />
         </Suspense>
@@ -664,10 +705,10 @@ export default function Scene3D({
         <TextCarousel />
 
         <EffectComposer multisampling={0}>
-          <Bloom intensity={0.9} luminanceThreshold={0.2} luminanceSmoothing={0.65} mipmapBlur radius={0.6} />
-          <Glitch delay={new THREE.Vector2(3.5, 8.0)} duration={new THREE.Vector2(0.05, 0.16)} strength={new THREE.Vector2(0.05, 0.15)} mode={GlitchMode.SPORADIC} ratio={0.85} active />
-          <Noise opacity={0.04} premultiply blendFunction={BlendFunction.SCREEN} />
-          <Vignette eskil={false} offset={0.22} darkness={0.85} />
+          <Bloom intensity={1.1} luminanceThreshold={0.18} luminanceSmoothing={0.7} mipmapBlur radius={0.65} />
+          <Glitch delay={new THREE.Vector2(4, 9)} duration={new THREE.Vector2(0.04, 0.12)} strength={new THREE.Vector2(0.04, 0.12)} mode={GlitchMode.SPORADIC} ratio={0.85} active />
+          <Noise opacity={0.035} premultiply blendFunction={BlendFunction.SCREEN} />
+          <Vignette eskil={false} offset={0.25} darkness={0.9} />
         </EffectComposer>
       </Canvas>
     </div>
