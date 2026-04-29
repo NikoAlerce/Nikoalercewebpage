@@ -253,12 +253,12 @@ function Loader() {
   return (
     <div className="absolute inset-0 grid place-items-center pointer-events-none bg-void/40 z-10">
       <div className="text-center">
-        <div className="text-[10px] tracking-[0.4em] text-glitch-cyan animate-pulse mb-3">
+        <div className="text-[10px] tracking-[0.4em] text-glitch-jade animate-pulse mb-3">
           DECODING GEOMETRY · {progress.toFixed(0)}%
         </div>
         <div className="w-64 h-px bg-white/10 mx-auto relative overflow-hidden">
           <div
-            className="absolute inset-y-0 left-0 bg-glitch-cyan transition-all duration-200"
+            className="absolute inset-y-0 left-0 bg-glitch-jade transition-all duration-200"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -412,7 +412,7 @@ export default function GlbViewer({ url }: { url: string }) {
 
       {hardError && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <div className="text-center text-glitch-red text-xs tracking-[0.3em]">
+          <div className="text-center text-glitch-terra text-xs tracking-[0.3em]">
             ERROR :: NO SE PUDO CARGAR EL MODELO
           </div>
         </div>
@@ -424,7 +424,7 @@ export default function GlbViewer({ url }: { url: string }) {
         {animations.length > 0 && (
           <>
             {" · "}
-            <span className="text-glitch-cyan">
+            <span className="text-glitch-jade">
               {animations.length} ANIM
             </span>
           </>
@@ -435,7 +435,7 @@ export default function GlbViewer({ url }: { url: string }) {
       <div className="absolute top-3 right-3 text-[9px] tracking-[0.3em] text-ash/60 font-mono text-right pointer-events-none leading-relaxed">
         <div>
           FPS{" "}
-          <span className={stats.fps >= 50 ? "text-glitch-lime" : "text-bone"}>
+          <span className={stats.fps >= 50 ? "text-glitch-bio" : "text-bone"}>
             {String(stats.fps).padStart(3, " ")}
           </span>
         </div>
@@ -458,8 +458,8 @@ export default function GlbViewer({ url }: { url: string }) {
               className={
                 "px-3 py-1.5 border bg-void/70 backdrop-blur-sm transition-colors " +
                 (playing
-                  ? "border-glitch-cyan text-glitch-cyan"
-                  : "border-white/15 text-ash hover:border-glitch-cyan hover:text-glitch-cyan")
+                  ? "border-glitch-jade text-glitch-jade"
+                  : "border-white/15 text-ash hover:border-glitch-jade hover:text-glitch-jade")
               }
               title={playing ? "Pause animation" : "Play animation"}
             >
@@ -561,7 +561,7 @@ export default function GlbViewer({ url }: { url: string }) {
           <ToggleBtn
             on={bloom}
             label="BLOOM"
-            color="red"
+            color="gold"
             onClick={() => setBloom((v) => !v)}
           />
           <button
@@ -580,17 +580,17 @@ export default function GlbViewer({ url }: { url: string }) {
 function ToggleBtn({
   on,
   label,
-  color = "cyan",
+  color = "jade",
   onClick,
 }: {
   on: boolean;
   label: string;
-  color?: "cyan" | "red";
+  color?: "jade" | "gold";
   onClick: () => void;
 }) {
   const onCls =
-    color === "red"
-      ? "border-glitch-red text-glitch-red"
+    color === "gold"
+      ? "border-glitch-gold text-glitch-gold"
       : "border-bone text-bone";
   return (
     <button
@@ -637,7 +637,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-20 accent-glitch-cyan cursor-pointer"
+        className="w-20 accent-glitch-jade cursor-pointer"
       />
       <span className="text-bone font-mono w-9 text-right">
         {value.toFixed(digits)}

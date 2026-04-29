@@ -169,7 +169,7 @@ export default function TokenViewerModal() {
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 md:px-6 h-14 border-b border-white/10 bg-void/80">
         <div className="flex items-center gap-3 text-[10px] tracking-[0.4em] text-ash min-w-0">
-          <span className="w-1.5 h-1.5 bg-glitch-red animate-pulse shrink-0" />
+          <span className="w-1.5 h-1.5 bg-glitch-gold animate-pulse shrink-0" />
           <span className="truncate">
             {(token.name ?? "untitled").toUpperCase()}
           </span>
@@ -183,10 +183,10 @@ export default function TokenViewerModal() {
           {address ? (
             <button
               onClick={disconnect}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-[10px] tracking-[0.3em] border border-glitch-lime/30 text-glitch-lime hover:bg-glitch-lime/10"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-[10px] tracking-[0.3em] border border-glitch-bio/30 text-glitch-bio hover:bg-glitch-bio/10"
               title="Disconnect wallet"
             >
-              <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+               <span className="w-1.5 h-1.5 bg-glitch-bio rounded-full" />
               {address.slice(0, 6)}…{address.slice(-4)}
             </button>
           ) : (
@@ -201,7 +201,7 @@ export default function TokenViewerModal() {
           <button
             onClick={close}
             aria-label="Close"
-            className="text-bone hover:text-glitch-red text-xl leading-none px-2"
+            className="text-bone hover:text-glitch-gold text-xl leading-none px-2"
           >
             ✕
           </button>
@@ -269,9 +269,9 @@ export default function TokenViewerModal() {
                 className={
                   "text-[10px] tracking-[0.4em] mb-2 " +
                   (status === "for_sale"
-                    ? "text-glitch-lime"
+                    ? "text-glitch-bio"
                     : status === "sold_out"
-                    ? "text-glitch-red"
+                    ? "text-glitch-terra"
                     : "text-ash")
                 }
               >
@@ -292,8 +292,8 @@ export default function TokenViewerModal() {
 
             {/* PURCHASE */}
             {status === "for_sale" && price !== null && (
-              <div className="border border-glitch-lime/40 bg-glitch-lime/5 p-5">
-                <div className="text-[10px] tracking-[0.4em] text-glitch-lime mb-1">
+              <div className="border border-glitch-gold/40 bg-glitch-gold/5 p-5">
+                <div className="text-[10px] tracking-[0.4em] text-glitch-gold mb-1">
                   // PRICE
                 </div>
                 <div className="font-mono text-3xl text-bone">
@@ -307,7 +307,7 @@ export default function TokenViewerModal() {
 
                 {/* Purchase state */}
                 {buyState.kind === "success" ? (
-                  <div className="mt-4 p-3 border border-glitch-lime bg-glitch-lime/10 text-[11px] tracking-[0.2em] text-glitch-lime">
+                  <div className="mt-4 p-3 border border-glitch-bio bg-glitch-bio/10 text-[11px] tracking-[0.2em] text-glitch-bio">
                     ✓ PURCHASE CONFIRMED
                     <a
                       href={`https://tzkt.io/${buyState.opHash}`}
@@ -319,7 +319,7 @@ export default function TokenViewerModal() {
                     </a>
                   </div>
                 ) : buyState.kind === "pending" ? (
-                  <div className="mt-4 p-3 border border-glitch-cyan/50 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan animate-pulse">
+                  <div className="mt-4 p-3 border border-glitch-jade/50 bg-glitch-jade/5 text-[11px] tracking-[0.2em] text-glitch-jade animate-pulse">
                     ⟳ TX SENT · WAITING FOR CONFIRMATION...
                     <a
                       href={`https://tzkt.io/${buyState.opHash}`}
@@ -333,11 +333,11 @@ export default function TokenViewerModal() {
                 ) : null}
 
                 {buyState.kind === "error" && (
-                  <div className="mt-4 p-3 border border-glitch-red/50 bg-glitch-red/5 text-[11px] tracking-[0.2em] text-glitch-red space-y-2">
+                  <div className="mt-4 p-3 border border-glitch-terra/50 bg-glitch-terra/5 text-[11px] tracking-[0.2em] text-glitch-terra space-y-2">
                     <div>✕ {buyState.message.toUpperCase()}</div>
                     <button
                       onClick={handleResetWallet}
-                      className="w-full px-3 py-2 border border-glitch-red/60 text-glitch-red hover:bg-glitch-red/10 transition-colors"
+                      className="w-full px-3 py-2 border border-glitch-terra/60 text-glitch-terra hover:bg-glitch-terra/10 transition-colors"
                     >
                       RESET WALLET CONNECTION ↻
                     </button>
@@ -345,14 +345,14 @@ export default function TokenViewerModal() {
                 )}
 
                 {buyState.kind === "signing" && showStuckHint && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                  <div className="mt-4 p-3 border border-glitch-jade/40 bg-glitch-jade/5 text-[11px] tracking-[0.2em] text-glitch-jade space-y-2">
                     <div>
                       // KUKAI / TEMPLE NOT SHOWING THE REQUEST? RESET PAIRING
                       AND TRY AGAIN.
                     </div>
                     <button
                       onClick={handleResetWallet}
-                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                      className="w-full px-3 py-2 border border-glitch-jade/60 text-glitch-jade hover:bg-glitch-jade/10 transition-colors"
                     >
                       RESET WALLET CONNECTION ↻
                     </button>
@@ -369,14 +369,14 @@ export default function TokenViewerModal() {
                 )}
 
                 {canBuyOnSite && connecting && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan animate-pulse">
+                  <div className="mt-4 p-3 border border-glitch-jade/40 bg-glitch-jade/5 text-[11px] tracking-[0.2em] text-glitch-jade animate-pulse">
                     ⟳ OPENING WALLET... PICK KUKAI / TEMPLE / UMAMI ON THE
                     BEACON DIALOG.
                   </div>
                 )}
 
                 {canBuyOnSite && isOwnListing && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                  <div className="mt-4 p-3 border border-glitch-jade/40 bg-glitch-jade/5 text-[11px] tracking-[0.2em] text-glitch-jade space-y-2">
                     <div>
                       // YOU ARE CONNECTED WITH THE SELLER WALLET
                       ({address?.slice(0, 6)}…{address?.slice(-4)}). OBJKT
@@ -384,7 +384,7 @@ export default function TokenViewerModal() {
                     </div>
                     <button
                       onClick={disconnect}
-                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                      className="w-full px-3 py-2 border border-glitch-jade/60 text-glitch-jade hover:bg-glitch-jade/10 transition-colors"
                     >
                       DISCONNECT &amp; USE A DIFFERENT WALLET
                     </button>
@@ -405,7 +405,7 @@ export default function TokenViewerModal() {
                         ? "Connected wallet is the seller. Switch wallets to collect."
                         : undefined
                     }
-                    className="mt-4 group flex items-center justify-between gap-3 w-full px-5 py-3 bg-glitch-lime text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="mt-4 group flex items-center justify-between gap-3 w-full px-5 py-3 bg-glitch-gold text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <span>
                       {!address
@@ -427,7 +427,7 @@ export default function TokenViewerModal() {
                     href={buyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 bg-glitch-lime text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone transition-colors"
+                    className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 bg-glitch-gold text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone transition-colors"
                   >
                     <span>BUY ON OBJKT (FA TOKEN)</span>
                     <span>↗</span>
@@ -441,8 +441,8 @@ export default function TokenViewerModal() {
             )}
 
             {status === "sold_out" && (
-              <div className="border border-glitch-red/40 bg-glitch-red/5 p-5">
-                <div className="text-[10px] tracking-[0.4em] text-glitch-red mb-1">
+              <div className="border border-glitch-terra/40 bg-glitch-terra/5 p-5">
+                <div className="text-[10px] tracking-[0.4em] text-glitch-terra mb-1">
                   // STATUS
                 </div>
                 <div className="text-bone text-base">
@@ -455,7 +455,7 @@ export default function TokenViewerModal() {
                   href={buyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-red hover:text-glitch-red transition-colors"
+                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-terra hover:text-glitch-terra transition-colors"
                 >
                   <span>VIEW ON OBJKT</span>
                   <span>↗</span>
@@ -475,7 +475,7 @@ export default function TokenViewerModal() {
                   href={buyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-cyan hover:text-glitch-cyan transition-colors"
+                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-jade hover:text-glitch-jade transition-colors"
                 >
                   <span>VIEW ON OBJKT</span>
                   <span>↗</span>
