@@ -8,6 +8,7 @@ import {
   shaderMaterial,
   Text,
   useGLTF,
+  useAnimations,
 } from "@react-three/drei";
 import {
   EffectComposer,
@@ -21,7 +22,7 @@ import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 // =============================================================
-//  GlitchOrb Shader
+//  GlitchOrb Shader — NOW TRANSPARENT (energy shield)
 // =============================================================
 
 const VOID_VERTEX = /* glsl */ `
@@ -111,6 +112,8 @@ const VOID_VERTEX = /* glsl */ `
   }
 `;
 
+// Fragment shader — now outputs alpha for transparency.
+// Fresnel drives opacity: edges glow bright, center is see-through.
 const VOID_FRAG = /* glsl */ `
   varying vec3 vNormal; varying vec3 vWorld; varying vec3 vViewDir; varying float vGlitch;
   uniform vec3 uColorA; uniform vec3 uColorB; uniform vec3 uEmissive; uniform float uTime;
@@ -123,7 +126,13 @@ const VOID_FRAG = /* glsl */ `
     vec3 emissive = uEmissive * (fres * 0.9 + sweep * 0.4 + vGlitch * 1.6);
     vec3 col = base + emissive;
     col.r += vGlitch * 0.6; col.b += vGlitch * 0.2;
-    gl_FragColor = vec4(col, 1.0);
+
+    // Alpha: strong at edges (fresnel), transparent at center
+    // This creates the "energy shield" look
+    float alpha = fres * 0.7 + sweep * 0.15 + vGlitch * 0.5;
+    alpha = clamp(alpha, 0.05, 0.75);
+
+    gl_FragColor = vec4(col, alpha);
   }
 `;
 
@@ -153,10 +162,11 @@ declare module "@react-three/fiber" {
 }
 
 // =============================================================
-//  GlitchOrb
+//  EnergyOrb — transparent shield wrapping the GLB
+//  renderOrder=10 so it draws AFTER the GLB inside
 // =============================================================
 
-function GlitchOrb() {
+function EnergyOrb() {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<VoidMaterialImpl>(null);
   const glitchPulse = useRef(0);
@@ -167,10 +177,8 @@ function GlitchOrb() {
     const mat = matRef.current;
     if (!m || !mat) return;
     const t = state.clock.getElapsedTime();
-    m.rotation.x = t * 0.12;
-    m.rotation.y = t * 0.18;
-    m.position.x += (state.mouse.x * 0.5 - m.position.x) * 0.04;
-    m.position.y += (state.mouse.y * 0.35 - m.position.y) * 0.04;
+    m.rotation.x = t * 0.08;
+    m.rotation.y = t * 0.12;
     if (t > glitchNext.current) {
       glitchPulse.current = 1.0;
       glitchNext.current = t + 2 + Math.random() * 4;
@@ -179,16 +187,20 @@ function GlitchOrb() {
     mat.uTime = t;
     mat.uMouse.set(state.mouse.x, state.mouse.y);
     mat.uGlitchAmount = glitchPulse.current * 0.6;
-    mat.uDistort = 0.16 + Math.sin(t * 0.5) * 0.04;
+    mat.uDistort = 0.12 + Math.sin(t * 0.5) * 0.03;
   });
 
   return (
-    <Float speed={1.0} rotationIntensity={0.2} floatIntensity={0.6}>
-      <mesh ref={meshRef}>
-        <icosahedronGeometry args={[1.4, 24]} />
-        <voidMaterial ref={matRef} />
-      </mesh>
-    </Float>
+    <mesh ref={meshRef} renderOrder={10}>
+      <icosahedronGeometry args={[1.5, 24]} />
+      <voidMaterial
+        ref={matRef}
+        transparent
+        depthWrite={false}
+        side={THREE.DoubleSide}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
   );
 }
 
@@ -205,7 +217,7 @@ function Rings() {
   });
   return (
     <group ref={group}>
-      {[2.4, 2.85, 3.35, 4.0].map((r, i) => (
+      {[2.0, 2.4, 2.85, 3.35].map((r, i) => (
         <mesh key={r} rotation={[Math.PI / 2 + i * 0.18, i * 0.4, i]}>
           <torusGeometry args={[r, 0.004, 8, 220]} />
           <meshBasicMaterial
@@ -244,35 +256,24 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
 
   useFrame((state, dt) => {
     if (!ref.current) return;
-    const geom = ref.current.geometry;
-    const posAttr = geom.attributes.position as THREE.BufferAttribute;
+    const posAttr = ref.current.geometry.attributes.position as THREE.BufferAttribute;
     const mx = state.mouse.x;
     const my = state.mouse.y;
-
-    // Smooth mouse tracking
     mouseTarget.current.x += (mx - mouseTarget.current.x) * 0.05;
     mouseTarget.current.y += (my - mouseTarget.current.y) * 0.05;
-
     const t = state.clock.getElapsedTime();
 
     for (let i = 0; i < count; i++) {
       const bx = basePositions[i * 3];
       const by = basePositions[i * 3 + 1];
       const bz = basePositions[i * 3 + 2];
-
-      // Distance from cursor ray (approximate in screen space)
       const dx = bx - mouseTarget.current.x * 3;
       const dy = by - mouseTarget.current.y * 3;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const repel = Math.max(0, 1 - dist / 2.5);
-
-      // Push particles away from cursor
       const pushX = repel * dx * 0.6;
       const pushY = repel * dy * 0.6;
-
-      // Organic drift
       const drift = Math.sin(t * 0.5 + i * 0.1) * 0.08;
-
       posAttr.setXYZ(
         i,
         bx + pushX + drift,
@@ -303,41 +304,56 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
 }
 
 // =============================================================
-//  FloatingGLB — loads and displays a GLB model from IPFS
+//  CapturedGLB — GLB displayed INSIDE the energy orb
+//  Cycles through available models every ~8 seconds
 // =============================================================
 
 const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
-
 function ipfsToHttp(uri: string): string {
   if (uri.startsWith("http")) return uri;
   if (uri.startsWith("ipfs://")) return `${IPFS_GATEWAY}${uri.replace("ipfs://", "")}`;
   return uri;
 }
 
-function GLBModel({ url, position, scale = 0.4 }: { url: string; position: [number, number, number]; scale?: number }) {
-  const { scene } = useGLTF(url);
+function InnerModel({ url }: { url: string }) {
+  const { scene, animations } = useGLTF(url);
   const cloned = useMemo(() => cloneSkeleton(scene as THREE.Object3D), [scene]);
   const groupRef = useRef<THREE.Group>(null);
+  const { actions, names } = useAnimations(animations, groupRef);
 
-  // Normalize the model
+  // Normalize to fit inside the orb (radius ~1.3 to leave room for the shell)
   const transform = useMemo(() => {
     const box = new THREE.Box3().setFromObject(cloned);
     const center = box.getCenter(new THREE.Vector3());
     const sz = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-    const ns = scale / maxDim;
+    const ns = 2.0 / maxDim; // Fill most of the orb
     return { offset: center.clone().multiplyScalar(-ns), scale: ns };
-  }, [cloned, scale]);
+  }, [cloned]);
+
+  // Play all animations
+  useEffect(() => {
+    if (!actions || names.length === 0) return;
+    for (const name of names) {
+      const action = actions[name];
+      if (action) {
+        action.reset();
+        action.setLoop(THREE.LoopRepeat, Infinity);
+        action.play();
+      }
+    }
+    return () => { Object.values(actions).forEach((a) => a?.stop()); };
+  }, [actions, names]);
 
   useFrame((state, dt) => {
     if (!groupRef.current) return;
-    groupRef.current.rotation.y += dt * 0.3;
-    // Subtle float
-    groupRef.current.position.y = position[1] + Math.sin(state.clock.getElapsedTime() * 0.8 + position[0]) * 0.15;
+    groupRef.current.rotation.y += dt * 0.25;
+    // Subtle mouse-driven tilt
+    groupRef.current.rotation.x += (state.mouse.y * 0.15 - groupRef.current.rotation.x) * 0.03;
   });
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} renderOrder={1}>
       <primitive
         object={cloned}
         position={transform.offset.toArray()}
@@ -347,16 +363,31 @@ function GLBModel({ url, position, scale = 0.4 }: { url: string; position: [numb
   );
 }
 
-function FloatingGLB({ url, position, scale }: { url: string; position: [number, number, number]; scale?: number }) {
+function CapturedGLB({ urls }: { urls: string[] }) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const httpUrls = useMemo(() => urls.map(ipfsToHttp), [urls]);
+
+  // Cycle through models
+  useEffect(() => {
+    if (httpUrls.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIdx((prev) => (prev + 1) % httpUrls.length);
+    }, 10000); // Switch every 10 seconds
+    return () => clearInterval(interval);
+  }, [httpUrls.length]);
+
+  if (httpUrls.length === 0) return null;
+  const currentUrl = httpUrls[currentIdx];
+
   return (
     <Suspense fallback={null}>
-      <GLBModel url={url} position={position} scale={scale} />
+      <InnerModel key={currentUrl} url={currentUrl} />
     </Suspense>
   );
 }
 
 // =============================================================
-//  TextCarousel — 3D interactive navigation
+//  TextCarousel — 3D interactive navigation orbiting the orb
 // =============================================================
 
 interface CarouselItemProps {
@@ -434,8 +465,8 @@ function TextCarousel() {
     window.location.href = href;
   }, []);
 
-  const radius = isMobile ? 1.6 : 2.4;
-  const fontSize = isMobile ? 0.28 : 0.48;
+  const radius = isMobile ? 2.0 : 2.8;
+  const fontSize = isMobile ? 0.28 : 0.42;
 
   return (
     <group ref={groupRef}>
@@ -460,10 +491,32 @@ function TextCarousel() {
 }
 
 // =============================================================
-//  Scene3D — full composition
+//  CenterGroup — GLB + Energy Orb move together with mouse
 // =============================================================
 
-type GlbEntry = { url: string; position: [number, number, number]; scale: number };
+function CenterGroup({ glbUrls }: { glbUrls: string[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    // Follow mouse gently (parallax)
+    groupRef.current.position.x += (state.mouse.x * 0.5 - groupRef.current.position.x) * 0.04;
+    groupRef.current.position.y += (state.mouse.y * 0.35 - groupRef.current.position.y) * 0.04;
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* GLB model inside — renders first */}
+      <CapturedGLB urls={glbUrls} />
+      {/* Transparent energy shield on top */}
+      <EnergyOrb />
+    </group>
+  );
+}
+
+// =============================================================
+//  Scene3D — full composition
+// =============================================================
 
 export default function Scene3D({
   className,
@@ -474,22 +527,6 @@ export default function Scene3D({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(true);
-
-  // Build GLB placement positions — orbit around the orb
-  const glbEntries: GlbEntry[] = useMemo(() => {
-    if (!glbUrls.length) return [];
-    const maxShow = Math.min(glbUrls.length, 6); // Max 6 GLBs to keep perf
-    return glbUrls.slice(0, maxShow).map((raw, i) => {
-      const angle = (i / maxShow) * Math.PI * 2 + Math.PI / 4; // offset from text
-      const r = 3.2 + (i % 2) * 0.8;
-      const y = -0.8 + (i % 3) * 0.6;
-      return {
-        url: ipfsToHttp(raw),
-        position: [Math.cos(angle) * r, y, Math.sin(angle) * r] as [number, number, number],
-        scale: 0.35 + (i % 2) * 0.1,
-      };
-    });
-  }, [glbUrls]);
 
   useEffect(() => {
     const node = wrapRef.current;
@@ -528,33 +565,34 @@ export default function Scene3D({
   return (
     <div ref={wrapRef} className={className}>
       <Canvas
-        camera={{ position: [0, 0, 4.4], fov: 42 }}
+        camera={{ position: [0, 0, 4.8], fov: 42 }}
         gl={{ antialias: false, alpha: true, powerPreference: "high-performance", stencil: false, depth: true }}
         dpr={[1, 1.25]}
         frameloop={active ? "always" : "never"}
       >
         <color attach="background" args={["#000000"]} />
-        <fog attach="fog" args={["#000000", 5, 14]} />
+        <fog attach="fog" args={["#000000", 6, 16]} />
+
+        {/* Ambient + directional light for the GLB models inside */}
+        <ambientLight intensity={0.3} />
+        <directionalLight position={[3, 2, 5]} intensity={1.2} color="#ffffff" />
+        <pointLight position={[-2, -1, -3]} intensity={0.5} color="#ff0040" />
 
         <Suspense fallback={null}>
           <Environment preset="night" />
-          <GlitchOrb />
+          {/* Central composition: GLB inside + Energy Orb wrapping it */}
+          <CenterGroup glbUrls={glbUrls} />
           <Rings />
         </Suspense>
 
         {/* Cursor-reactive particles */}
         <ReactiveParticles count={450} />
 
-        {/* 3D Text carousel */}
+        {/* 3D Text carousel orbiting outside the orb */}
         <TextCarousel />
 
-        {/* Floating GLB models from OBJKT */}
-        {glbEntries.map((entry, i) => (
-          <FloatingGLB key={i} url={entry.url} position={entry.position} scale={entry.scale} />
-        ))}
-
         <EffectComposer multisampling={0}>
-          <Bloom intensity={0.85} luminanceThreshold={0.22} luminanceSmoothing={0.65} mipmapBlur radius={0.55} />
+          <Bloom intensity={0.9} luminanceThreshold={0.2} luminanceSmoothing={0.65} mipmapBlur radius={0.6} />
           <Glitch delay={new THREE.Vector2(3.5, 8.0)} duration={new THREE.Vector2(0.05, 0.16)} strength={new THREE.Vector2(0.05, 0.15)} mode={GlitchMode.SPORADIC} ratio={0.85} active />
           <Noise opacity={0.04} premultiply blendFunction={BlendFunction.SCREEN} />
           <Vignette eskil={false} offset={0.22} darkness={0.85} />
