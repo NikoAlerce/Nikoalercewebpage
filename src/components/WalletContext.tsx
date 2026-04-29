@@ -278,7 +278,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore session; ACTIVE_ACCOUNT_SET is subscribed inside getOrInitWallet().
+  // Restore session ONLY if user previously connected (check localStorage first
+  // to avoid initializing the full Beacon SDK on every page load for new visitors).
   useEffect(() => {
     let cancelled = false;
     const listener = (addr: string | null) => {
@@ -287,11 +288,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     activeAccountListeners.add(listener);
     (async () => {
       try {
+        // Beacon SDK stores active account info in localStorage under keys
+        // prefixed with "beacon:". Only initialize the heavy SDK if we detect
+        // a previous session — otherwise new visitors never see a wallet popup.
+        const hasSession = Object.keys(localStorage).some(
+          (k) => k.startsWith("beacon:") && k.includes("active-account"),
+        );
+        if (!hasSession) return;
+
         const { wallet } = await getOrInitWallet();
         const active = await wallet.client.getActiveAccount();
         if (!cancelled && active?.address) setAddress(active.address);
       } catch {
-        // ignore: user never connected
+        // ignore: user never connected or session expired
       }
     })();
     return () => {
