@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import GlitchText from "./GlitchText";
 
@@ -12,7 +13,44 @@ const Scene3D = dynamic(() => import("./Scene3D"), {
   ),
 });
 
+type ObjktToken = {
+  artifact_uri?: string | null;
+  mime?: string | null;
+  name?: string | null;
+};
+
 export default function Hero() {
+  const [glbUrls, setGlbUrls] = useState<string[]>([]);
+
+  // Fetch GLB models from OBJKT API
+  useEffect(() => {
+    async function loadGlbs() {
+      try {
+        const res = await fetch("/api/objkt?alias=nikoalerce&limit=300");
+        if (!res.ok) return;
+        const data = await res.json();
+        const tokens: ObjktToken[] = data.tokens ?? [];
+        
+        // Filter only GLB/GLTF models
+        const models = tokens
+          .filter(
+            (t) =>
+              t.mime === "model/gltf-binary" ||
+              t.mime === "model/gltf+json",
+          )
+          .map((t) => t.artifact_uri!)
+          .filter(Boolean);
+
+        // Take up to 6 random GLBs for the hero
+        const shuffled = models.sort(() => Math.random() - 0.5);
+        setGlbUrls(shuffled.slice(0, 6));
+      } catch {
+        // Silently fail — hero works fine without GLBs
+      }
+    }
+    loadGlbs();
+  }, []);
+
   return (
     <section
       id="top"
@@ -21,9 +59,9 @@ export default function Hero() {
       <div className="absolute inset-0 bg-grid opacity-20" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,0,64,0.05),transparent_70%)]" />
 
-      {/* Full-bleed 3D scene with shader orb + interactive text carousel */}
+      {/* Full-bleed 3D scene with shader orb + GLBs + interactive text carousel */}
       <div className="absolute inset-0">
-        <Scene3D className="absolute inset-0" />
+        <Scene3D className="absolute inset-0" glbUrls={glbUrls} />
       </div>
 
       {/* Minimal overlay — artist identity */}
@@ -36,11 +74,14 @@ export default function Hero() {
           </div>
           <div className="flex items-center gap-4">
             <span className="w-1 h-1 bg-glitch-lime rounded-full animate-pulse" />
-            <span className="text-glitch-lime/60">NODE_STATUS::SYNCHRONIZED</span>
+            <span className="text-glitch-lime/60">
+              NODE_STATUS::SYNCHRONIZED
+              {glbUrls.length > 0 && ` · ${glbUrls.length}_MODELS_LOADED`}
+            </span>
           </div>
         </div>
 
-        {/* Artist name — large but transparent enough not to block interaction */}
+        {/* Artist name */}
         <h1 className="font-display font-black leading-[0.8] tracking-tighter text-bone uppercase">
           <span className="block text-[clamp(3rem,12vw,11rem)] opacity-90">
             <GlitchText>NIKO</GlitchText>
@@ -51,13 +92,13 @@ export default function Hero() {
         </h1>
 
         <p className="mt-6 text-sm md:text-base text-ash/70 max-w-lg leading-relaxed">
-          Sculpting inside the void. Move your cursor to control the carousel.
-          Click to navigate.
+          Sculpting inside the void. 3D pieces, animations, and glitch
+          experiments. Move your cursor to interact. Click the floating text to navigate.
         </p>
       </div>
 
       {/* Bottom hint */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-40 pointer-events-none">
+      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-40 pointer-events-none">
         <span className="text-[9px] tracking-[0.5em] text-ash uppercase">SCROLL_TO_EXPLORE</span>
         <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center p-1">
           <div className="w-1 h-1 bg-bone rounded-full animate-bounce" />
