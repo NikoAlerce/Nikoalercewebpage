@@ -15,7 +15,7 @@ export default function SideQuestPage() {
         alias="sidequest"
         title="SIDE/QUEST"
         subtitle="Experimental alter ego. Iterations, drafts, and glitches that do not fit the main canon."
-        accent="cyan"
+        accent="jade"
       />
     </div>
   );

@@ -15,7 +15,7 @@ export default function WorksPage() {
         alias="nikoalerce"
         title="WORKS"
         subtitle="Gallery synced with Tezos. Open a piece to view the real artifact in high quality and collect it."
-        accent="red"
+        accent="gold"
       />
     </div>
   );
