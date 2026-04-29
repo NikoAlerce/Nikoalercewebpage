@@ -372,7 +372,7 @@ function CapturedGLB({ urls }: { urls: string[] }) {
     if (httpUrls.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % httpUrls.length);
-    }, 10000); // Switch every 10 seconds
+    }, 30000); // Switch every 30 seconds
     return () => clearInterval(interval);
   }, [httpUrls.length]);
 
@@ -451,10 +451,11 @@ function TextCarousel() {
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    const mouseInfluence = state.mouse.x * 0.4;
-    rotationY.current += delta * (0.15 + mouseInfluence);
+    // Mouse strongly drives rotation — feels like dragging
+    const mouseInfluence = state.mouse.x * 1.2;
+    rotationY.current += delta * (0.08 + mouseInfluence);
     groupRef.current.rotation.y = rotationY.current;
-    groupRef.current.rotation.x += (state.mouse.y * 0.08 - groupRef.current.rotation.x) * 0.05;
+    groupRef.current.rotation.x += (state.mouse.y * 0.2 - groupRef.current.rotation.x) * 0.08;
   });
 
   const handleNavigate = useCallback((href: string) => {
