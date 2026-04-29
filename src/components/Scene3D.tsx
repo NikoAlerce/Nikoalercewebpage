@@ -387,8 +387,10 @@ function CapturedGLB({ urls }: { urls: string[] }) {
 }
 
 // =============================================================
-//  TextCarousel — premium holographic 3D navigation
+//  TextCarousel — subtle, deep, editorial 3D navigation
 // =============================================================
+
+const MONO_FONT = "https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff";
 
 interface CarouselItemProps {
   label: string;
@@ -404,16 +406,33 @@ interface CarouselItemProps {
 function CarouselItem({ label, tag, href, color, position, rotation, fontSize, onNavigate }: CarouselItemProps) {
   const [hovered, setHovered] = useState(false);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
-  const outlineRef = useRef<{ outlineWidth: number; outlineColor: string }>(null);
+  const shadowRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  // Per-item dust positions (stable across renders)
+  const dustPositions = useMemo(() => {
+    const arr = new Float32Array(18 * 3);
+    for (let k = 0; k < 18; k++) {
+      arr[k * 3] = (Math.random() - 0.5) * fontSize * 3;
+      arr[k * 3 + 1] = (Math.random() - 0.5) * fontSize * 1.5;
+      arr[k * 3 + 2] = (Math.random() - 0.5) * 0.3;
+    }
+    return arr;
+  }, [fontSize]);
 
   useFrame((_state, delta) => {
     if (!matRef.current) return;
-    const targetEmissive = hovered ? 10 : 2;
-    matRef.current.emissiveIntensity += (targetEmissive - matRef.current.emissiveIntensity) * delta * 6;
+    const targetEmissive = hovered ? 2.5 : 0.3;
+    matRef.current.emissiveIntensity += (targetEmissive - matRef.current.emissiveIntensity) * delta * 5;
+    const targetOpacity = hovered ? 0.95 : 0.7;
+    matRef.current.opacity += (targetOpacity - matRef.current.opacity) * delta * 5;
+    if (shadowRef.current) {
+      const so = hovered ? 0.25 : 0.08;
+      shadowRef.current.opacity += (so - shadowRef.current.opacity) * delta * 4;
+    }
   });
 
   return (
-    <Float speed={1.5 + Math.random()} rotationIntensity={0} floatIntensity={0.15}>
+    <Float speed={1.2 + Math.random() * 0.5} rotationIntensity={0} floatIntensity={0.08}>
       <group
         position={position}
         rotation={rotation}
@@ -421,43 +440,70 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
         onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
         onClick={() => onNavigate(href)}
       >
+        {/* Shadow/depth layer — offset behind */}
+        <Text
+          position={[0.008, -0.008, -0.04]}
+          fontSize={fontSize}
+          font={MONO_FONT}
+          letterSpacing={0.35}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {label}
+          <meshBasicMaterial ref={shadowRef} color={color} transparent opacity={0.08} depthWrite={false} />
+        </Text>
+
         {/* Main label */}
         <Text
           fontSize={fontSize}
-          letterSpacing={0.22}
+          font={MONO_FONT}
+          letterSpacing={0.35}
           anchorX="center"
           anchorY="middle"
-          outlineWidth={hovered ? fontSize * 0.06 : fontSize * 0.025}
+          outlineWidth={fontSize * 0.008}
           outlineColor={color}
-          outlineOpacity={hovered ? 0.9 : 0.4}
+          outlineOpacity={hovered ? 0.5 : 0.12}
         >
           {label}
           <meshStandardMaterial
             ref={matRef}
-            color={hovered ? "#ffffff" : "#e0e0e0"}
+            color="#c8c8c8"
             emissive={color}
-            emissiveIntensity={2}
+            emissiveIntensity={0.3}
             toneMapped={false}
+            transparent
+            opacity={0.7}
           />
         </Text>
 
-        {/* Tag line underneath */}
+        {/* Tiny tag underneath */}
         <Text
-          position={[0, -fontSize * 0.85, 0]}
-          fontSize={fontSize * 0.2}
-          letterSpacing={0.5}
+          position={[0, -fontSize * 0.75, 0]}
+          fontSize={fontSize * 0.16}
+          font={MONO_FONT}
+          letterSpacing={0.4}
           anchorX="center"
           anchorY="middle"
         >
           {tag}
-          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.9 : 0.35} toneMapped={false} />
+          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.6 : 0.18} toneMapped={false} />
         </Text>
 
-        {/* Decorative line above */}
-        <mesh position={[0, fontSize * 0.6, 0]}>
-          <planeGeometry args={[fontSize * 1.8, 0.003]} />
-          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.7 : 0.15} toneMapped={false} />
-        </mesh>
+        {/* Micro dust particles near each word */}
+        <points>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[dustPositions, 3]} count={18} />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.008}
+            color={color}
+            transparent
+            opacity={hovered ? 0.5 : 0.12}
+            sizeAttenuation
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </points>
       </group>
     </Float>
   );
@@ -470,10 +516,10 @@ function TextCarousel() {
   const rotationY = useRef(0);
 
   const items = [
-    { label: "WORKS", tag: "// 001_GALLERY", href: "/works", color: "#ff0040" },
-    { label: "SIDEQUEST", tag: "// 002_ALTER_EGO", href: "/sidequest", color: "#00fff0" },
-    { label: "BIO", tag: "// 003_IDENTITY", href: "/#about", color: "#a3ff00" },
-    { label: "CONTACT", tag: "// 004_CONNECT", href: "/#about", color: "#ffffff" },
+    { label: "WORKS", tag: "001_GALLERY", href: "/works", color: "#ff0040" },
+    { label: "SIDEQUEST", tag: "002_ALTER_EGO", href: "/sidequest", color: "#00fff0" },
+    { label: "BIO", tag: "003_IDENTITY", href: "/#about", color: "#a3ff00" },
+    { label: "CONTACT", tag: "004_CONNECT", href: "/#about", color: "#ffffff" },
   ];
 
   useFrame((state, delta) => {
@@ -492,8 +538,8 @@ function TextCarousel() {
     window.location.href = href;
   }, []);
 
-  const radius = isMobile ? 2.2 : 3.0;
-  const fontSize = isMobile ? 0.32 : 0.55;
+  const radius = isMobile ? 2.0 : 2.6;
+  const fontSize = isMobile ? 0.22 : 0.32;
 
   return (
     <group ref={groupRef}>
@@ -517,6 +563,7 @@ function TextCarousel() {
     </group>
   );
 }
+
 
 // =============================================================
 //  CenterGroup — GLB + Energy Orb move together with mouse
