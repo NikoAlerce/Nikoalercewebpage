@@ -173,7 +173,7 @@ function ReactiveParticles({ count = 400 }: { count?: number }) {
 const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
 function ipfsToHttp(uri: string): string {
   if (uri.startsWith("http")) return uri;
-  if (uri.startsWith("ipfs://")) return \`\${IPFS_GATEWAY}\${uri.replace("ipfs://", "")}\`;
+  if (uri.startsWith("ipfs://")) return `${IPFS_GATEWAY}${uri.replace("ipfs://", "")}`;
   return uri;
 }
 
@@ -500,9 +500,6 @@ export default function Scene3D({
           <Vignette eskil={false} offset={0.3} darkness={0.8} />
         </EffectComposer>
       </Canvas>
-    </div>
-  );
-}   </Canvas>
     </div>
   );
 }
