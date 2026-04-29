@@ -32,11 +32,11 @@ const statusBadge: Record<
 > = {
   for_sale: {
     label: "FOR SALE",
-    className: "bg-glitch-lime/20 text-glitch-lime border-glitch-lime/50",
+    className: "bg-glitch-bio/20 text-glitch-bio border-glitch-bio/50",
   },
   sold_out: {
     label: "SOLD OUT",
-    className: "bg-glitch-red/15 text-glitch-red border-glitch-red/40",
+    className: "bg-glitch-terra/15 text-glitch-terra border-glitch-terra/40",
   },
   in_collection: {
     label: "ARCHIVE",
@@ -59,7 +59,7 @@ export default function NFTCard({ token, index }: Props) {
       onClick={() => open(token)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="group relative block w-full text-left bg-ink border border-white/5 hover:border-glitch-red/60 transition-colors cursor-pointer"
+      className="group relative block w-full text-left bg-ink border border-white/5 hover:border-glitch-gold/60 transition-colors cursor-pointer"
     >
       <div className="relative aspect-square overflow-hidden bg-black">
         <div
@@ -98,7 +98,7 @@ export default function NFTCard({ token, index }: Props) {
           )}
           style={{
             background:
-              "repeating-linear-gradient(0deg, rgba(255,0,64,0.05) 0 1px, transparent 1px 3px)",
+              "repeating-linear-gradient(0deg, rgba(212,168,83,0.05) 0 1px, transparent 1px 3px)",
             mixBlendMode: "screen",
           }}
         />
@@ -106,19 +106,19 @@ export default function NFTCard({ token, index }: Props) {
 
       <div className="p-3 flex items-start justify-between gap-2 border-t border-white/5">
         <div className="min-w-0">
-          <div className="text-xs font-medium text-bone truncate group-hover:text-glitch-red transition-colors">
+          <div className="text-xs font-medium text-bone truncate group-hover:text-glitch-gold transition-colors">
             {token.name ?? "untitled"}
           </div>
           <div className="mt-1 flex items-center gap-2 text-[10px] tracking-[0.2em]">
             <span className="text-ash">{editions}</span>
             {price !== null && status === "for_sale" && (
-              <span className="text-glitch-lime font-mono">
+              <span className="text-glitch-bio font-mono">
                 {price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ
               </span>
             )}
           </div>
         </div>
-        <span className="text-[10px] text-ash group-hover:text-glitch-cyan transition-colors mt-0.5">
+        <span className="text-[10px] text-ash group-hover:text-glitch-jade transition-colors mt-0.5">
           ↗
         </span>
       </div>

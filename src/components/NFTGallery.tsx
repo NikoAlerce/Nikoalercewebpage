@@ -13,7 +13,7 @@ type Props = {
   alias: string;
   title: string;
   subtitle?: string;
-  accent?: "red" | "cyan";
+  accent?: "gold" | "jade";
   id?: string;
 };
 
@@ -38,7 +38,7 @@ export default function NFTGallery({
   alias,
   title,
   subtitle,
-  accent = "red",
+  accent = "gold",
   id,
 }: Props) {
   const [tokens, setTokens] = useState<ObjktToken[]>([]);
@@ -124,13 +124,13 @@ export default function NFTGallery({
     return tokens.filter((t) => tokenStatus(t) === filter);
   }, [tokens, filter]);
 
-  const accentClass = accent === "red" ? "text-glitch-red" : "text-glitch-cyan";
+  const accentClass = accent === "gold" ? "text-glitch-gold" : "text-glitch-jade";
   const accentBorder =
-    accent === "red" ? "border-glitch-red/30" : "border-glitch-cyan/30";
+    accent === "gold" ? "border-glitch-gold/30" : "border-glitch-jade/30";
   const activeTabClass =
-    accent === "red"
-      ? "border-glitch-red text-glitch-red"
-      : "border-glitch-cyan text-glitch-cyan";
+    accent === "gold"
+      ? "border-glitch-gold text-glitch-gold"
+      : "border-glitch-jade text-glitch-jade";
 
   const tabs: { key: Filter; label: string }[] = [
     { key: "all", label: "ALL" },
@@ -189,8 +189,8 @@ export default function NFTGallery({
                   : loading
                   ? "text-ash animate-pulse"
                   : error
-                  ? "text-glitch-red"
-                  : "text-glitch-lime"
+                  ? "text-glitch-gold"
+                  : "text-glitch-bio"
               }
             >
               {!shouldLoad
@@ -206,7 +206,7 @@ export default function NFTGallery({
             href={`https://objkt.com/@${alias}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block mt-2 text-bone hover:text-glitch-red glitch-hover"
+            className="block mt-2 text-bone hover:text-glitch-gold glitch-hover"
           >
             VIEW ON OBJKT ↗
           </a>
@@ -262,14 +262,14 @@ export default function NFTGallery({
 
       {/* Error */}
       {!loading && error && (
-        <div className="border border-glitch-red/40 bg-glitch-red/5 p-6 text-sm text-bone">
-          <div className="text-glitch-red text-xs tracking-[0.3em] mb-2">
+        <div className="border border-glitch-gold/40 bg-glitch-gold/5 p-6 text-sm text-bone">
+          <div className="text-glitch-gold text-xs tracking-[0.3em] mb-2">
             // CONNECTION_FAILED
           </div>
           <div className="text-ash">{error}</div>
           <button
             onClick={load}
-            className="mt-4 px-4 py-2 border border-white/20 text-xs tracking-[0.3em] hover:border-glitch-red hover:text-glitch-red"
+            className="mt-4 px-4 py-2 border border-white/20 text-xs tracking-[0.3em] hover:border-glitch-gold hover:text-glitch-gold"
           >
             RETRY
           </button>

@@ -57,7 +57,7 @@ export default function Hero() {
       className="relative min-h-[100svh] w-full overflow-hidden bg-void"
     >
       <div className="absolute inset-0 bg-grid opacity-20" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,0,64,0.05),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,168,83,0.05),transparent_70%)]" />
 
       {/* Full-bleed 3D scene with shader orb + GLBs + interactive text carousel */}
       <div className="absolute inset-0">
@@ -69,12 +69,12 @@ export default function Hero() {
         {/* Top-left meta coordinates */}
         <div className="flex flex-col gap-1 text-[9px] tracking-[0.5em] text-ash/40 uppercase mb-8">
           <div className="flex items-center gap-4">
-            <span className="text-glitch-red">//</span>
+            <span className="text-glitch-gold">//</span>
             <span>SYSTEM_ORIGIN::PATAGONIA_VOID</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="w-1 h-1 bg-glitch-lime rounded-full animate-pulse" />
-            <span className="text-glitch-lime/60">
+            <span className="w-1 h-1 bg-glitch-bio rounded-full animate-pulse" />
+            <span className="text-glitch-bio/60">
               NODE_STATUS::SYNCHRONIZED
               {glbUrls.length > 0 && ` · ${glbUrls.length}_MODELS_LOADED`}
             </span>
@@ -86,7 +86,7 @@ export default function Hero() {
           <span className="block text-[clamp(3rem,12vw,11rem)] opacity-90">
             <GlitchText>NIKO</GlitchText>
           </span>
-          <span className="block text-[clamp(3rem,12vw,11rem)] text-glitch-red -mt-[2vw] opacity-90">
+          <span className="block text-[clamp(3rem,12vw,11rem)] text-glitch-gold -mt-[2vw] opacity-90">
             <GlitchText>ALERCE</GlitchText>
           </span>
         </h1>
@@ -111,17 +111,17 @@ export default function Hero() {
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex shrink-0">
               {[
-                "GLITCH/CORE",
+                "GLITCH//FLORA",
                 "TEZOS_NATIVE",
                 "3D_VISUAL_ARTIST",
                 "OBJKT://NIKOALERCE",
                 "ALTER_EGO::SIDEQUEST",
                 "WEBGL//R3F",
                 "AR/VR_READY",
-                "VOID_SIGNAL",
+                "TEMPLE_SIGNAL",
               ].map((w) => (
                 <span key={w} className="px-8 flex items-center gap-3">
-                  <span className="text-glitch-red">▌</span>
+                  <span className="text-glitch-gold">▌</span>
                   {w}
                 </span>
               ))}

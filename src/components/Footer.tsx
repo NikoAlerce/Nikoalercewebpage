@@ -17,7 +17,7 @@ export default function Footer() {
     >
       <div className="grid md:grid-cols-2 gap-16">
         <div>
-          <div className="text-[10px] tracking-[0.5em] text-glitch-cyan mb-4">
+          <div className="text-[10px] tracking-[0.5em] text-glitch-jade mb-4">
             // SIGNAL_OUT
           </div>
           <h3 className="font-display font-bold text-bone uppercase leading-[0.9] text-[clamp(2rem,6vw,5rem)]">
@@ -31,7 +31,7 @@ export default function Footer() {
           </p>
           <a
             href="mailto:hello@nikoalerce.art"
-            className="mt-6 inline-flex items-center gap-3 text-bone hover:text-glitch-red glitch-hover text-base"
+            className="mt-6 inline-flex items-center gap-3 text-bone hover:text-glitch-gold glitch-hover text-base"
           >
             hello@nikoalerce.art →
           </a>
@@ -44,9 +44,9 @@ export default function Footer() {
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group border border-white/10 p-5 hover:border-glitch-red/60 transition-colors"
+              className="group border border-white/10 p-5 hover:border-glitch-gold/60 transition-colors"
             >
-              <div className="text-[10px] tracking-[0.3em] text-ash group-hover:text-glitch-red transition-colors">
+              <div className="text-[10px] tracking-[0.3em] text-ash group-hover:text-glitch-gold transition-colors">
                 {s.label}
               </div>
               <div className="mt-2 text-bone text-sm font-mono break-all group-hover:translate-x-1 transition-transform">
@@ -60,7 +60,7 @@ export default function Footer() {
       <div className="mt-20 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 text-[10px] tracking-[0.3em] text-ash">
         <div>© {new Date().getFullYear()} NIKO_ALERCE :: ALL_RIGHTS_RESERVED</div>
         <div className="flex items-center gap-3">
-          <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full animate-pulse" />
+          <span className="w-1.5 h-1.5 bg-glitch-bio rounded-full animate-pulse" />
           <span>POWERED_BY :: NEXT.JS · R3F · OBJKT_API · TEZOS</span>
         </div>
       </div>

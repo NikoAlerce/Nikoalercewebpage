@@ -5,15 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        void: "#000000",
-        ink: "#0a0a0a",
-        bone: "#f5f5f0",
-        ash: "#9a9a92",
+        void: "#050a05",
+        ink: "#0a0f0a",
+        bone: "#ede8df",
+        ash: "#8a8d7b",
         glitch: {
-          red: "#ff0040",
-          cyan: "#00fff0",
-          magenta: "#ff00ff",
-          lime: "#a3ff00",
+          gold: "#d4a853",
+          jade: "#5eff8a",
+          terra: "#c47a5a",
+          bio: "#7dffaf",
         },
       },
       fontFamily: {
@@ -48,7 +48,7 @@ const config: Config = {
           "0%, 100%": { textShadow: "0 0 0 transparent" },
           "50%": {
             textShadow:
-              "-2px 0 #ff0040, 2px 0 #00fff0",
+              "-2px 0 #d4a853, 2px 0 #5eff8a",
           },
         },
         noiseShift: {

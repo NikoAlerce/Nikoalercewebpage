@@ -66,10 +66,10 @@ export default function Navbar() {
       <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between text-xs md:text-sm uppercase tracking-[0.4em] font-bold">
         <Link href="/" className="flex items-center gap-4 group relative py-4">
           <div className="relative w-3 h-3 overflow-hidden">
-            <span className="absolute inset-0 bg-glitch-red animate-pulse" />
-            <span className="absolute inset-0 bg-glitch-cyan translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <span className="absolute inset-0 bg-glitch-gold animate-pulse" />
+            <span className="absolute inset-0 bg-glitch-jade translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <div className="font-display font-black text-bone tracking-tighter text-lg leading-none group-hover:text-glitch-red transition-colors flex flex-col">
+          <div className="font-display font-black text-bone tracking-tighter text-lg leading-none group-hover:text-glitch-gold transition-colors flex flex-col">
             <span>NIKO</span>
             <span className="text-[10px] tracking-[0.5em] -mt-1 opacity-60 group-hover:opacity-100">ALERCE</span>
           </div>
@@ -90,7 +90,7 @@ export default function Navbar() {
                 {l.label}
               </Link>
               <span className={clsx(
-                "absolute -bottom-1 left-0 h-0.5 bg-glitch-red transition-all duration-500",
+                "absolute -bottom-1 left-0 h-0.5 bg-glitch-gold transition-all duration-500",
                 isActive(l.href) ? "w-full" : "w-0 group-hover:w-full"
               )} />
             </li>
@@ -101,14 +101,14 @@ export default function Navbar() {
           <div className="flex flex-col items-end gap-0.5 opacity-40 hover:opacity-100 transition-opacity">
             <span className="text-[8px] tracking-[0.6em] text-ash">NETWORK_STATUS</span>
             <div className="flex items-center gap-2">
-              <span className="w-1 h-1 bg-glitch-lime rounded-full shadow-[0_0_8px_#39ff14]" />
+              <span className="w-1 h-1 bg-glitch-bio rounded-full shadow-[0_0_8px_#7dffaf]" />
               <span className="text-bone">TEZOS_MAINNET</span>
             </div>
           </div>
           <div className="w-[1px] h-8 bg-white/10" />
           <Link 
             href="/works"
-            className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all"
+            className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-gold hover:bg-glitch-gold hover:text-void transition-all"
           >
             COLLECT_ART
           </Link>
@@ -133,8 +133,8 @@ export default function Navbar() {
                 className={clsx(
                   "transition-colors",
                   isActive(l.href)
-                    ? "text-glitch-red"
-                    : "text-ash hover:text-glitch-red",
+                    ? "text-glitch-gold"
+                    : "text-ash hover:text-glitch-gold",
                 )}
               >
                 {l.label}

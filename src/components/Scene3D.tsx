@@ -140,9 +140,9 @@ const VoidMaterial = shaderMaterial(
   {
     uTime: 0, uDistort: 0.18, uGlitchAmount: 0.0,
     uMouse: new THREE.Vector2(0, 0),
-    uColorA: new THREE.Color("#070707"),
-    uColorB: new THREE.Color("#1a0205"),
-    uEmissive: new THREE.Color("#ff0040"),
+    uColorA: new THREE.Color("#070a07"),
+    uColorB: new THREE.Color("#0a1a0a"),
+    uEmissive: new THREE.Color("#d4a853"),
   },
   VOID_VERTEX,
   VOID_FRAG,
@@ -221,9 +221,9 @@ function Rings() {
         <mesh key={r} rotation={[Math.PI / 2 + i * 0.18, i * 0.4, i]}>
           <torusGeometry args={[r, 0.004, 8, 220]} />
           <meshBasicMaterial
-            color={i % 2 === 0 ? "#ff0040" : "#00fff0"}
+            color={i % 2 === 0 ? "#d4a853" : "#5eff8a"}
             transparent
-            opacity={0.55 - i * 0.08}
+            opacity={0.45 - i * 0.07}
           />
         </mesh>
       ))}
@@ -292,9 +292,9 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
       </bufferGeometry>
       <pointsMaterial
         size={0.02}
-        color="#ffffff"
+        color="#d4a853"
         transparent
-        opacity={0.6}
+        opacity={0.5}
         sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
@@ -513,10 +513,10 @@ function TextCarousel() {
   const rotationY = useRef(0);
 
   const items = [
-    { label: "WORKS", tag: "001_GALLERY", href: "/works", color: "#ff0040" },
-    { label: "SIDEQUEST", tag: "002_ALTER_EGO", href: "/sidequest", color: "#00fff0" },
-    { label: "BIO", tag: "003_IDENTITY", href: "/#about", color: "#a3ff00" },
-    { label: "CONTACT", tag: "004_CONNECT", href: "/#about", color: "#ffffff" },
+    { label: "WORKS", tag: "001_GALLERY", href: "/works", color: "#d4a853" },
+    { label: "SIDEQUEST", tag: "002_ALTER_EGO", href: "/sidequest", color: "#5eff8a" },
+    { label: "BIO", tag: "003_IDENTITY", href: "/#about", color: "#7dffaf" },
+    { label: "CONTACT", tag: "004_CONNECT", href: "/#about", color: "#c47a5a" },
   ];
 
   useFrame((state, delta) => {
@@ -594,8 +594,8 @@ function OrbitingLights() {
 
   return (
     <>
-      <pointLight ref={redRef} color="#ff0040" intensity={1.5} distance={6} decay={2} />
-      <pointLight ref={cyanRef} color="#00fff0" intensity={1.0} distance={6} decay={2} />
+      <pointLight ref={redRef} color="#d4a853" intensity={1.5} distance={6} decay={2} />
+      <pointLight ref={cyanRef} color="#5eff8a" intensity={1.0} distance={6} decay={2} />
     </>
   );
 }
@@ -677,19 +677,19 @@ export default function Scene3D({
         dpr={[1, 1.25]}
         frameloop={active ? "always" : "never"}
       >
-        <color attach="background" args={["#000000"]} />
-        <fog attach="fog" args={["#000000", 7, 18]} />
+        <color attach="background" args={["#050a05"]} />
+        <fog attach="fog" args={["#050a05", 7, 18]} />
 
         {/* Epic three-point lighting for the GLB */}
-        <ambientLight intensity={0.15} color="#1a1a2e" />
-        {/* Key light — warm white from upper right */}
-        <directionalLight position={[4, 3, 5]} intensity={1.8} color="#fff5e6" />
-        {/* Fill light — cool blue from lower left */}
-        <directionalLight position={[-3, -1, 2]} intensity={0.6} color="#4a90d9" />
-        {/* Back/rim light — strong from behind for silhouette separation */}
-        <pointLight position={[0, 2, -4]} intensity={1.2} color="#ff0040" distance={10} decay={2} />
-        {/* Bottom dramatic uplight */}
-        <pointLight position={[0, -3, 0]} intensity={0.4} color="#00fff0" distance={6} decay={2} />
+        <ambientLight intensity={0.15} color="#1a2e1a" />
+        {/* Key light — warm golden from upper right */}
+        <directionalLight position={[4, 3, 5]} intensity={1.8} color="#ffe8c0" />
+        {/* Fill light — cool jade from lower left */}
+        <directionalLight position={[-3, -1, 2]} intensity={0.6} color="#5eff8a" />
+        {/* Back/rim light — gold glow from behind */}
+        <pointLight position={[0, 2, -4]} intensity={1.2} color="#d4a853" distance={10} decay={2} />
+        {/* Bottom dramatic uplight — jade */}
+        <pointLight position={[0, -3, 0]} intensity={0.4} color="#5eff8a" distance={6} decay={2} />
 
         <Suspense fallback={null}>
           <Environment preset="city" />

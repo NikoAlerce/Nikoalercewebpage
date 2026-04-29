@@ -13,8 +13,8 @@
 
 html,
 body {
-  background-color: #000;
-  color: #f5f5f0;
+  background-color: #050a05;
+  color: #ede8df;
   margin: 0;
   padding: 0;
   font-family: var(--font-mono);
@@ -24,8 +24,8 @@ body {
 }
 
 ::selection {
-  background: #ff0040;
-  color: #000;
+  background: #d4a853;
+  color: #050a05;
 }
 
 ::-webkit-scrollbar {
@@ -33,30 +33,30 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #000;
+  background: #050a05;
 }
 ::-webkit-scrollbar-thumb {
   background: #1a1a1a;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff0040;
+  background: #d4a853;
 }
 
 @layer utilities {
   .text-shadow-glitch {
-    text-shadow: -1px 0 #ff0040, 1px 0 #00fff0;
+    text-shadow: -1px 0 #d4a853, 1px 0 #5eff8a;
   }
 
   .border-glitch {
     box-shadow:
-      -2px 0 0 #ff0040,
-      2px 0 0 #00fff0;
+      -2px 0 0 #d4a853,
+      2px 0 0 #5eff8a;
   }
 
   .bg-grid {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      linear-gradient(rgba(94, 255, 138, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(94, 255, 138, 0.03) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 
@@ -105,7 +105,7 @@ body {
   }
   .glitch-hover:hover {
     animation: glitch 0.4s steps(2) infinite;
-    text-shadow: -2px 0 #ff0040, 2px 0 #00fff0;
+    text-shadow: -2px 0 #d4a853, 2px 0 #5eff8a;
   }
 }
 
@@ -132,14 +132,14 @@ body {
   pointer-events: none;
 }
 .glitch-text::before {
-  color: #ff0040;
+  color: #d4a853;
   transform: translate(-2px, 0);
   mix-blend-mode: screen;
   clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
   animation: glitch-clip 3s infinite linear alternate-reverse;
 }
 .glitch-text::after {
-  color: #00fff0;
+  color: #5eff8a;
   transform: translate(2px, 0);
   mix-blend-mode: screen;
   clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
