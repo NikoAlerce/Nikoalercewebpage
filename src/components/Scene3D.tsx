@@ -1,11 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Canvas, useFrame, extend, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Environment,
   Float,
-  shaderMaterial,
   Text,
   useGLTF,
   useAnimations,
@@ -15,192 +14,56 @@ import {
   Bloom,
   Noise,
   Vignette,
-  Glitch,
 } from "@react-three/postprocessing";
-import { BlendFunction, GlitchMode } from "postprocessing";
+import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 // =============================================================
-//  GlitchOrb Shader — NOW TRANSPARENT (energy shield)
+//  EnergyIcosahedron — MoMA aesthetic (glass/crystal)
 // =============================================================
 
-const VOID_VERTEX = /* glsl */ `
-  varying vec3 vNormal;
-  varying vec3 vWorld;
-  varying vec3 vViewDir;
-  varying float vGlitch;
-  uniform float uTime;
-  uniform float uDistort;
-  uniform float uGlitchAmount;
-  uniform vec2 uMouse;
-
-  vec3 mod289(vec3 x){ return x - floor(x*(1.0/289.0))*289.0; }
-  vec4 mod289(vec4 x){ return x - floor(x*(1.0/289.0))*289.0; }
-  vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
-  vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }
-
-  float snoise(vec3 v){
-    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-    vec3 i  = floor(v + dot(v, C.yyy));
-    vec3 x0 = v - i + dot(i, C.xxx);
-    vec3 g = step(x0.yzx, x0.xyz);
-    vec3 l = 1.0 - g;
-    vec3 i1 = min(g.xyz, l.zxy);
-    vec3 i2 = max(g.xyz, l.zxy);
-    vec3 x1 = x0 - i1 + C.xxx;
-    vec3 x2 = x0 - i2 + C.yyy;
-    vec3 x3 = x0 - D.yyy;
-    i = mod289(i);
-    vec4 p = permute(permute(permute(
-        i.z + vec4(0.0, i1.z, i2.z, 1.0))
-      + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-      + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-    float n_ = 0.142857142857;
-    vec3 ns = n_ * D.wyz - D.xzx;
-    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-    vec4 x_ = floor(j * ns.z);
-    vec4 y_ = floor(j - 7.0 * x_);
-    vec4 x = x_ *ns.x + ns.yyyy;
-    vec4 y = y_ *ns.x + ns.yyyy;
-    vec4 h = 1.0 - abs(x) - abs(y);
-    vec4 b0 = vec4(x.xy, y.xy);
-    vec4 b1 = vec4(x.zw, y.zw);
-    vec4 s0 = floor(b0)*2.0 + 1.0;
-    vec4 s1 = floor(b1)*2.0 + 1.0;
-    vec4 sh = -step(h, vec4(0.0));
-    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-    vec3 p0 = vec3(a0.xy, h.x);
-    vec3 p1 = vec3(a0.zw, h.y);
-    vec3 p2 = vec3(a1.xy, h.z);
-    vec3 p3 = vec3(a1.zw, h.w);
-    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-    m = m * m;
-    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-  }
-
-  float fbm(vec3 p){
-    float v = 0.0; float a = 0.5;
-    for (int i = 0; i < 4; i++) { v += a * snoise(p); p *= 2.05; a *= 0.5; }
-    return v;
-  }
-
-  float band(float y, float t){
-    return step(0.97, fract(sin(y*120.0 + t)*43758.5453));
-  }
-
-  void main(){
-    vec3 pos = position;
-    vec3 n = normal;
-    float t = uTime * 0.35;
-    float d = fbm(pos * 1.6 + vec3(t, t * 0.7, t * 0.3));
-    pos += n * d * uDistort;
-    float g = band(pos.y * 4.0, uTime * 6.0) * uGlitchAmount;
-    float xshift = (fract(sin(uTime * 13.0 + pos.y * 30.0) * 7919.0) - 0.5) * 0.4;
-    pos.x += xshift * g;
-    pos.z += xshift * g * 0.6;
-    vGlitch = g;
-    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    vWorld = (modelMatrix * vec4(pos, 1.0)).xyz;
-    vNormal = normalize(normalMatrix * n);
-    vViewDir = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
-  }
-`;
-
-// Fragment shader — now outputs alpha for transparency.
-// Fresnel drives opacity: edges glow bright, center is see-through.
-const VOID_FRAG = /* glsl */ `
-  varying vec3 vNormal; varying vec3 vWorld; varying vec3 vViewDir; varying float vGlitch;
-  uniform vec3 uColorA; uniform vec3 uColorB; uniform vec3 uEmissive; uniform float uTime;
-  void main(){
-    vec3 n = normalize(vNormal); vec3 v = normalize(vViewDir);
-    float fres = pow(1.0 - max(dot(n, v), 0.0), 2.5);
-    float sweep = sin(vWorld.y * 8.0 - uTime * 2.5) * 0.5 + 0.5;
-    sweep = smoothstep(0.4, 0.95, sweep);
-    vec3 base = mix(uColorA, uColorB, fres);
-    vec3 emissive = uEmissive * (fres * 0.9 + sweep * 0.4 + vGlitch * 1.6);
-    vec3 col = base + emissive;
-    col.r += vGlitch * 0.6; col.b += vGlitch * 0.2;
-
-    // Alpha: strong at edges (fresnel), transparent at center
-    // This creates the "energy shield" look
-    float alpha = fres * 0.7 + sweep * 0.15 + vGlitch * 0.5;
-    alpha = clamp(alpha, 0.05, 0.75);
-
-    gl_FragColor = vec4(col, alpha);
-  }
-`;
-
-const VoidMaterial = shaderMaterial(
-  {
-    uTime: 0, uDistort: 0.18, uGlitchAmount: 0.0,
-    uMouse: new THREE.Vector2(0, 0),
-    uColorA: new THREE.Color("#070a07"),
-    uColorB: new THREE.Color("#0a1a0a"),
-    uEmissive: new THREE.Color("#d4a853"),
-  },
-  VOID_VERTEX,
-  VOID_FRAG,
-);
-
-extend({ VoidMaterial });
-
-type VoidMaterialImpl = THREE.ShaderMaterial & {
-  uTime: number; uDistort: number; uGlitchAmount: number;
-  uMouse: THREE.Vector2; uColorA: THREE.Color; uColorB: THREE.Color; uEmissive: THREE.Color;
-};
-
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    voidMaterial: import("@react-three/fiber").Object3DNode<VoidMaterialImpl, typeof VoidMaterial>;
-  }
-}
-
-// =============================================================
-//  EnergyOrb — transparent shield wrapping the GLB
-//  renderOrder=10 so it draws AFTER the GLB inside
-// =============================================================
-
-function EnergyOrb() {
+function EnergyIcosahedron() {
   const meshRef = useRef<THREE.Mesh>(null);
-  const matRef = useRef<VoidMaterialImpl>(null);
-  const glitchPulse = useRef(0);
-  const glitchNext = useRef(2);
+  const wireRef = useRef<THREE.LineSegments>(null);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const m = meshRef.current;
-    const mat = matRef.current;
-    if (!m || !mat) return;
+    if (!m) return;
     const t = state.clock.getElapsedTime();
-    m.rotation.x = t * 0.08;
-    m.rotation.y = t * 0.12;
-    if (t > glitchNext.current) {
-      glitchPulse.current = 1.0;
-      glitchNext.current = t + 2 + Math.random() * 4;
+    m.rotation.x = t * 0.05;
+    m.rotation.y = t * 0.08;
+    
+    if (wireRef.current) {
+      wireRef.current.rotation.copy(m.rotation);
     }
-    glitchPulse.current = Math.max(0, glitchPulse.current - delta * 3.5);
-    mat.uTime = t;
-    mat.uMouse.set(state.mouse.x, state.mouse.y);
-    mat.uGlitchAmount = glitchPulse.current * 0.6;
-    mat.uDistort = 0.12 + Math.sin(t * 0.5) * 0.03;
   });
 
   return (
-    <mesh ref={meshRef} renderOrder={10}>
-      <icosahedronGeometry args={[1.5, 24]} />
-      <voidMaterial
-        ref={matRef}
-        transparent
-        depthWrite={false}
-        side={THREE.DoubleSide}
-        blending={THREE.AdditiveBlending}
-      />
-    </mesh>
+    <group renderOrder={10}>
+      <mesh ref={meshRef}>
+        {/* Sharp edges with 0 detail */}
+        <icosahedronGeometry args={[1.6, 0]} />
+        <meshPhysicalMaterial
+          color="#ffffff"
+          transmission={1}
+          opacity={1}
+          transparent
+          roughness={0.15}
+          metalness={0.1}
+          thickness={1.5}
+          ior={1.4}
+          clearcoat={1}
+          clearcoatRoughness={0.1}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* Subtle structural wireframe */}
+      <lineSegments ref={wireRef}>
+        <edgesGeometry args={[new THREE.IcosahedronGeometry(1.6, 0)]} />
+        <lineBasicMaterial color="#ffffff" transparent opacity={0.15} />
+      </lineSegments>
+    </group>
   );
 }
 
@@ -212,18 +75,18 @@ function Rings() {
   const group = useRef<THREE.Group>(null);
   useFrame((s, dt) => {
     if (!group.current) return;
-    group.current.rotation.z += dt * 0.05;
-    group.current.rotation.x = Math.sin(s.clock.getElapsedTime() * 0.2) * 0.05;
+    group.current.rotation.z += dt * 0.03;
+    group.current.rotation.x = Math.sin(s.clock.getElapsedTime() * 0.1) * 0.05;
   });
   return (
     <group ref={group}>
-      {[2.0, 2.4, 2.85, 3.35].map((r, i) => (
-        <mesh key={r} rotation={[Math.PI / 2 + i * 0.18, i * 0.4, i]}>
-          <torusGeometry args={[r, 0.004, 8, 220]} />
+      {[2.2, 2.7, 3.2, 3.8].map((r, i) => (
+        <mesh key={r} rotation={[Math.PI / 2 + i * 0.1, i * 0.2, i]}>
+          <torusGeometry args={[r, 0.0015, 16, 200]} />
           <meshBasicMaterial
-            color={i % 2 === 0 ? "#d4a853" : "#5eff8a"}
+            color="#ffffff"
             transparent
-            opacity={0.45 - i * 0.07}
+            opacity={0.08 - i * 0.015}
           />
         </mesh>
       ))}
@@ -232,10 +95,10 @@ function Rings() {
 }
 
 // =============================================================
-//  ReactiveParticles — particles that react to cursor
+//  ReactiveParticles — subtle minimal dust
 // =============================================================
 
-function ReactiveParticles({ count = 500 }: { count?: number }) {
+function ReactiveParticles({ count = 400 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null);
   const mouseTarget = useRef(new THREE.Vector2(0, 0));
 
@@ -282,7 +145,7 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
       );
     }
     posAttr.needsUpdate = true;
-    ref.current.rotation.y += dt * 0.03;
+    ref.current.rotation.y += dt * 0.02;
   });
 
   return (
@@ -291,10 +154,10 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} count={count} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.02}
-        color="#d4a853"
+        size={0.015}
+        color="#ffffff"
         transparent
-        opacity={0.5}
+        opacity={0.3}
         sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
@@ -304,14 +167,13 @@ function ReactiveParticles({ count = 500 }: { count?: number }) {
 }
 
 // =============================================================
-//  CapturedGLB — GLB displayed INSIDE the energy orb
-//  Cycles through available models every ~8 seconds
+//  CapturedGLB — Inside the icosahedron
 // =============================================================
 
 const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
 function ipfsToHttp(uri: string): string {
   if (uri.startsWith("http")) return uri;
-  if (uri.startsWith("ipfs://")) return `${IPFS_GATEWAY}${uri.replace("ipfs://", "")}`;
+  if (uri.startsWith("ipfs://")) return \`\${IPFS_GATEWAY}\${uri.replace("ipfs://", "")}\`;
   return uri;
 }
 
@@ -321,17 +183,15 @@ function InnerModel({ url }: { url: string }) {
   const groupRef = useRef<THREE.Group>(null);
   const { actions, names } = useAnimations(animations, groupRef);
 
-  // Normalize to fit inside the orb (radius ~1.3 to leave room for the shell)
   const transform = useMemo(() => {
     const box = new THREE.Box3().setFromObject(cloned);
     const center = box.getCenter(new THREE.Vector3());
     const sz = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(sz.x, sz.y, sz.z) || 1;
-    const ns = 2.0 / maxDim; // Fill most of the orb
+    const ns = 2.0 / maxDim; // Fit nicely inside the 1.6 radius
     return { offset: center.clone().multiplyScalar(-ns), scale: ns };
   }, [cloned]);
 
-  // Play all animations
   useEffect(() => {
     if (!actions || names.length === 0) return;
     for (const name of names) {
@@ -348,7 +208,6 @@ function InnerModel({ url }: { url: string }) {
   useFrame((state, dt) => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y += dt * 0.25;
-    // Subtle mouse-driven tilt
     groupRef.current.rotation.x += (state.mouse.y * 0.15 - groupRef.current.rotation.x) * 0.03;
   });
 
@@ -367,12 +226,11 @@ function CapturedGLB({ urls }: { urls: string[] }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const httpUrls = useMemo(() => urls.map(ipfsToHttp), [urls]);
 
-  // Cycle through models
   useEffect(() => {
     if (httpUrls.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % httpUrls.length);
-    }, 30000); // Switch every 30 seconds
+    }, 30000);
     return () => clearInterval(interval);
   }, [httpUrls.length]);
 
@@ -387,10 +245,8 @@ function CapturedGLB({ urls }: { urls: string[] }) {
 }
 
 // =============================================================
-//  TextCarousel — subtle, deep, editorial 3D navigation
+//  TextCarousel — sleek, editorial, high-end
 // =============================================================
-
-// Uses drei's built-in default font (Roboto) — no external URL needed
 
 interface CarouselItemProps {
   label: string;
@@ -406,33 +262,17 @@ interface CarouselItemProps {
 function CarouselItem({ label, tag, href, color, position, rotation, fontSize, onNavigate }: CarouselItemProps) {
   const [hovered, setHovered] = useState(false);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
-  const shadowRef = useRef<THREE.MeshBasicMaterial>(null);
-
-  // Per-item dust positions (stable across renders)
-  const dustPositions = useMemo(() => {
-    const arr = new Float32Array(18 * 3);
-    for (let k = 0; k < 18; k++) {
-      arr[k * 3] = (Math.random() - 0.5) * fontSize * 3;
-      arr[k * 3 + 1] = (Math.random() - 0.5) * fontSize * 1.5;
-      arr[k * 3 + 2] = (Math.random() - 0.5) * 0.3;
-    }
-    return arr;
-  }, [fontSize]);
 
   useFrame((_state, delta) => {
     if (!matRef.current) return;
-    const targetEmissive = hovered ? 2.5 : 0.3;
+    const targetEmissive = hovered ? 1.5 : 0.1;
     matRef.current.emissiveIntensity += (targetEmissive - matRef.current.emissiveIntensity) * delta * 5;
-    const targetOpacity = hovered ? 0.95 : 0.7;
+    const targetOpacity = hovered ? 1.0 : 0.6;
     matRef.current.opacity += (targetOpacity - matRef.current.opacity) * delta * 5;
-    if (shadowRef.current) {
-      const so = hovered ? 0.25 : 0.08;
-      shadowRef.current.opacity += (so - shadowRef.current.opacity) * delta * 4;
-    }
   });
 
   return (
-    <Float speed={1.2 + Math.random() * 0.5} rotationIntensity={0} floatIntensity={0.08}>
+    <Float speed={1.0} rotationIntensity={0} floatIntensity={0.05}>
       <group
         position={position}
         rotation={rotation}
@@ -440,41 +280,24 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
         onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
         onClick={() => onNavigate(href)}
       >
-        {/* Shadow/depth layer — offset behind */}
-        <Text
-          position={[0.008, -0.008, -0.04]}
-          fontSize={fontSize}
-          letterSpacing={0.35}
-          anchorX="center"
-          anchorY="middle"
-        >
-          {label}
-          <meshBasicMaterial ref={shadowRef} color={color} transparent opacity={0.08} depthWrite={false} />
-        </Text>
-
-        {/* Main label */}
         <Text
           fontSize={fontSize}
-          letterSpacing={0.35}
+          letterSpacing={0.3}
           anchorX="center"
           anchorY="middle"
-          outlineWidth={fontSize * 0.008}
-          outlineColor={color}
-          outlineOpacity={hovered ? 0.5 : 0.12}
         >
           {label}
           <meshStandardMaterial
             ref={matRef}
-            color="#c8c8c8"
+            color="#ffffff"
             emissive={color}
-            emissiveIntensity={0.3}
+            emissiveIntensity={0.1}
             toneMapped={false}
             transparent
-            opacity={0.7}
+            opacity={0.6}
           />
         </Text>
 
-        {/* Tiny tag underneath */}
         <Text
           position={[0, -fontSize * 0.75, 0]}
           fontSize={fontSize * 0.16}
@@ -483,24 +306,8 @@ function CarouselItem({ label, tag, href, color, position, rotation, fontSize, o
           anchorY="middle"
         >
           {tag}
-          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.6 : 0.18} toneMapped={false} />
+          <meshBasicMaterial color={color} transparent opacity={hovered ? 0.7 : 0.3} toneMapped={false} />
         </Text>
-
-        {/* Micro dust particles near each word */}
-        <points>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[dustPositions, 3]} count={18} />
-          </bufferGeometry>
-          <pointsMaterial
-            size={0.008}
-            color={color}
-            transparent
-            opacity={hovered ? 0.5 : 0.12}
-            sizeAttenuation
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </points>
       </group>
     </Float>
   );
@@ -513,18 +320,18 @@ function TextCarousel() {
   const rotationY = useRef(0);
 
   const items = [
-    { label: "WORKS", tag: "001_GALLERY", href: "/works", color: "#d4a853" },
-    { label: "SIDEQUEST", tag: "002_ALTER_EGO", href: "/sidequest", color: "#5eff8a" },
-    { label: "BIO", tag: "003_IDENTITY", href: "/#about", color: "#7dffaf" },
-    { label: "CONTACT", tag: "004_CONNECT", href: "/#about", color: "#c47a5a" },
+    { label: "WORKS", tag: "001_GALLERY", href: "/works", color: "#ffffff" },
+    { label: "SIDEQUEST", tag: "002_ALTER_EGO", href: "/sidequest", color: "#e0e0e0" },
+    { label: "BIO", tag: "003_IDENTITY", href: "/#about", color: "#cccccc" },
+    { label: "CONTACT", tag: "004_CONNECT", href: "/#about", color: "#a0a0a0" },
   ];
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    const mouseInfluence = state.mouse.x * 1.2;
-    rotationY.current += delta * (0.08 + mouseInfluence);
+    const mouseInfluence = state.mouse.x * 0.8;
+    rotationY.current += delta * (0.05 + mouseInfluence);
     groupRef.current.rotation.y = rotationY.current;
-    groupRef.current.rotation.x += (state.mouse.y * 0.2 - groupRef.current.rotation.x) * 0.08;
+    groupRef.current.rotation.x += (state.mouse.y * 0.15 - groupRef.current.rotation.x) * 0.08;
   });
 
   const handleNavigate = useCallback((href: string) => {
@@ -535,8 +342,8 @@ function TextCarousel() {
     window.location.href = href;
   }, []);
 
-  const radius = isMobile ? 2.0 : 2.6;
-  const fontSize = isMobile ? 0.22 : 0.32;
+  const radius = isMobile ? 2.2 : 2.8;
+  const fontSize = isMobile ? 0.2 : 0.28;
 
   return (
     <group ref={groupRef}>
@@ -561,41 +368,36 @@ function TextCarousel() {
   );
 }
 
-
 // =============================================================
-//  CenterGroup — GLB + Energy Orb + orbiting lights
+//  CenterGroup — Lighting and Composition
 // =============================================================
 
 function OrbitingLights() {
-  const redRef = useRef<THREE.PointLight>(null);
-  const cyanRef = useRef<THREE.PointLight>(null);
+  const whiteRef1 = useRef<THREE.PointLight>(null);
+  const whiteRef2 = useRef<THREE.PointLight>(null);
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
-    // Red light orbits clockwise
-    if (redRef.current) {
-      redRef.current.position.set(
-        Math.cos(t * 0.5) * 2.2,
-        Math.sin(t * 0.7) * 1.0,
-        Math.sin(t * 0.5) * 2.2,
+    if (whiteRef1.current) {
+      whiteRef1.current.position.set(
+        Math.cos(t * 0.3) * 2.5,
+        Math.sin(t * 0.5) * 1.5,
+        Math.sin(t * 0.3) * 2.5,
       );
-      redRef.current.intensity = 1.5 + Math.sin(t * 1.5) * 0.5;
     }
-    // Cyan light orbits counter-clockwise
-    if (cyanRef.current) {
-      cyanRef.current.position.set(
-        Math.cos(-t * 0.4 + 2) * 2.5,
-        Math.sin(-t * 0.6 + 1) * 0.8,
-        Math.sin(-t * 0.4 + 2) * 2.5,
+    if (whiteRef2.current) {
+      whiteRef2.current.position.set(
+        Math.cos(-t * 0.2 + 2) * 2.8,
+        Math.sin(-t * 0.4 + 1) * 1.0,
+        Math.sin(-t * 0.2 + 2) * 2.8,
       );
-      cyanRef.current.intensity = 1.0 + Math.sin(t * 1.2 + 1) * 0.4;
     }
   });
 
   return (
     <>
-      <pointLight ref={redRef} color="#d4a853" intensity={1.5} distance={6} decay={2} />
-      <pointLight ref={cyanRef} color="#5eff8a" intensity={1.0} distance={6} decay={2} />
+      <pointLight ref={whiteRef1} color="#ffffff" intensity={0.8} distance={8} decay={2} />
+      <pointLight ref={whiteRef2} color="#e0e0e0" intensity={0.6} distance={8} decay={2} />
     </>
   );
 }
@@ -605,24 +407,21 @@ function CenterGroup({ glbUrls }: { glbUrls: string[] }) {
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    groupRef.current.position.x += (state.mouse.x * 0.5 - groupRef.current.position.x) * 0.04;
-    groupRef.current.position.y += (state.mouse.y * 0.35 - groupRef.current.position.y) * 0.04;
+    groupRef.current.position.x += (state.mouse.x * 0.3 - groupRef.current.position.x) * 0.04;
+    groupRef.current.position.y += (state.mouse.y * 0.2 - groupRef.current.position.y) * 0.04;
   });
 
   return (
     <group ref={groupRef}>
-      {/* Orbiting colored lights for epic rim lighting */}
       <OrbitingLights />
-      {/* GLB model inside — renders first */}
       <CapturedGLB urls={glbUrls} />
-      {/* Transparent energy shield on top */}
-      <EnergyOrb />
+      <EnergyIcosahedron />
     </group>
   );
 }
 
 // =============================================================
-//  Scene3D — full composition
+//  Scene3D — main entry
 // =============================================================
 
 export default function Scene3D({
@@ -665,52 +464,45 @@ export default function Scene3D({
 
   if (reducedMotion) {
     return (
-      <div className={className} style={{ background: "radial-gradient(ellipse at center, #1a0205 0%, #000 60%)" }} />
+      <div className={className} style={{ background: "#0a0a0a" }} />
     );
   }
 
   return (
     <div ref={wrapRef} className={className}>
       <Canvas
-        camera={{ position: [0, 0, 4.8], fov: 42 }}
-        gl={{ antialias: false, alpha: true, powerPreference: "high-performance", stencil: false, depth: true }}
-        dpr={[1, 1.25]}
+        camera={{ position: [0, 0, 5], fov: 45 }}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance", stencil: false, depth: true }}
+        dpr={[1, 1.5]}
         frameloop={active ? "always" : "never"}
       >
-        <color attach="background" args={["#050a05"]} />
-        <fog attach="fog" args={["#050a05", 7, 18]} />
+        <color attach="background" args={["#080808"]} />
+        <fog attach="fog" args={["#080808", 6, 16]} />
 
-        {/* Epic three-point lighting for the GLB */}
-        <ambientLight intensity={0.15} color="#1a2e1a" />
-        {/* Key light — warm golden from upper right */}
-        <directionalLight position={[4, 3, 5]} intensity={1.8} color="#ffe8c0" />
-        {/* Fill light — cool jade from lower left */}
-        <directionalLight position={[-3, -1, 2]} intensity={0.6} color="#5eff8a" />
-        {/* Back/rim light — gold glow from behind */}
-        <pointLight position={[0, 2, -4]} intensity={1.2} color="#d4a853" distance={10} decay={2} />
-        {/* Bottom dramatic uplight — jade */}
-        <pointLight position={[0, -3, 0]} intensity={0.4} color="#5eff8a" distance={6} decay={2} />
+        {/* Elegant studio lighting */}
+        <ambientLight intensity={0.4} color="#ffffff" />
+        <directionalLight position={[5, 5, 5]} intensity={1.5} color="#ffffff" />
+        <directionalLight position={[-3, -2, 2]} intensity={0.5} color="#a0a0a0" />
+        <pointLight position={[0, 0, -3]} intensity={1.0} color="#ffffff" distance={8} decay={2} />
 
         <Suspense fallback={null}>
-          <Environment preset="city" />
-          {/* Central composition: GLB inside + Energy Orb + orbiting lights */}
+          <Environment preset="studio" />
           <CenterGroup glbUrls={glbUrls} />
           <Rings />
         </Suspense>
 
-        {/* Cursor-reactive particles */}
-        <ReactiveParticles count={450} />
-
-        {/* 3D Text carousel orbiting outside the orb */}
+        <ReactiveParticles count={300} />
         <TextCarousel />
 
-        <EffectComposer multisampling={0}>
-          <Bloom intensity={1.1} luminanceThreshold={0.18} luminanceSmoothing={0.7} mipmapBlur radius={0.65} />
-          <Glitch delay={new THREE.Vector2(4, 9)} duration={new THREE.Vector2(0.04, 0.12)} strength={new THREE.Vector2(0.04, 0.12)} mode={GlitchMode.SPORADIC} ratio={0.85} active />
-          <Noise opacity={0.035} premultiply blendFunction={BlendFunction.SCREEN} />
-          <Vignette eskil={false} offset={0.25} darkness={0.9} />
+        <EffectComposer multisampling={4}>
+          <Bloom intensity={0.4} luminanceThreshold={0.5} luminanceSmoothing={0.9} mipmapBlur radius={0.5} />
+          <Noise opacity={0.04} premultiply blendFunction={BlendFunction.SCREEN} />
+          <Vignette eskil={false} offset={0.3} darkness={0.8} />
         </EffectComposer>
       </Canvas>
+    </div>
+  );
+}   </Canvas>
     </div>
   );
 }
