@@ -77,7 +77,7 @@ export default function TokenViewerModal() {
   const listing = token?.listings_active?.[0] ?? null;
 
   const handleBuy = useCallback(async () => {
-    if (!listing) return;
+    if (!token || !listing) return;
     if (!address) {
       const pkh = await connect();
       if (!pkh) return;
@@ -116,6 +116,11 @@ export default function TokenViewerModal() {
       setBuyState({ kind: "pending", opHash: res.opHash });
       setTimeout(() => {
         setBuyState({ kind: "success", opHash: res.opHash });
+        window.dispatchEvent(
+          new CustomEvent("nft-bought", {
+            detail: { tokenId: token.token_id, price },
+          })
+        );
       }, 30_000);
     } else {
       setBuyState({ kind: "error", message: res.error });
@@ -165,6 +170,12 @@ export default function TokenViewerModal() {
       className="fixed inset-0 z-[100] flex flex-col bg-void/95 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
+      onClick={(e) => {
+        // Close when clicking outside the modal content
+        if (e.target === e.currentTarget) {
+          close();
+        }
+      }}
     >
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 md:px-6 h-14 border-b border-white/10 bg-void/80">
@@ -201,9 +212,10 @@ export default function TokenViewerModal() {
           <button
             onClick={close}
             aria-label="Close"
-            className="text-bone hover:text-glitch-red text-xl leading-none px-2"
+            className="flex items-center gap-2 px-4 py-2 text-[11px] tracking-[0.3em] border border-glitch-red/50 text-glitch-red hover:bg-glitch-red/10 transition-colors"
           >
-            ✕
+            <span>✕</span>
+            <span className="hidden md:inline">CLOSE</span>
           </button>
         </div>
       </header>
