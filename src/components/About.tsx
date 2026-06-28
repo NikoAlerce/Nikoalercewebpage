@@ -18,6 +18,23 @@ export default function About() {
         <div className="absolute top-1/2 right-0 w-[1px] h-24 bg-gradient-to-b from-transparent via-white/20 to-transparent -translate-y-1/2" />
       </div>
 
+      {/* ── Bio header / landing video ── */}
+      <div className="relative z-10 mb-16 md:mb-24">
+        <div className="text-[10px] tracking-[0.6em] text-glitch-red uppercase mb-4 font-black">
+          // SHOWREEL
+        </div>
+        <div className="relative w-full aspect-video border border-white/10 overflow-hidden bg-black shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src="https://www.youtube.com/embed/1MQ428VFzIo?autoplay=1&mute=1&loop=1&playlist=1MQ428VFzIo&controls=1&rel=0&modestbranding=1&playsinline=1"
+            title="Niko Alerce — showreel"
+            loading="lazy"
+            allow="autoplay; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
         {/* LEFT: meta column */}
         <aside className="lg:col-span-3 space-y-6 text-[10px] tracking-[0.4em] text-ash">
@@ -27,7 +44,7 @@ export default function About() {
               NIKO<br />ALERCE
             </div>
             <div className="mt-3 text-glitch-cyan/60 text-[9px] tracking-[0.4em] uppercase">
-              Primary_Node::SIDEQUEST
+              Full-Stack Creative
             </div>
           </div>
 
@@ -37,20 +54,20 @@ export default function About() {
               <span className="text-glitch-lime">ACTIVE</span>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/5 pb-1.5">
-              <span>MEDIUM</span>
-              <span className="text-bone">3D / GLITCH</span>
+              <span>FIELDS</span>
+              <span className="text-bone">3D · MUSIC · XR</span>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/5 pb-1.5">
-              <span>CHAIN</span>
-              <span className="text-bone">TEZOS</span>
+              <span>LABEL</span>
+              <span className="text-bone">EL BOSQUECITO</span>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-white/5 pb-1.5">
+              <span>CHAINS</span>
+              <span className="text-bone">TEZOS · DCL</span>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/5 pb-1.5">
               <span>BASE</span>
-              <span className="text-bone">PATAGONIA</span>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-white/5 pb-1.5">
-              <span>SINCE</span>
-              <span className="text-bone font-mono">~2022</span>
+              <span className="text-bone">EL BOLSÓN, AR</span>
             </div>
           </div>
 
@@ -100,10 +117,10 @@ export default function About() {
               // ARCHIVE_RECORDS_001
             </div>
             <h2 className="font-display font-black uppercase text-bone leading-[0.8] text-[clamp(3rem,10vw,8rem)] relative">
-              <GlitchText>DIGITAL</GlitchText>
+              <GlitchText>FULL STACK</GlitchText>
               <br />
               <span className="text-glitch-red">
-                <GlitchText>ARCHAEOLOGY</GlitchText>
+                <GlitchText>CREATIVE</GlitchText>
               </span>
             </h2>
           </div>
@@ -111,36 +128,37 @@ export default function About() {
 
           <div className="grid md:grid-cols-2 gap-x-10 gap-y-6 text-[15px] md:text-base text-bone/90 leading-relaxed">
             <p>
-              I am <span className="text-bone font-bold">Niko Alerce</span>.
-              I sculpt marble deities and let them decay inside a glitching
-              grid. I have been working on{" "}
-              <span className="text-glitch-cyan">Tezos</span> since 2022 across
-              3D animation, photoreal rendering, generative code, and the
-              existential fatigue of algorithms.
+              I am <span className="text-bone font-bold">Niko Alerce</span>, a
+              full-stack creative based in{" "}
+              <span className="text-glitch-cyan">El Bolsón, Patagonia</span>. I
+              work at the intersection of visual art, sound design, and
+              immersive technology, delivering end-to-end production for clients
+              who need more than a single-discipline contractor.
             </p>
             <p>
-              My work is a dialogue between{" "}
-              <span className="text-bone font-semibold">stone that endures</span>{" "}
-              and <span className="text-glitch-red">code that dies</span> in a
-              millisecond. AI synthesis to 3D mesh, PBR materials, custom
-              generative engines, and 5-7-5 haikus written by machines that
-              learned to feel tired.
+              I produce high-quality{" "}
+              <span className="text-bone font-semibold">3D illustration, motion graphics, and glitch aesthetics</span>{" "}
+              in Blender — character design, environmental art, and animated
+              assets optimized for web, game engines, and VR. I have shipped
+              original collections as NFTs on{" "}
+              <span className="text-glitch-cyan">Objkt</span> and exhibited work
+              born from artist residencies in Patagonia.
             </p>
             <p>
-              Inspired by the fragmented soul of{" "}
-              <span className="italic">Fernando Pessoa</span> and his
-              heteronyms, my{" "}
-              <span className="text-glitch-red font-bold">GØDz</span> collection
-              is 333 snapshots of <em>Divine Disquiet</em>: Zeus, Hera, Hades,
-              and Poseidon — ancient sovereigns trapped inside a system that
-              processes, renders, and deletes them.
+              I am the founder of{" "}
+              <span className="text-glitch-red font-bold">El Bosquecito Records</span>,
+              where I produce, record, mix, and master original music —
+              hip-hop, trap, lo-fi, and experimental electronic — handling the
+              whole pipeline from composition to master, released across
+              Spotify, TIDAL, Deezer, and YouTube Music.
             </p>
             <p>
-              Under the{" "}
-              <span className="text-glitch-cyan font-bold">SIDEQUEST</span> alter
-              ego, I release what does not fit the main canon: drafts,
-              iterations, pipeline breaks, and errors that became finished
-              pieces. It is where I learn in public.
+              I design and build virtual real estate and wearables for{" "}
+              <span className="text-glitch-cyan font-bold">Decentraland</span>,
+              authored a commercial Blender addon that turns video textures into
+              optimized GLB/GLTF animations, and handle video post-production in
+              After Effects and Premiere. One stack, one vision — concept to
+              delivery.
             </p>
           </div>
 
@@ -148,38 +166,38 @@ export default function About() {
           <div className="grid sm:grid-cols-3 gap-3 pt-6">
             <div className="border border-white/10 p-5 hover:border-glitch-red/60 transition-colors group">
               <div className="text-[10px] tracking-[0.4em] text-glitch-red mb-3">
-                // 01 · MEDIUM
+                // 01 · VISUAL
               </div>
               <div className="font-display text-lg text-bone mb-2">
-                Marble + Glitch
+                3D &amp; Motion
               </div>
               <p className="text-[13px] text-ash leading-relaxed">
-                AI-to-3D synthesis, PBR materials, realtime animation, and
-                controlled tearing.
+                Blender 3D, animation, motion graphics and glitch. Characters,
+                environments and assets for web, games and VR.
               </p>
             </div>
             <div className="border border-white/10 p-5 hover:border-glitch-cyan/60 transition-colors group">
               <div className="text-[10px] tracking-[0.4em] text-glitch-cyan mb-3">
-                // 02 · ENGINE
+                // 02 · SOUND
               </div>
               <div className="font-display text-lg text-bone mb-2">
-                Generative Systems
+                El Bosquecito Records
               </div>
               <p className="text-[13px] text-ash leading-relaxed">
-                Custom engines: Metropolis, Flora, Slit-Scan, Glitch. Every
-                background is a living system.
+                Compose, record, mix and master. Hip-hop, trap, lo-fi and
+                experimental electronic — released on every major platform.
               </p>
             </div>
             <div className="border border-white/10 p-5 hover:border-bone transition-colors group">
               <div className="text-[10px] tracking-[0.4em] text-ash mb-3">
-                // 03 · WORDS
+                // 03 · BUILD
               </div>
               <div className="font-display text-lg text-bone mb-2">
-                Machine Haikus
+                Metaverse &amp; Tools
               </div>
               <p className="text-[13px] text-ash leading-relaxed">
-                Every piece speaks in 5-7-5. Fragmented confessions from a
-                system that learned to feel fatigue.
+                Decentraland real estate and wearables, a commercial Blender
+                addon, and full video post-production.
               </p>
             </div>
           </div>
@@ -187,8 +205,8 @@ export default function About() {
           {/* Quote */}
           <blockquote className="relative pl-6 border-l-2 border-glitch-red/60 max-w-2xl">
             <p className="font-display italic text-xl md:text-2xl text-bone/90 leading-snug">
-              &ldquo;Stone lasts forever. Code disappears in a millisecond. I work in
-              the space between them.&rdquo;
+              &ldquo;One studio, one vision. You are not coordinating four
+              contractors — I own the full stack, from concept to delivery.&rdquo;
             </p>
             <footer className="mt-3 text-[10px] tracking-[0.4em] text-ash">
               — N.A.

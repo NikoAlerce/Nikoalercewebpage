@@ -1,63 +1,64 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { Environment, Html, useProgress } from "@react-three/drei";
-import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useTokenViewer } from "./TokenViewerContext";
 import { playClickSound, playUnlockSound, playCollectSound } from "@/lib/sound";
 import PlayerControls, { PlayerControlsRef } from "./PlayerControls";
 import GalleryScene from "./GalleryScene";
 import NftFrame from "./NftFrame";
+import MeshScreen from "./MeshScreen";
 import type { ObjktToken } from "@/lib/types";
 import { lowestPriceXtz, isDisplayableToken, detectKind, ipfsToUrl } from "@/lib/objkt";
 
 // ============================================================
-// 34 exact frame positions extracted from artgalery.glb
-// Light_Inner_Body nodes – world-space translation + rotY
+// Frame positions for nuevagalery.glb — auto-extracted from the painting
+// UV-islands in the model (world position, facing rotation, and the real
+// width/height of each painting so the artwork covers it exactly).
 // ============================================================
-const FRAME_SPOTS: { pos: [number, number, number]; rotY: number }[] = [
-  { pos: [-25.771, 0.9, 4.791], rotY: -0.0145 + Math.PI },
-  { pos: [-28.343, 0.9, 4.791], rotY: -0.0145 + Math.PI },
-  { pos: [-30.983, 0.9, 4.791], rotY: -0.0145 + Math.PI },
-  { pos: [-31.814, 0.9, -4.177], rotY: 3.1271 + Math.PI },
-  { pos: [-28.947, 0.9, -4.177], rotY: 3.1271 + Math.PI },
-  { pos: [-26.141, 0.9, -4.177], rotY: 3.1271 + Math.PI },
-  { pos: [-21.965, 0.9, -6.822], rotY: -2.3225 + Math.PI },
-  { pos: [-21.242, 0.9, -8.070], rotY: -2.7948 + Math.PI },
-  { pos: [-20.230, 0.9, -8.333], rotY: -3.0417 + Math.PI },
-  { pos: [-19.339, 0.9, -8.293], rotY: 2.8474 + Math.PI },
-  { pos: [-18.671, 0.9, -7.876], rotY: 2.5371 + Math.PI },
-  { pos: [-18.235, 0.9, -6.756], rotY: 2.2691 + Math.PI },
-  { pos: [-21.806, 0.9, 8.351], rotY: -0.7456 + Math.PI },
-  { pos: [-21.226, 0.9, 8.913], rotY: -0.4838 + Math.PI },
-  { pos: [-20.300, 0.9, 9.291], rotY: -0.1028 + Math.PI },
-  { pos: [-19.285, 0.9, 9.238], rotY: 0.3330 + Math.PI },
-  { pos: [-18.602, 0.9, 8.501], rotY: 0.8534 + Math.PI },
-  { pos: [-15.119, 0.9, -4.747], rotY: 2.8619 + Math.PI },
-  { pos: [-15.086, 0.9, 5.148], rotY: -0.3678 + Math.PI },
-  { pos: [-11.080, 0.9, -0.667], rotY: 2.9494 + Math.PI },
-  { pos: [-11.080, 0.9, 1.052], rotY: 0.1644 + Math.PI },
-  { pos: [-5.430, 0.9, -6.544], rotY: -1.5656 + Math.PI },
-  { pos: [-5.430, 0.9, -9.782], rotY: -1.5785 + Math.PI },
-  { pos: [-5.429, 0.9, -13.0], rotY: -1.5792 + Math.PI },
-  { pos: [4.247, 0.9, -13.0], rotY: 1.5785 + Math.PI },
-  { pos: [4.247, 0.9, -9.782], rotY: 1.5785 + Math.PI },
-  { pos: [4.247, 0.9, -6.312], rotY: 1.5785 + Math.PI },
-  { pos: [6.842, 0.9, -1.725], rotY: 2.5540 + Math.PI },
-  { pos: [8.407, 0.9, 0.031], rotY: 1.5774 + Math.PI },
-  { pos: [6.890, 0.9, 1.847], rotY: 0.4227 + Math.PI },
-  { pos: [-0.003, 0.9, 8.573], rotY: 0.0151 + Math.PI },
-  { pos: [4.373, 0.9, 5.466], rotY: 0.9651 + Math.PI },
-  { pos: [-4.359, 0.9, 5.512], rotY: -0.6390 + Math.PI },
-  { pos: [4.437, 0.9, -11.901], rotY: 2.2623 + Math.PI },
-  { pos: [-3.419, 0.9, -13.166], rotY: -2.1451 + Math.PI },
+const FRAME_SPOTS: { pos: [number, number, number]; rotY: number; w: number; h: number; curved?: boolean; slots?: number }[] = [
+  { pos: [-6.21, 1.45, -6.52], rotY: -1.5842, w: 4.01, h: 2 },
+  { pos: [6.06, 1.48, -6.46], rotY: -1.5708, w: 2, h: 2 },
+  { pos: [6.06, 1.48, -8.02], rotY: -1.5708, w: 0.86, h: 2 },
+  { pos: [6.06, 2.02, -8.96], rotY: -1.5708, w: 0.86, h: 0.92 },
+  { pos: [6.06, 0.97, -8.96], rotY: -1.5708, w: 0.86, h: 0.98 },
+  { pos: [9.57, 1.44, 0.09], rotY: -1.5898, w: 2, h: 2 },
+  { pos: [-10.71, 1.79, -2.08], rotY: 0.0555, w: 2, h: 2 }, // rotY flipped +π (was facing wall)
+  { pos: [-31.79, 1.59, -5.68], rotY: -0.0254, w: 2, h: 2 },
+  { pos: [-28.86, 1.59, -5.68], rotY: -0.0035, w: 2, h: 2 },
+  { pos: [-26.03, 1.59, -5.63], rotY: -0.0035, w: 2, h: 2 },
+  { pos: [-21.8, 1.67, -9.06], rotY: 0.5964, w: 0.77, h: 2.45, slots: 3 },
+  { pos: [-20.35, 1.67, -9.5], rotY: 0.1091, w: 0.77, h: 2.45, slots: 3 },
+  { pos: [-18.93, 2.51, -9.36], rotY: -0.4029, w: 0.77, h: 0.77 },
+  { pos: [-17.93, 2.51, -8.68], rotY: -0.7806, w: 0.77, h: 0.77 },
+  { pos: [-17.1, 2.51, -7.39], rotY: -1.2321, w: 0.77, h: 0.77 }, // rotY flipped +π
+  { pos: [-22.82, 1.67, -7.57], rotY: 1.1442, w: 0.77, h: 2.45, slots: 3 },
+  { pos: [-18.93, 1.68, -9.36], rotY: -0.4029, w: 0.77, h: 0.77 },
+  { pos: [-18.93, 0.83, -9.36], rotY: -0.4029, w: 0.77, h: 0.77 },
+  { pos: [-17.93, 1.64, -8.68], rotY: -0.7806, w: 0.77, h: 0.77 },
+  { pos: [-17.1, 1.64, -7.39], rotY: 1.9095, w: 0.77, h: 0.77 },
+  { pos: [-17.93, 0.77, -8.68], rotY: -0.7806, w: 0.77, h: 0.77 },
+  { pos: [-17.1, 0.77, -7.39], rotY: 1.9095, w: 0.77, h: 0.77 },
+  { pos: [-15.39, 1.56, -5.82], rotY: -0.0533, w: 0.77, h: 1.94, slots: 3 },
+  { pos: [-13.98, 1.56, -5.43], rotY: -0.5396, w: 0.77, h: 1.94, slots: 3 },
+  { pos: [-12.6, 1.56, -3.28], rotY: -1.467, w: 0.77, h: 1.94, slots: 3 },
+  { pos: [7.76, 1.43, -2.82], rotY: -0.3538, w: 1.83, h: 1.83 },
+  { pos: [-20.25, 1.61, 9.32], rotY: 2.1694, w: 3.67, h: 2.66, curved: true }, // Dancer N|4 — curved screen
+  { pos: [7.49, 1.44, 2.86], rotY: -2.813, w: 2, h: 2 },
+  { pos: [-10.77, 1.79, 2.24], rotY: -3.1396, w: 2, h: 2 },
+  { pos: [-15.05, 1.58, 6.06], rotY: -2.9577, w: 2, h: 2 },
+  { pos: [-25.73, 1.59, 6.23], rotY: 3.1162, w: 2, h: 2 },
+  { pos: [-28.44, 1.59, 6.19], rotY: 3.1162, w: 2, h: 2 },
+  { pos: [-30.97, 1.59, 6.12], rotY: 3.1162, w: 2, h: 2 },
+  { pos: [-12.54, 1.56, 3.5], rotY: -1.5817, w: 0.77, h: 1.94, slots: 3 },
+  { pos: [-6.11, 1.45, -11.92], rotY: 1.5611, w: 2.61, h: 2 }, // rotY flipped +π
+  { pos: [-6.14, 1.45, -9.56], rotY: 1.5526, w: 1.38, h: 2 }, // rotY flipped +π
 ];
 
-// Player starts near the entrance area (positive X end of scene)
-const PLAYER_START = new THREE.Vector3(6, 0.0, 0);
+// Player starts in the middle of the gallery floor (flat, y=0).
+const PLAYER_START = new THREE.Vector3(-15, 0.0, 0);
 
 // ──────────────────────────────────────────────
 // Loading overlay (inside Canvas via Html)
@@ -78,11 +79,37 @@ function LoadingOverlay() {
           />
         </div>
         <div className="text-[9px] tracking-[0.3em] text-white/30">
-          artgalery.glb · {FRAME_SPOTS.length} FRAMES
+          nuevagalery.glb · {FRAME_SPOTS.length} FRAMES
         </div>
       </div>
     </Html>
   );
+}
+
+// ──────────────────────────────────────────────
+// Perf probe — samples FPS + draw calls + triangles (gl.info) twice a second.
+// ──────────────────────────────────────────────
+function PerfProbe({ onStats }: { onStats: (s: { fps: number; calls: number; tris: number }) => void }) {
+  const { gl } = useThree();
+  const last = useRef(performance.now());
+  const frames = useRef(0);
+  const acc = useRef(0);
+  useFrame(() => {
+    frames.current++;
+    const now = performance.now();
+    acc.current += now - last.current;
+    last.current = now;
+    if (acc.current >= 500) {
+      onStats({
+        fps: Math.round((frames.current * 1000) / acc.current),
+        calls: gl.info.render.calls,
+        tris: gl.info.render.triangles,
+      });
+      frames.current = 0;
+      acc.current = 0;
+    }
+  });
+  return null;
 }
 
 export default function MetaverseGallery() {
@@ -99,21 +126,40 @@ export default function MetaverseGallery() {
   const [bonusText, setBonusText] = useState<string | null>(null);
   const playerControlsRef = useRef<PlayerControlsRef>(null);
   const [playingVideoIndex, setPlayingVideoIndex] = useState<number | null>(null);
+  // Frames close enough to load the full artwork + animate (perf gate).
+  const [activeFrames, setActiveFrames] = useState<Set<number>>(new Set());
+  const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
 
-  // Fetch & sort tokens cheapest → most expensive
+  // Fetch SideQuest collection only, sort cheapest → priciest
   useEffect(() => {
-    fetch("/api/objkt?alias=nikoalerce&limit=300")
-      .then((r) => r.json())
-      .then((data) => {
-        const filtered = (data.tokens ?? []).filter(
-          (t: ObjktToken) => isDisplayableToken(t) && !t.name?.match(/^G0dz\s*#/i)
-        );
-        filtered.sort((a: ObjktToken, b: ObjktToken) => {
+    const aliases = ["sidequest"];
+    Promise.all(
+      aliases.map((a) =>
+        fetch(`/api/objkt?alias=${a}&limit=300`)
+          .then((r) => r.json())
+          .then((d) => (d.tokens ?? []) as ObjktToken[])
+          .catch(() => [] as ObjktToken[])
+      )
+    )
+      .then((lists) => {
+        // Merge + de-dupe by contract/token_id
+        const seen = new Set<string>();
+        const merged: ObjktToken[] = [];
+        for (const t of lists.flat()) {
+          const id = `${t.fa_contract}-${t.token_id}`;
+          if (seen.has(id)) continue;
+          seen.add(id);
+          // Only flat artworks in the frames: image / gif / video. No 3D (glb) or interactive html.
+          const k = detectKind(t.mime);
+          if (k === "model" || k === "html") continue;
+          if (isDisplayableToken(t) && !t.name?.match(/^G0dz\s*#/i)) merged.push(t);
+        }
+        merged.sort((a, b) => {
           const pa = lowestPriceXtz(a) ?? 999999;
           const pb = lowestPriceXtz(b) ?? 999999;
           return pa - pb;
         });
-        setTokens(filtered);
+        setTokens(merged);
       })
       .catch(console.error)
       .finally(() => setLoadingTokens(false));
@@ -122,14 +168,40 @@ export default function MetaverseGallery() {
   // Map tokens to frame spots (cycle if tokens < 34)
   // Limit to 10 on mobile, 20 on desktop to prevent overload
   const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-  const initialFrameCount = isMobileDevice ? 10 : 20;
+  const initialFrameCount = isMobileDevice ? 18 : FRAME_SPOTS.length;
 
-  const frameTokens = useMemo(() => {
-    if (tokens.length === 0) return [];
-    return FRAME_SPOTS.slice(0, initialFrameCount).map((spot, i) => ({
-      spot,
-      token: tokens[i % tokens.length],
-    }));
+  // Expand frame spots into render UNITS. Tall thin slots (slots:3) split into 3 stacked
+  // artworks; the curved spot becomes a single unit painted onto the GLB mesh. Tokens are
+  // assigned sequentially across all units.
+  const units = useMemo(() => {
+    type Unit = {
+      key: string; pos: [number, number, number]; rotY: number; w: number; h: number;
+      token: ObjktToken; meshDigits?: string;
+    };
+    if (tokens.length === 0) return [] as Unit[];
+    const out: Unit[] = [];
+    let t = 0;
+    const spots = FRAME_SPOTS.slice(0, initialFrameCount);
+    spots.forEach((spot, s) => {
+      const n = spot.slots && spot.slots > 1 ? spot.slots : 1;
+      if (n === 1) {
+        // Single frame → painted directly onto its GLB mesh (Object_574.00X, where the
+        // frame index s+1 is the suffix; "574" + zero-padded number → digit match key).
+        const digits = "574" + String(s + 1).padStart(3, "0");
+        out.push({ key: `f${s}`, pos: spot.pos, rotY: spot.rotY, w: spot.w, h: spot.h, token: tokens[t % tokens.length], meshDigits: digits });
+        t++;
+      } else {
+        // Tall thin slot → 3 stacked artworks as floating planes (one mesh can't show 3).
+        const step = spot.h / n;
+        const subH = step * 0.92;
+        for (let k = 0; k < n; k++) {
+          const y = spot.pos[1] + ((n - 1) / 2 - k) * step; // top → bottom
+          out.push({ key: `f${s}_${k}`, pos: [spot.pos[0], y, spot.pos[2]], rotY: spot.rotY, w: spot.w, h: subH, token: tokens[t % tokens.length] });
+          t++;
+        }
+      }
+    });
+    return out;
   }, [tokens, initialFrameCount]);
 
   // On-chain buy event → bonus score
@@ -154,33 +226,50 @@ export default function MetaverseGallery() {
     setTimeout(() => setBonusText(null), 4000);
   };
 
-  // Poll nearest frame spot (rAF, no setState flood)
+  // Poll nearest frame spot + active set (rAF, no setState flood).
+  // Active = the few NEAREST frames (capped) so a compact gallery doesn't end up
+  // animating 27 GIFs at once. Radius alone was useless here.
   useEffect(() => {
+    const MAX_ACTIVE = 9;
+    const MAX_ACTIVE_R2 = 13 * 13;
     let rafId: number;
     const loop = () => {
       const pp = playerPos.current;
+      const dists: { i: number; d2: number }[] = [];
       let closest: number | null = null;
       let minDist = 5.0; // interaction radius
-      frameTokens.forEach(({ spot }, i) => {
-        const dx = pp.x - spot.pos[0];
-        const dz = pp.z - spot.pos[2];
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < minDist) {
-          minDist = dist;
-          closest = i;
-        }
+      units.forEach((u, i) => {
+        const dx = pp.x - u.pos[0];
+        const dz = pp.z - u.pos[2];
+        const d2 = dx * dx + dz * dz;
+        dists.push({ i, d2 });
+        const dist = Math.sqrt(d2);
+        if (dist < minDist) { minDist = dist; closest = i; }
       });
+      dists.sort((a, b) => a.d2 - b.d2);
+      const next = new Set<number>();
+      for (let j = 0; j < dists.length && j < MAX_ACTIVE; j++) {
+        if (dists[j].d2 < MAX_ACTIVE_R2) next.add(dists[j].i);
+      }
       setNearestFrame((prev) => (prev !== closest ? closest : prev));
+      setActiveFrames((prev) => {
+        if (prev.size === next.size) {
+          let same = true;
+          for (const i of next) if (!prev.has(i)) { same = false; break; }
+          if (same) return prev;
+        }
+        return next;
+      });
       rafId = requestAnimationFrame(loop);
     };
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [frameTokens]);
+  }, [units]);
 
   // [E] key handler
   const handleInteract = useCallback(() => {
-    if (nearestFrame === null || !frameTokens[nearestFrame]) return;
-    const { token } = frameTokens[nearestFrame];
+    if (nearestFrame === null || !units[nearestFrame]) return;
+    const { token } = units[nearestFrame];
     const id = `${token.fa_contract}-${token.token_id}`;
 
     if (!discoveredIds.has(id)) {
@@ -194,7 +283,7 @@ export default function MetaverseGallery() {
       playClickSound();
     }
     openModal(token);
-  }, [nearestFrame, frameTokens, discoveredIds, openModal]);
+  }, [nearestFrame, units, discoveredIds, openModal]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -211,13 +300,16 @@ export default function MetaverseGallery() {
     window.location.href = "/";
   };
 
-  const nearToken = nearestFrame !== null ? frameTokens[nearestFrame]?.token : null;
+  const nearToken = nearestFrame !== null ? units[nearestFrame]?.token : null;
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden font-mono select-none">
       {/* ──── THREE.JS CANVAS ──── */}
       <Canvas
         shadows={false}
+        // Cap pixel ratio — on a retina/4K display an uncapped dpr renders 4× the
+        // pixels and is the single biggest FPS killer here.
+        dpr={[1, 1.5]}
         gl={{
           antialias: true,
           powerPreference: "high-performance",
@@ -227,43 +319,52 @@ export default function MetaverseGallery() {
         camera={{
           fov: 70,
           near: 0.1,
-          far: 150,
+          far: 800,
           position: [PLAYER_START.x, PLAYER_START.y + 1.7, PLAYER_START.z],
         }}
       >
-        <color attach="background" args={["#020205"]} />
-        <fog attach="fog" args={["#020205", 10, 80]} />
+        <color attach="background" args={["#15120f"]} />
+        <fog attach="fog" args={["#15120f", 60, 240]} />
 
-        {/* Lighting */}
-        <ambientLight intensity={0.5} color="#b0b8ff" />
-        <directionalLight position={[-10, 12, 0]} intensity={1.2} color="#fff6e8" />
-        <directionalLight position={[5, 8, -5]} intensity={0.5} color="#3366ff" />
-        <pointLight position={[-16, 4, 0]} intensity={3} color="#ff0040" distance={22} decay={2} />
-        <pointLight position={[-5, 4, -5]} intensity={2} color="#00fff0" distance={20} decay={2} />
-        <pointLight position={[4, 4, 0]} intensity={1.5} color="#ffffff" distance={18} decay={2} />
+        {/* Warm gallery fill. Kept a few point lights so the GLB (and its metalness
+            materials) read properly; the real perf wins were the dpr cap + dropping
+            the Bloom pass, not the lights. */}
+        <ambientLight intensity={0.85} color="#f2e8d8" />
+        <hemisphereLight args={["#fff3e0", "#1a1612", 0.6]} />
+        <directionalLight position={[-12, 20, 8]} intensity={0.7} color="#fff4e6" />
+        <pointLight position={[-22, 4.5, -4]} intensity={1.4} color="#ffe9cf" distance={26} decay={2} />
+        <pointLight position={[-12, 4.5, -2]} intensity={1.4} color="#fff2e2" distance={26} decay={2} />
+        <pointLight position={[-2, 4.5, -6]} intensity={1.2} color="#ffe9cf" distance={24} decay={2} />
+
+        <PerfProbe onStats={setPerf} />
 
         <Suspense fallback={<LoadingOverlay />}>
-          <Environment preset="night" />
+          <Environment preset="apartment" />
           <GalleryScene />
 
-          {/* NFT frames on the 34 Light_Inner_Body spots */}
-          {frameTokens.map(({ spot, token }, i) => {
-            const id = `${token.fa_contract}-${token.token_id}`;
+          {/* NFT render units: single frames painted on their GLB mesh, tall slots as
+              stacked floating planes. */}
+          {units.map((u, i) => {
+            const id = `${u.token.fa_contract}-${u.token.token_id}`;
+            if (u.meshDigits) {
+              return <MeshScreen key={u.key} token={u.token} digits={u.meshDigits} isActive={activeFrames.has(i)} />;
+            }
             return (
               <NftFrame
-                key={`nft-${i}`}
-                token={token}
-                position={spot.pos}
-                rotY={spot.rotY}
-                index={i}
+                key={u.key}
+                token={u.token}
+                position={u.pos}
+                rotY={u.rotY}
+                maxW={u.w}
+                maxH={u.h}
                 isNear={nearestFrame === i}
+                isActive={activeFrames.has(i)}
                 isDiscovered={discoveredIds.has(id)}
-                isBought={boughtIds.has(String(token.token_id))}
+                isBought={boughtIds.has(String(u.token.token_id))}
                 onClick={() => {
                   playerControlsRef.current?.unlock();
-                  openModal(token);
+                  openModal(u.token);
                 }}
-                playerPosition={playerPos.current}
                 isVideoPlaying={playingVideoIndex === i}
                 onVideoPlay={() => setPlayingVideoIndex(playingVideoIndex === i ? null : i)}
               />
@@ -279,11 +380,23 @@ export default function MetaverseGallery() {
           paused={!!activeModalToken}
         />
 
-        <EffectComposer multisampling={0}>
-          <Bloom intensity={0.4} luminanceThreshold={0.5} luminanceSmoothing={0.9} mipmapBlur />
-          <Vignette eskil={false} offset={0.3} darkness={0.5} />
-        </EffectComposer>
       </Canvas>
+
+      {/* ──── PERF DIAGNOSTIC OVERLAY (temporary) ──── */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-cyan-500/50 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
+        <span className={perf.fps < 30 ? "text-red-400" : perf.fps < 50 ? "text-yellow-400" : "text-green-400"}>
+          {perf.fps} FPS
+        </span>
+        <span className="text-cyan-300">{perf.calls} draws</span>
+        <span className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k tris</span>
+        <span className="text-gray-500">active {activeFrames.size}</span>
+      </div>
+
+      {/* Cheap CSS vignette (replaces the GPU postprocessing pass) */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{ boxShadow: "inset 0 0 220px 60px rgba(0,0,0,0.65)" }}
+      />
 
       {/* ──── CLICK TO ENTER OVERLAY ──── */}
       {!isLocked && !activeModalToken && (

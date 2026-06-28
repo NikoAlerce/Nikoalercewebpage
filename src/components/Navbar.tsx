@@ -5,10 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import GlitchText from "./GlitchText";
+import { useWallet } from "./WalletContext";
 
 const links = [
   { href: "/works", label: "WORKS" },
   { href: "/sidequest", label: "SIDEQUEST" },
+  { href: "/music", label: "MUSIC" },
+  { href: "/metaverse", label: "3D GALLERY" },
+  { href: "/decentraland", label: "DECENTRALAND" },
   { href: "/shop", label: "SHOP" },
   { href: "/#about", label: "BIO" },
 ];
@@ -17,6 +21,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { address, connecting, connect, disconnect } = useWallet();
 
   useEffect(() => {
     let raf = 0;
@@ -75,7 +80,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-14">
+        <ul className="hidden md:flex items-center gap-5 lg:gap-8 xl:gap-11">
           {links.map((l) => (
             <li key={l.href} className="relative group">
               <Link
@@ -106,12 +111,24 @@ export default function Navbar() {
             </div>
           </div>
           <div className="w-[1px] h-8 bg-white/10" />
-          <Link 
-            href="/works"
-            className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all"
-          >
-            COLLECT_ART
-          </Link>
+          {address ? (
+            <button
+              onClick={() => disconnect()}
+              title="Disconnect wallet"
+              className="px-4 py-2 border border-glitch-lime/40 text-glitch-lime hover:border-glitch-lime hover:bg-glitch-lime/10 transition-all flex items-center gap-2"
+            >
+              <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+              {address.slice(0, 6)}…{address.slice(-4)}
+            </button>
+          ) : (
+            <button
+              onClick={() => connect()}
+              disabled={connecting}
+              className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all disabled:opacity-50"
+            >
+              {connecting ? "CONNECTING…" : "CONNECT_WALLET"}
+            </button>
+          )}
         </div>
 
         <button

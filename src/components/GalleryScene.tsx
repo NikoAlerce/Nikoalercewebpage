@@ -1,11 +1,14 @@
 "use client";
 
 import { useGLTF } from "@react-three/drei";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
+// Loads the gallery model (nuevagalery.glb) and flags every mesh as collidable so
+// PlayerControls' forward raycast stops you at walls / objects.
 export default function GalleryScene() {
-  const { scene } = useGLTF("/artgalery.glb");
+  const { scene } = useGLTF("/nuevagalery.glb", true);
+  const sceneRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
     scene.traverse((child) => {
@@ -13,26 +16,31 @@ export default function GalleryScene() {
         child.castShadow = false;
         child.receiveShadow = false;
         child.frustumCulled = true;
+        child.userData.isCollidable = true;
 
-        if (child.material) {
-          const mats = Array.isArray(child.material)
-            ? child.material
-            : [child.material];
-          for (const m of mats) {
-            if (!m) continue;
-            // Keep emissive lights on the model (lamp inner bodies)
-            if ("roughness" in m) {
-              m.roughness = Math.min((m as any).roughness ?? 0.8, 0.95);
-              m.metalness = (m as any).metalness ?? 0;
-            }
-            m.needsUpdate = true;
+        // Build a BVH so PlayerControls' per-frame collision raycast against the
+        // huge gallery mesh is fast (computeBoundsTree is patched on in PlayerControls).
+        const geom = child.geometry as THREE.BufferGeometry & { computeBoundsTree?: () => void; boundsTree?: unknown };
+        if (geom && !geom.boundsTree && typeof geom.computeBoundsTree === "function") {
+          geom.computeBoundsTree();
+        }
+
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const m of mats) {
+          if (!m) continue;
+          if ("roughness" in m) {
+            (m as THREE.MeshStandardMaterial).roughness = Math.min(
+              (m as THREE.MeshStandardMaterial).roughness ?? 0.8,
+              0.95,
+            );
           }
+          m.needsUpdate = true;
         }
       }
     });
   }, [scene]);
 
-  return <primitive object={scene} position={[0, 0, 0]} scale={[1, 1, 1]} />;
+  return <primitive ref={sceneRef} object={scene} position={[0, 0, 0]} scale={[1, 1, 1]} />;
 }
 
-useGLTF.preload("/artgalery.glb");
+useGLTF.preload("/nuevagalery.glb", true);

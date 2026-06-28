@@ -13,3 +13,8 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Large source GLB at repo root (the optimized copy is committed in /public)
+/nuevagalery.glb
+# Local helper / debug scripts
+/scratch/

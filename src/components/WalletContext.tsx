@@ -278,24 +278,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore session; ACTIVE_ACCOUNT_SET is subscribed inside getOrInitWallet().
+  // Register for active-account updates only. We deliberately do NOT initialise
+  // Beacon on page load — eager init() kicks off wallet pairing/connection
+  // prompts before the user asked for anything. The wallet is initialised lazily,
+  // only when the user clicks "Connect wallet" (or BUY). The trade-off is that a
+  // session is not auto-restored across reloads, which is the intended behaviour.
   useEffect(() => {
-    let cancelled = false;
-    const listener = (addr: string | null) => {
-      if (!cancelled) setAddress(addr);
-    };
+    const listener = (addr: string | null) => setAddress(addr);
     activeAccountListeners.add(listener);
-    (async () => {
-      try {
-        const { wallet } = await getOrInitWallet();
-        const active = await wallet.client.getActiveAccount();
-        if (!cancelled && active?.address) setAddress(active.address);
-      } catch {
-        // ignore: user never connected
-      }
-    })();
     return () => {
-      cancelled = true;
       activeAccountListeners.delete(listener);
     };
   }, []);

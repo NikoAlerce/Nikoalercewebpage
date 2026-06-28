@@ -67,6 +67,12 @@ export default function Shop() {
             Physical objects from the NIKO_ALERCE universe. Limited editions
             that extend the glitch into the analog world.
           </p>
+          <div className="mt-5 inline-flex items-center gap-3 border border-glitch-lime/40 bg-glitch-lime/5 px-4 py-2 relative z-10">
+            <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full animate-pulse" />
+            <span className="text-[10px] tracking-[0.4em] text-glitch-lime uppercase">
+              // UNDER_CONSTRUCTION · STORE NOT YET LIVE
+            </span>
+          </div>
         </div>
         <div className="text-[10px] tracking-[0.3em] text-ash space-y-1 border-l border-glitch-lime/30 pl-4">
           <div className="flex justify-between gap-6">

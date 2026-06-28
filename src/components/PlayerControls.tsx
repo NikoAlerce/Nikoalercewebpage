@@ -4,12 +4,22 @@ import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "re
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
 import * as THREE from "three";
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from "three-mesh-bvh";
+
+// Accelerate Mesh.raycast with a BVH — the gallery is a single ~721k-triangle mesh,
+// so the per-frame collision raycast is O(triangles) without this (the main hitch).
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 type Props = {
   startPosition: THREE.Vector3;
   positionRef: React.MutableRefObject<THREE.Vector3>;
   onLockChange: (locked: boolean) => void;
   paused: boolean;
+  // Optional terrain follow: returns the ground height under (x,z), or null if none.
+  // When omitted, the player walks on a flat floor at FLOOR_Y (legacy behaviour).
+  getGroundY?: (x: number, z: number) => number | null;
 };
 
 export interface PlayerControlsRef {
@@ -33,10 +43,14 @@ const isMobile = () => {
          ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 };
 
-const PlayerControlsInner = function PlayerControls({ startPosition, positionRef, onLockChange, paused }: Props, ref: React.Ref<PlayerControlsRef>) {
+const PlayerControlsInner = function PlayerControls({ startPosition, positionRef, onLockChange, paused, getGroundY }: Props, ref: React.Ref<PlayerControlsRef>) {
   const controlsRef = useRef<any>(null);
-  const { camera } = useThree();
+  const { camera, scene } = useThree();
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  // Raycasting for collision detection
+  const raycaster = useRef(new THREE.Raycaster());
+  const playerBox = useRef(new THREE.Box3());
 
   // Touch controls state
   const touchMoveRef = useRef({ x: 0, y: 0 });
@@ -68,6 +82,11 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
   });
   const velocityY = useRef(0);
   const isGrounded = useRef(true);
+  // Cache of collidable meshes — rebuilt occasionally instead of every frame
+  // (traversing the whole gallery scene each frame was a major hitch source).
+  const collidablesRef = useRef<THREE.Object3D[]>([]);
+  const frameCount = useRef(0);
+  const lastFloorY = useRef(FLOOR_Y); // remembered terrain height to avoid falling through holes
   const headBobT = useRef(0);
   const initialized = useRef(false);
   const currentVelocity = useRef(new THREE.Vector3()); // For smooth acceleration
@@ -243,10 +262,47 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     // Snap to zero if very slow
     if (!isMoving && vel.length() < 0.01) vel.set(0, 0, 0);
 
-    // Apply horizontal movement
+    // Apply horizontal movement with collision detection
     const pos = positionRef.current;
-    pos.x += vel.x * clampedDt;
-    pos.z += vel.z * clampedDt;
+    const newPos = new THREE.Vector3(
+      pos.x + vel.x * clampedDt,
+      pos.y,
+      pos.z + vel.z * clampedDt
+    );
+
+    // Collision detection using raycasting
+    const playerRadius = 0.5;
+    const playerHeight = PLAYER_HEIGHT;
+
+    // Check collision in movement direction
+    raycaster.current.set(
+      new THREE.Vector3(pos.x, pos.y + EYE_LEVEL, pos.z),
+      new THREE.Vector3(newPos.x - pos.x, 0, newPos.z - pos.z).normalize()
+    );
+    raycaster.current.far = playerRadius + 0.5;
+
+    // Get collidable objects from scene — cached and refreshed every 60 frames
+    // (and while still empty, until the GLB has loaded) rather than every frame.
+    frameCount.current++;
+    if (collidablesRef.current.length === 0 || frameCount.current % 60 === 0) {
+      const list: THREE.Object3D[] = [];
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && (child.userData.isCollidable || child.name?.includes('wall') || child.name?.includes('floor'))) {
+          list.push(child);
+        }
+      });
+      collidablesRef.current = list;
+    }
+
+    const intersects = raycaster.current.intersectObjects(collidablesRef.current, false);
+
+    if (intersects.length > 0 && intersects[0].distance < playerRadius) {
+      // Collision detected, don't move
+      vel.set(0, 0, 0);
+    } else {
+      pos.x = newPos.x;
+      pos.z = newPos.z;
+    }
 
     // Gravity
     if (!isGrounded.current) {
@@ -262,9 +318,18 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     // Apply vertical
     pos.y += velocityY.current * clampedDt;
 
+    // Resolve the floor height under the player: terrain (if provided) or flat FLOOR_Y.
+    let floorY = FLOOR_Y;
+    if (getGroundY) {
+      const g = getGroundY(pos.x, pos.z);
+      // Keep last good height when over a gap (e.g. the lake) so we don't fall forever.
+      floorY = g !== null && g !== undefined ? g : lastFloorY.current;
+      lastFloorY.current = floorY;
+    }
+
     // Floor clamp
-    if (pos.y <= FLOOR_Y) {
-      pos.y = FLOOR_Y;
+    if (pos.y <= floorY) {
+      pos.y = floorY;
       velocityY.current = 0;
       isGrounded.current = true;
     } else {

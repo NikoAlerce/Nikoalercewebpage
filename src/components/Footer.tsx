@@ -30,10 +30,10 @@ export default function Footer() {
             imagined it in 3D, we can materialize it.
           </p>
           <a
-            href="mailto:hello@nikoalerce.art"
+            href="mailto:alercebolson@gmail.com"
             className="mt-6 inline-flex items-center gap-3 text-bone hover:text-glitch-red glitch-hover text-base"
           >
-            hello@nikoalerce.art →
+            alercebolson@gmail.com →
           </a>
         </div>
 

@@ -4,10 +4,21 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import clsx from "clsx";
 import NFTCard from "./NFTCard";
 import GlitchText from "./GlitchText";
-import { isDisplayableToken, tokenStatus } from "@/lib/objkt";
+import { isDisplayableToken, tokenStatus, detectKind } from "@/lib/objkt";
 import type { ObjktHolder, ObjktToken } from "@/lib/types";
 
 type Filter = "all" | "for_sale" | "sold_out" | "in_collection";
+type MediaFilter = "all" | "image" | "gif" | "video" | "model" | "interactive";
+
+// Map a token's mime to a media category (gif split out from static images).
+function mediaCat(t: ObjktToken): Exclude<MediaFilter, "all"> | "other" {
+  const k = detectKind(t.mime);
+  if (k === "image") return t.mime === "image/gif" ? "gif" : "image";
+  if (k === "video") return "video";
+  if (k === "model") return "model";
+  if (k === "html") return "interactive";
+  return "other"; // audio / unknown
+}
 
 type Props = {
   alias: string;
@@ -46,34 +57,7 @@ export default function NFTGallery({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
-  const [shouldLoad, setShouldLoad] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // Lazy-load: only fetch when the section is near the viewport.
-  // Keeps the landing light until the user decides to view Works/SideQuest.
-  useEffect(() => {
-    if (shouldLoad) return;
-    const node = sentinelRef.current;
-    if (!node) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setShouldLoad(true);
-      return;
-    }
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setShouldLoad(true);
-            obs.disconnect();
-            break;
-          }
-        }
-      },
-      { rootMargin: "300px 0px" },
-    );
-    obs.observe(node);
-    return () => obs.disconnect();
-  }, [shouldLoad]);
+  const [media, setMedia] = useState<MediaFilter>("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,8 +82,8 @@ export default function NFTGallery({
   }, [alias]);
 
   useEffect(() => {
-    if (shouldLoad) load();
-  }, [load, shouldLoad]);
+    load();
+  }, [load]);
 
   const counts = useMemo(() => {
     let forSale = 0;
@@ -119,10 +103,22 @@ export default function NFTGallery({
     };
   }, [tokens]);
 
+  const mediaCounts = useMemo(() => {
+    const c = { all: tokens.length, image: 0, gif: 0, video: 0, model: 0, interactive: 0 };
+    for (const t of tokens) {
+      const m = mediaCat(t);
+      if (m !== "other") c[m]++;
+    }
+    return c;
+  }, [tokens]);
+
   const displayed = useMemo(() => {
-    if (filter === "all") return tokens;
-    return tokens.filter((t) => tokenStatus(t) === filter);
-  }, [tokens, filter]);
+    return tokens.filter(
+      (t) =>
+        (filter === "all" || tokenStatus(t) === filter) &&
+        (media === "all" || mediaCat(t) === media),
+    );
+  }, [tokens, filter, media]);
 
   const accentClass = accent === "red" ? "text-glitch-red" : "text-glitch-cyan";
   const accentBorder =
@@ -139,10 +135,21 @@ export default function NFTGallery({
     { key: "in_collection", label: "ARCHIVE" },
   ];
 
+  // Only show media-type tabs the artist actually has.
+  const mediaTabs: { key: MediaFilter; label: string }[] = (
+    [
+      { key: "all", label: "ALL TYPES" },
+      { key: "image", label: "IMAGE" },
+      { key: "gif", label: "GIF" },
+      { key: "video", label: "VIDEO" },
+      { key: "model", label: "3D" },
+      { key: "interactive", label: "INTERACTIVE" },
+    ] as { key: MediaFilter; label: string }[]
+  ).filter((t) => t.key === "all" || mediaCounts[t.key] > 0);
+
   return (
     <section
       id={id}
-      ref={sentinelRef}
       className="relative py-24 md:py-32 px-6 md:px-10 max-w-[1600px] mx-auto border-t border-white/5"
     >
       {/* Header */}
@@ -184,18 +191,14 @@ export default function NFTGallery({
             <span>STATUS</span>
             <span
               className={
-                !shouldLoad
-                  ? "text-ash/60"
-                  : loading
+                loading
                   ? "text-ash animate-pulse"
                   : error
                   ? "text-glitch-red"
                   : "text-glitch-lime"
               }
             >
-              {!shouldLoad
-                ? "STANDBY"
-                : loading
+              {loading
                 ? "FETCHING"
                 : error
                 ? "ERROR"
@@ -213,43 +216,59 @@ export default function NFTGallery({
         </div>
       </div>
 
-      {/* Filter tabs */}
+      {/* Filters: status + file type */}
       {!loading && !error && tokens.length > 0 && (
-        <div className="flex items-center gap-0 mb-8 border border-white/10 w-fit">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={clsx(
-                "px-4 py-2 text-[10px] tracking-[0.3em] uppercase border-r border-white/10 last:border-r-0 transition-colors",
-                filter === tab.key
-                  ? clsx("bg-white/5", activeTabClass, "border-b-2")
-                  : "text-ash hover:text-bone",
-              )}
-            >
-              {tab.label}
-              <span className="ml-2 opacity-50">
-                ({counts[tab.key]})
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+        <div className="flex flex-col gap-3 mb-8">
+          {/* Status */}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[9px] tracking-[0.4em] text-ash/50 w-12 shrink-0">STATUS</span>
+            <div className="flex flex-wrap items-center border border-white/10 w-fit">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
+                  className={clsx(
+                    "px-4 py-2 text-[10px] tracking-[0.3em] uppercase border-r border-white/10 last:border-r-0 transition-colors",
+                    filter === tab.key
+                      ? clsx("bg-white/5", activeTabClass, "border-b-2")
+                      : "text-ash hover:text-bone",
+                  )}
+                >
+                  {tab.label}
+                  <span className="ml-2 opacity-50">({counts[tab.key]})</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Standby (before scrolling) */}
-      {!shouldLoad && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="aspect-square bg-ink/40 border border-white/5"
-            />
-          ))}
+          {/* File type */}
+          {mediaTabs.length > 2 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[9px] tracking-[0.4em] text-ash/50 w-12 shrink-0">TYPE</span>
+              <div className="flex flex-wrap items-center border border-white/10 w-fit">
+                {mediaTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setMedia(tab.key)}
+                    className={clsx(
+                      "px-4 py-2 text-[10px] tracking-[0.3em] uppercase border-r border-white/10 last:border-r-0 transition-colors",
+                      media === tab.key
+                        ? clsx("bg-white/5", activeTabClass, "border-b-2")
+                        : "text-ash hover:text-bone",
+                    )}
+                  >
+                    {tab.label}
+                    <span className="ml-2 opacity-50">({mediaCounts[tab.key]})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Loading skeleton */}
-      {shouldLoad && loading && (
+      {loading && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
@@ -281,7 +300,9 @@ export default function NFTGallery({
         <div className="border border-white/10 p-10 text-center text-ash">
           <div className="text-xs tracking-[0.3em] mb-2">// VOID</div>
           <div>
-            {filter === "for_sale"
+            {media !== "all"
+              ? "No pieces match the current type + status filter."
+              : filter === "for_sale"
               ? "No pieces have an active listing right now."
               : filter === "sold_out"
               ? "No pieces are fully sold out yet."

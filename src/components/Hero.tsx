@@ -92,8 +92,9 @@ export default function Hero() {
         </h1>
 
         <p className="mt-6 text-sm md:text-base text-ash/70 max-w-lg leading-relaxed">
-          Sculpting inside the void. 3D pieces, animations, and glitch
-          experiments. Move your cursor to interact. Click the floating text to navigate.
+          Full-stack creative from Patagonia — 3D art, music, and immersive
+          worlds, all under one roof. Move your cursor to interact. Click the
+          floating text to navigate.
         </p>
       </div>
 
@@ -111,14 +112,14 @@ export default function Hero() {
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex shrink-0">
               {[
-                "GLITCH/CORE",
-                "TEZOS_NATIVE",
                 "3D_VISUAL_ARTIST",
+                "MUSIC_PRODUCER",
+                "EL_BOSQUECITO_RECORDS",
+                "DECENTRALAND_BUILDER",
+                "BLENDER_ADDON_DEV",
                 "OBJKT://NIKOALERCE",
-                "ALTER_EGO::SIDEQUEST",
-                "WEBGL//R3F",
                 "AR/VR_READY",
-                "VOID_SIGNAL",
+                "EL_BOLSÓN//PATAGONIA",
               ].map((w) => (
                 <span key={w} className="px-8 flex items-center gap-3">
                   <span className="text-glitch-red">▌</span>
