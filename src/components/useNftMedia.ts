@@ -24,8 +24,11 @@ export function proxied(uri?: string | null): string | null {
  *  - the real mp4 (VideoTexture) when `videoActive`.
  * Returns the current best texture + its aspect ratio.
  */
-export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoActive: boolean }) {
-  const { active, videoActive } = opts;
+export function useNftMedia(
+  token: ObjktToken,
+  opts: { active: boolean; videoActive: boolean; bufferActive?: boolean },
+) {
+  const { active, videoActive, bufferActive = false } = opts;
 
   const [staticTex, setStaticTex] = useState<THREE.Texture | null>(null);
   const [animTex, setAnimTex] = useState<THREE.CanvasTexture | null>(null);
@@ -175,7 +178,11 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
   // Keyed on `shouldLoadVideo` (not videoActive) so walking from "nearby" into
   // "playing" range does NOT tear down and re-download the element — the buffer it
   // built up while you approached is exactly what makes playback start instantly.
-  const shouldLoadVideo = isVideo && !!videoUrl && videoActive;
+  // Create + buffer the <video> when the frame is either playing OR merely close enough to
+  // pre-buffer (bufferActive). Pre-buffered videos download (preload=auto) but don't play
+  // or upload a texture, so the bytes are already there the instant you look at one — which
+  // is what kills the "load, then wait to play" delay on the cold production gateways.
+  const shouldLoadVideo = isVideo && !!videoUrl && (videoActive || bufferActive);
   useEffect(() => {
     if (!shouldLoadVideo || !videoUrl) return;
     const video = document.createElement("video");

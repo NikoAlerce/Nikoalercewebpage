@@ -14,6 +14,67 @@ Todo el flujo de compra ya existía y se reutiliza.
 
 ---
 
+## Actualización (2026-06-29) — Performance de video, interacción por mira, playlist y tiers
+
+Sesión posterior: hacer la galería **fluida** y la reproducción de video **inmediata**, sumar una **playlist con sonido**, **selección por mira** y un **indicador de carga**.
+
+### Streaming y carga de video — proxy IPFS (`src/app/api/ipfs/route.ts`)
+- **Range requests**: reenvía el header `Range` al gateway y devuelve `206 Partial Content` con `Content-Range`/`Accept-Ranges` → el `<video>` reproduce en streaming en vez de bajar el mp4 entero (era la causa #1 de la demora).
+- **Carrera de gateways + pinning**: la 1ª petición de cada CID corre 3 gateways en paralelo (`Promise.any`), usa el más rápido y lo **fija por CID** (Map en memoria) para los Range siguientes. Fallback secuencial, timeout 8s/gateway. Se quitó `cloudflare-ipfs.com` (muerto), se sumó `4everland.io`.
+- **Cache `immutable` 1 año** (`public, max-age=31536000, immutable`): IPFS es content-addressed. En Vercel llena el edge cache (2º visitante instantáneo). **OJO**: los `206` de video no siempre se cachean en el edge → el escalón real para video pesado sigue siendo **gateway dedicado** (Pinata con key) o re-hostear.
+
+### Reproducción inmediata + presupuesto de videos (lo más importante de perf)
+Síntoma: pared con muchos videos → **10 FPS**. Causa: el navegador tiene un **límite de decoders de video por hardware** (~5–6); pasado eso cae a software (CPU) y se desploma. **No es la GPU** (una Arc A730M también caía).
+- **Presupuesto priorizado por la mirada** (`videoPlayFrames`): solo reproducen los N videos más **centrados en tu vista** (`dot` = dirección de cámara · dirección-a-obra, en XZ); el resto muestra su **still a resolución completa** (`display_uri`). El set sigue tu mirada.
+- **Pre-buffer** (`videoBufferFrames`): los videos cercanos (≈2× el presupuesto, por distancia) **descargan apenas entrás al radio** (`preload=auto`, en pausa, sin textura → cero GPU). Girar a otro grupo = solo play/pause, sin recargar. Esto arregla el "cargan pero tardan en reproducir" del deploy.
+- **GIFs** siguen por proximidad (`activeFrames`); son más baratos.
+- Hook central: `useNftMedia(token, { active, videoActive, bufferActive })` — `active`=gif, `videoActive`=reproduce, `bufferActive`=precarga. La VideoTexture solo se muestra cuando hay frame decodificado (sin flash negro).
+
+### Tiers de calidad (adaptación a la máquina) — en `MetaverseGallery`
+- `TIERS` LOW/MED/HIGH → `videoBudget` (3/6/9), `dpr` ([1,1]/[1,1.25]/[1,1.4]), `maxActive` (8/16/24).
+- `detectTier()` por GPU (`WEBGL_debug_renderer_info`), cores y RAM. **MED es el default sano** (techo real de decoders de casi cualquier máquina, laptops con GPU discreta incluidas); HIGH es opt-in solo para GPUs de escritorio tope; LOW para software/integradas.
+- **Hotkeys `1`/`2`/`3`** cambian tier en vivo (sirven con pointer-lock) + selector **GFX** arriba-derecha. Overlay diagnóstico arriba: `FPS / draws / tris / active / vid X/Y` (**sigue visible para usuarios finales → esconder antes de "producción final"**).
+
+### Selección por mira (raycast) + click
+- `TargetingController` (en el Canvas) lanza un rayo por el centro de pantalla cada frame → resuelve el primer NFT apuntado (registro en `targetsRef`: `NftFrame` registra su grupo, `MeshScreen` su malla), hasta 18 unidades.
+- El frame **apuntado** maneja HUD, brillo, `[E]` y **click** (mousedown global mientras estás locked). Preciso aunque haya muchos NFTs juntos; la mira se pone cyan al apuntar. La proximidad ya **no** maneja selección.
+
+### Playlist con sonido en la pantalla "Wicked World"
+- La pantalla que mostraba **"Wicked World"** (token 23, gif; pantalla **curva** spot 26 = `Object_574.027`) ahora reproduce una **playlist de 3 videos en bucle, con sonido**:
+  1. `KT1G1wt3PFhfLf6UW6bJGsuNuhgnNWKSh7sW:353` — Niko Alerce
+  2. `KT1PUZFdBCVscamVfr91rcZPpPau5MHiS3ip:2` — The Blender Cube
+  3. `KT1PUZFdBCVscamVfr91rcZPpPau5MHiS3ip:0` — Mask (Music Video)
+- `PLAYLIST_IDS` + `PLAYLIST_HOST` (`/wicked\s*world/i`) en `MetaverseGallery`; la unidad que matchea recibe `playlist`. `usePlaylistMedia(tokens, { active, withSound, onTrack })` cicla con el evento `ended`, sin mute (si el browser bloquea autoplay-con-sonido reintenta muteado), y reporta el track actual.
+- **HUD muestra el track en reproducción** (no "Wicked World") vía `tokenForUnit()`; `[E]`/click abren el track actual.
+- Nuevo endpoint **`/api/tokens?ids=contrato:id,...`** + `fetchTokensByIds` en `objkt.ts` (trae tokens de **cualquier** contrato, no solo de las colecciones del artista).
+
+### Fixes visuales
+- **Mallas en negro antes de cargar**: `MeshScreen` pinta la malla en negro hasta que llega el NFT (antes asomaba el placeholder beige horneado del GLB).
+- **Paneles verticales (slots:3) en negro**: `BlackoutMesh` pinta las mallas `Object_574.011/.012/.016/.023/.024/.025/.034` (paneles altos) → sin beige ni z-fight contra los planos flotantes apilados.
+- **Espejado en la pantalla curva**: `flipU` en `applyCover` (invierte el eje U). La proyección planar de UV de la malla curva corría al revés del sentido de visión → video/texto espejado. Atado a `curved:true`.
+
+### Indicador de carga
+- `AssetProgressHUD` (DOM) lee `useProgress` (DefaultLoadingManager): muestra **`cargados / total`** + % + barra mientras cargan GLB/HDR/miniaturas (TextureLoader). Se oculta solo al terminar.
+
+### Interactivo Eyejack — NO se pudo (revertido)
+- Se intentó embeber `KT1DZDmc2x8XvwiqYFCVrbSYMA7RZhEeNAtR:0` ("The observer and the observed") como objeto 3D, pero es **WebAR de Eyejack** (`application/x-directory`, HTML), no un GLB. El iframe en 3D (`InteractiveKiosk`) no funciona porque Eyejack pide cámara/AR. **Borrado** a pedido. Vía futura: un cuadro normal que abra la experiencia a pantalla completa / nueva pestaña.
+
+### Archivos tocados / nuevos (esta actualización)
+- `src/app/api/ipfs/route.ts` — Range + race + pinning + cache immutable.
+- `src/app/api/tokens/route.ts` — **nuevo**: fetch por contrato:id.
+- `src/lib/objkt.ts` — `fetchTokensByIds` + query `TOKENS_BY_IDS`.
+- `src/components/useNftMedia.ts` — split buffer/play, `usePlaylistMedia`, still de video = `display_uri`.
+- `src/components/NftFrame.tsx` — `shouldPlayVideo`/`shouldBufferVideo`/`isTargeted`, registro en `targetsRef`, playlist.
+- `src/components/MeshScreen.tsx` — black-before-load, `BlackoutMesh` (export), `flipU`, playlist, registro target, gates de video.
+- `src/components/MetaverseGallery.tsx` — tiers + auto-detect + hotkeys + GFX, `TargetingController`, `videoPlayFrames`/`videoBufferFrames`/gaze, `AssetProgressHUD`, playlist host, blackout slotted, perf overlay.
+
+### Pendientes nuevos
+- **Gateway IPFS dedicado** (Pinata/own con key) o re-hostear videos: único escalón que queda para video pesado en prod.
+- **Esconder el overlay de diagnóstico** (FPS/draws/tris/vid) para usuarios finales.
+- **Rediseño del hero/landing**: recomendación acordada = "la obra es el hero" (sacar orbe/ruido, un foco, placa de museo, glitch como puntuación, paleta neutra + color de la obra). **Pendiente prototipar en branch `hero-redesign`.**
+
+---
+
 ## Cómo llegamos acá (arco de la sesión)
 1. Pedido inicial: usar los GLB optimizados de Mario Kart en la galería/minijuego 3D de la página.
 2. Se construyó primero un **circuito de karts conducible** en `/metaverse` (KartCircuit + Karts:

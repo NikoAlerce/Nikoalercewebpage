@@ -14,6 +14,8 @@ type Props = {
   // Allowed to actually play its video (within the concurrent-video budget). When false a
   // video frame shows its full-res still instead.
   shouldPlayVideo: boolean;
+  // Close enough to pre-buffer its video (download ahead of time, no playback).
+  shouldBufferVideo: boolean;
   isTargeted: boolean;
   isDiscovered: boolean;
   isBought: boolean;
@@ -37,6 +39,7 @@ export default function NftFrame({
   rotY,
   isActive,
   shouldPlayVideo,
+  shouldBufferVideo,
   isTargeted,
   isDiscovered,
   isBought,
@@ -59,6 +62,7 @@ export default function NftFrame({
   const single = useNftMedia(token, {
     active: hasPlaylist ? false : isActive,
     videoActive: hasPlaylist ? false : shouldPlayVideo,
+    bufferActive: hasPlaylist ? false : shouldBufferVideo,
   });
   const pl = usePlaylistMedia(hasPlaylist ? playlist! : [], {
     active: shouldPlayVideo,

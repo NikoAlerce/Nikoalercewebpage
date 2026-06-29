@@ -80,9 +80,9 @@ const TIERS: Record<Quality, { videoBudget: number; maxActive: number; dpr: [num
   // stalls past ~5 concurrent HD videos because the browser runs out of hardware video
   // decoders and falls back to software. So budgets stay conservative; dpr is the knob
   // that actually scales with GPU power.
-  low: { videoBudget: 2, maxActive: 8, dpr: [1, 1] },
-  medium: { videoBudget: 5, maxActive: 16, dpr: [1, 1.25] },
-  high: { videoBudget: 8, maxActive: 24, dpr: [1, 1.4] },
+  low: { videoBudget: 3, maxActive: 8, dpr: [1, 1] },
+  medium: { videoBudget: 6, maxActive: 16, dpr: [1, 1.25] },
+  high: { videoBudget: 9, maxActive: 24, dpr: [1, 1.4] },
 };
 
 function detectTier(): Quality {
@@ -258,6 +258,8 @@ export default function MetaverseGallery() {
   const [activeFrames, setActiveFrames] = useState<Set<number>>(new Set());
   // Subset of active VIDEO frames allowed to actually play (the gaze-prioritised budget).
   const [videoPlayFrames, setVideoPlayFrames] = useState<Set<number>>(new Set());
+  // Nearby videos to PRE-BUFFER (download ahead, no playback) so they start instantly.
+  const [videoBufferFrames, setVideoBufferFrames] = useState<Set<number>>(new Set());
   const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
   // Quality tier — auto-detected on mount, overridable via the GFX selector.
   const [quality, setQuality] = useState<Quality>("medium");
@@ -434,14 +436,24 @@ export default function MetaverseGallery() {
         if (items[j].d2 < MAX_ACTIVE_R2) active.add(items[j].i);
       }
 
-      // Video budget: among active videos that are roughly in front of you, take the ones
-      // most centred in view (then nearest) up to the budget.
-      const vids = items.filter((x) => x.isVideo && active.has(x.i) && x.dot > -0.15);
+      // Pre-buffer set: the nearest active videos (by distance, not gaze — you might turn),
+      // up to ~2× the play budget, so the group you're looking at AND the next group you
+      // could turn to are already downloaded → switching gaze starts them instantly.
+      const activeVideos = items.filter((x) => x.isVideo && active.has(x.i)); // nearest-first
+      const bset = new Set<number>();
+      for (let j = 0; j < activeVideos.length && bset.size < VIDEO_BUDGET * 2; j++) {
+        bset.add(activeVideos[j].i);
+      }
+
+      // Play budget: among active videos roughly in front of you, the ones most centred in
+      // view (then nearest) up to the budget.
+      const vids = activeVideos.filter((x) => x.dot > -0.15);
       vids.sort((a, b) => (b.dot - a.dot) || (a.d2 - b.d2));
       const vset = new Set<number>();
       for (let j = 0; j < vids.length && vset.size < VIDEO_BUDGET; j++) vset.add(vids[j].i);
 
       setIfChanged(setActiveFrames, active);
+      setIfChanged(setVideoBufferFrames, bset);
       setIfChanged(setVideoPlayFrames, vset);
       rafId = requestAnimationFrame(loop);
     };
@@ -590,6 +602,7 @@ export default function MetaverseGallery() {
                   digits={u.meshDigits}
                   isActive={activeFrames.has(i)}
                   shouldPlayVideo={videoPlayFrames.has(i)}
+                  shouldBufferVideo={videoBufferFrames.has(i)}
                   playlist={unitPlaylist}
                   onPlaylistTrack={onPlaylistTrack}
                   flipU={u.curved}
@@ -608,6 +621,7 @@ export default function MetaverseGallery() {
                 maxH={u.h}
                 isActive={activeFrames.has(i)}
                 shouldPlayVideo={videoPlayFrames.has(i)}
+                shouldBufferVideo={videoBufferFrames.has(i)}
                 isTargeted={targetedFrame === i}
                 isDiscovered={discoveredIds.has(id)}
                 isBought={boughtIds.has(String(u.token.token_id))}
