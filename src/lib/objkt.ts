@@ -109,8 +109,45 @@ const TOKENS_BY_CREATOR = gql`
   }
 `;
 
+// Fetch arbitrary tokens by (contract, token_id) — used for the curated video playlist,
+// whose tokens live in other creators' contracts (not the gallery's own collection).
+const TOKENS_BY_IDS = gql`
+  query TokensByIds($pairs: [token_bool_exp!]) {
+    token(where: { _or: $pairs }) {
+      pk
+      token_id
+      name
+      description
+      display_uri
+      artifact_uri
+      thumbnail_uri
+      mime
+      fa_contract
+      timestamp
+      supply
+    }
+  }
+`;
+
 type TokensResponse = { token: ObjktToken[] };
 type HolderResponse = { holder: ObjktHolder[] };
+
+export async function fetchTokensByIds(
+  pairs: { contract: string; id: string }[],
+): Promise<ObjktToken[]> {
+  if (!pairs.length) return [];
+  const _or = pairs.map((p) => ({
+    fa_contract: { _eq: p.contract },
+    token_id: { _eq: p.id },
+  }));
+  try {
+    const data = await objktClient.request<TokensResponse>(TOKENS_BY_IDS, { pairs: _or });
+    return data.token ?? [];
+  } catch (err) {
+    console.error("[objkt] fetchTokensByIds error", err);
+    return [];
+  }
+}
 
 const aliasResolutionCache = new Map<string, string | null>();
 

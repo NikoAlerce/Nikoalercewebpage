@@ -36,6 +36,9 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
 
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
+  const videoTexRef = useRef<THREE.VideoTexture | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
   const framesRef = useRef<{ bitmap: ImageBitmap; duration: number }[] | null>(null);
   const totalDurRef = useRef(1);
   const startTimeRef = useRef(0);
@@ -164,32 +167,63 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, isAnimated, fullUri]);
 
-  // ── Real mp4 playback when videoActive ──
+  // ── Create + buffer the mp4 as soon as the frame is nearby (active OR playing) ──
+  // Keyed on `shouldLoadVideo` (not videoActive) so walking from "nearby" into
+  // "playing" range does NOT tear down and re-download the element — the buffer it
+  // built up while you approached is exactly what makes playback start instantly.
+  const shouldLoadVideo = isVideo && !!videoUrl && (active || videoActive);
   useEffect(() => {
-    if (!isVideo || !videoActive || !videoUrl) return;
+    if (!shouldLoadVideo || !videoUrl) return;
     const video = document.createElement("video");
-    video.src = videoUrl;
     video.crossOrigin = "anonymous";
     video.loop = true;
     video.muted = true;
     video.playsInline = true;
+    video.preload = "auto"; // begin buffering immediately, even before we play
+    video.src = videoUrl;
     const videoTex = new THREE.VideoTexture(video);
     videoTex.colorSpace = THREE.SRGBColorSpace;
+    videoElRef.current = video;
+    videoTexRef.current = videoTex;
+    setVideoReady(false);
+
     const onMeta = () => {
       if (video.videoWidth && video.videoHeight) setAspect(video.videoWidth / video.videoHeight);
     };
+    const onReady = () => setVideoReady(true);
     video.addEventListener("loadedmetadata", onMeta);
-    setVideoTexture(videoTex);
-    video.play().catch(() => {});
+    video.addEventListener("loadeddata", onReady);
+
     return () => {
       video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("loadeddata", onReady);
       video.pause();
       video.src = "";
+      video.load();
       videoTex.dispose();
+      videoElRef.current = null;
+      videoTexRef.current = null;
+      setVideoReady(false);
       setVideoTexture(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVideo, videoActive, videoUrl]);
+  }, [shouldLoadVideo, videoUrl]);
+
+  // ── Play + show the buffered video only when actually in playing range ──
+  // Keep showing the static thumbnail until the video has a decoded frame; swapping to
+  // the VideoTexture before then would paint the frame black while it loads.
+  useEffect(() => {
+    const video = videoElRef.current;
+    const videoTex = videoTexRef.current;
+    if (!video || !videoTex) return;
+    if (videoActive) {
+      video.play().catch(() => {});
+      if (videoReady) setVideoTexture(videoTex);
+    } else {
+      video.pause();
+      setVideoTexture(null);
+    }
+  }, [videoActive, videoReady]);
 
   // Advance the decoded GIF every frame.
   useFrame(() => {
@@ -213,4 +247,94 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
 
   const map = videoTexture ?? animTex ?? staticTex;
   return { map, aspect, loading, error: loadError, isVideo };
+}
+
+/**
+ * Plays a curated list of video tokens back-to-back on a single screen (a playlist).
+ * Each clip plays in full (with sound when `withSound`), then advances to the next and
+ * loops. Shows the current track's static thumbnail until its video has a decoded frame,
+ * and whenever the screen isn't `active` (so it isn't blasting audio from across the room).
+ */
+export function usePlaylistMedia(
+  tokens: ObjktToken[],
+  opts: { active: boolean; withSound: boolean; onTrack?: (token: ObjktToken) => void },
+) {
+  const { active, withSound, onTrack } = opts;
+  const [idx, setIdx] = useState(0);
+  const [staticTex, setStaticTex] = useState<THREE.Texture | null>(null);
+  const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null);
+  const [aspect, setAspect] = useState<number | null>(null);
+
+  const count = tokens.length;
+  const token = count ? tokens[idx % count] : null;
+  const thumbUri = token?.thumbnail_uri ?? token?.display_uri ?? token?.artifact_uri;
+  const fullUri = token?.artifact_uri ?? token?.display_uri ?? thumbUri;
+  const thumbUrl = proxied(thumbUri);
+  const videoUrl = proxied(fullUri);
+
+  // Report the current track up (for the HUD) whenever it changes.
+  useEffect(() => {
+    if (token) onTrack?.(token);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  // Static thumbnail of the current track (shown until its video is ready / when idle).
+  useEffect(() => {
+    if (!thumbUrl) return;
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    let cancelled = false;
+    loader.load(thumbUrl, (tex) => {
+      if (cancelled) { tex.dispose(); return; }
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const img = tex.image as HTMLImageElement;
+      if (img?.width && img?.height) setAspect(img.width / img.height);
+      setStaticTex((prev) => { prev?.dispose(); return tex; });
+    });
+    return () => { cancelled = true; };
+  }, [thumbUrl]);
+
+  // Play the current track while the screen is active; advance to the next on 'ended'.
+  useEffect(() => {
+    if (!active || !videoUrl) return;
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = !withSound;
+    video.volume = 1;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.src = videoUrl;
+    const tex = new THREE.VideoTexture(video);
+    tex.colorSpace = THREE.SRGBColorSpace;
+
+    const onMeta = () => {
+      if (video.videoWidth && video.videoHeight) setAspect(video.videoWidth / video.videoHeight);
+    };
+    const onReady = () => setVideoTexture(tex);
+    const onEnded = () => setIdx((i) => (i + 1) % Math.max(1, count));
+    video.addEventListener("loadedmetadata", onMeta);
+    video.addEventListener("loadeddata", onReady);
+    video.addEventListener("ended", onEnded);
+    video.play().catch(() => {
+      // Autoplay-with-sound can be blocked until a user gesture; retry muted so the
+      // playlist still advances visually rather than stalling.
+      video.muted = true;
+      video.play().catch(() => {});
+    });
+
+    return () => {
+      video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("loadeddata", onReady);
+      video.removeEventListener("ended", onEnded);
+      video.pause();
+      video.src = "";
+      video.load();
+      tex.dispose();
+      setVideoTexture(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, videoUrl, withSound, count]);
+
+  const map = (active ? videoTexture : null) ?? staticTex;
+  return { map, aspect, isVideo: true };
 }

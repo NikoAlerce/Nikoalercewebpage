@@ -1,58 +1,87 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ObjktToken } from "@/lib/types";
-import { useNftMedia } from "./useNftMedia";
+import { useNftMedia, usePlaylistMedia } from "./useNftMedia";
 
 type Props = {
   token: ObjktToken;
   position: [number, number, number];
   rotY: number;
-  isNear: boolean;
   isActive: boolean;
+  isTargeted: boolean;
   isDiscovered: boolean;
   isBought: boolean;
-  onClick?: () => void;
-  isVideoPlaying?: boolean;
-  onVideoPlay?: () => void;
   // The size of the real painting slot on the wall.
   maxW?: number;
   maxH?: number;
+  // When set, this screen plays the given tokens as a looping video playlist (with sound)
+  // instead of showing `token`.
+  playlist?: ObjktToken[];
+  // Reports the playlist's currently-playing track up to the gallery (for the HUD).
+  onPlaylistTrack?: (token: ObjktToken) => void;
+  // Crosshair-targeting registry: this frame registers its group under `index` so the
+  // gallery's raycaster can resolve a hit back to a unit.
+  index: number;
+  targetsRef: React.MutableRefObject<Map<number, THREE.Object3D>>;
 };
 
 export default function NftFrame({
   token,
   position,
   rotY,
-  isNear,
   isActive,
+  isTargeted,
   isDiscovered,
   isBought,
-  onClick,
-  isVideoPlaying,
-  onVideoPlay,
   maxW = 2.0,
   maxH = 2.5,
+  playlist,
+  onPlaylistTrack,
+  index,
+  targetsRef,
 }: Props) {
   const MAX_WIDTH = maxW;
   const MAX_HEIGHT = maxH;
 
+  const groupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.PointLight>(null);
-  const videoActive = isNear || !!isVideoPlaying;
-  const { map, aspect, isVideo } = useNftMedia(token, {
-    active: isActive,
-    videoActive,
+  // Play whenever the frame is active (nearby), not just when it's the single closest —
+  // so a whole wall of videos is already running by the time you reach it.
+  const videoActive = isActive;
+  const hasPlaylist = !!playlist?.length;
+  // Both hooks run unconditionally (rules of hooks); the single-token one is parked
+  // (inactive) when a playlist is driving this screen so it doesn't load needlessly.
+  const single = useNftMedia(token, {
+    active: hasPlaylist ? false : isActive,
+    videoActive: hasPlaylist ? false : videoActive,
   });
+  const pl = usePlaylistMedia(hasPlaylist ? playlist! : [], {
+    active: isActive,
+    withSound: true,
+    onTrack: onPlaylistTrack,
+  });
+  const { map, aspect } = hasPlaylist ? { map: pl.map, aspect: pl.aspect } : single;
 
-  const glowColor = isBought ? "#9fe6ab" : isNear ? "#ffe1b0" : isDiscovered ? "#c2cee2" : "#b3a382";
+  // Register this frame's group for crosshair raycasting.
+  useEffect(() => {
+    const g = groupRef.current;
+    if (!g) return;
+    g.userData.unitIndex = index;
+    const targets = targetsRef.current;
+    targets.set(index, g);
+    return () => { targets.delete(index); };
+  }, [index, targetsRef]);
+
+  const glowColor = isBought ? "#9fe6ab" : isTargeted ? "#ffe1b0" : isDiscovered ? "#c2cee2" : "#b3a382";
 
   useFrame((state) => {
     if (glowRef.current) {
       const t = state.clock.getElapsedTime();
-      const base = isBought ? 3 : isNear ? 2 : isDiscovered ? 1 : 0.3;
-      const pulse = isBought ? Math.sin(t * 3) * 0.8 : isNear ? Math.sin(t * 2) * 0.4 : 0;
+      const base = isBought ? 3 : isTargeted ? 2.4 : isDiscovered ? 1 : 0.3;
+      const pulse = isBought ? Math.sin(t * 3) * 0.8 : isTargeted ? Math.sin(t * 2) * 0.5 : 0;
       glowRef.current.intensity = base + pulse;
     }
   });
@@ -66,8 +95,8 @@ export default function NftFrame({
   else { artH = MAX_HEIGHT; artW = MAX_HEIGHT * a; }
 
   return (
-    <group position={position} rotation={[0, rotY, 0]}>
-      {isNear && (
+    <group ref={groupRef} position={position} rotation={[0, rotY, 0]}>
+      {isTargeted && (
         <pointLight
           ref={glowRef}
           color="#ffffff"
@@ -80,7 +109,7 @@ export default function NftFrame({
 
       {/* Solid PURE-BLACK box (unlit) straddling the GLB quad — hides its baked
           placeholder painting from any side and sits proud of the wall so the NFT reads
-          as a mounted screen rather than a recessed frame. */}
+          as a mounted screen rather than a recessed frame. Also the raycast target. */}
       <mesh position={[0, 0, 0.02]}>
         <boxGeometry args={[MAX_WIDTH + 0.06, MAX_HEIGHT + 0.06, 0.12]} />
         <meshBasicMaterial color="#000000" toneMapped={false} />
@@ -94,7 +123,7 @@ export default function NftFrame({
 
       {/* Artwork — flat plane sized to its own aspect, sitting proud of the box */}
       {map && (
-        <mesh position={[0, 0, 0.09]} onClick={isVideo ? onVideoPlay : onClick}>
+        <mesh position={[0, 0, 0.09]}>
           <planeGeometry args={[artW, artH]} />
           <meshBasicMaterial map={map} toneMapped={false} side={THREE.FrontSide} />
         </mesh>

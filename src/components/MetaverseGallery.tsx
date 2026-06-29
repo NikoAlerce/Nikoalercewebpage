@@ -9,7 +9,7 @@ import { playClickSound, playUnlockSound, playCollectSound } from "@/lib/sound";
 import PlayerControls, { PlayerControlsRef } from "./PlayerControls";
 import GalleryScene from "./GalleryScene";
 import NftFrame from "./NftFrame";
-import MeshScreen from "./MeshScreen";
+import MeshScreen, { BlackoutMesh } from "./MeshScreen";
 import type { ObjktToken } from "@/lib/types";
 import { lowestPriceXtz, isDisplayableToken, detectKind, ipfsToUrl } from "@/lib/objkt";
 
@@ -59,6 +59,15 @@ const FRAME_SPOTS: { pos: [number, number, number]; rotY: number; w: number; h: 
 
 // Player starts in the middle of the gallery floor (flat, y=0).
 const PLAYER_START = new THREE.Vector3(-15, 0.0, 0);
+
+// The screen showing the "Wicked World" token instead plays this curated playlist of
+// video tokens back-to-back, with sound. Order is preserved.
+const PLAYLIST_IDS = [
+  "KT1G1wt3PFhfLf6UW6bJGsuNuhgnNWKSh7sW:353",
+  "KT1PUZFdBCVscamVfr91rcZPpPau5MHiS3ip:2",
+  "KT1PUZFdBCVscamVfr91rcZPpPau5MHiS3ip:0",
+];
+const PLAYLIST_HOST = /wicked\s*world/i;
 
 // ──────────────────────────────────────────────
 // Loading overlay (inside Canvas via Html)
@@ -112,20 +121,63 @@ function PerfProbe({ onStats }: { onStats: (s: { fps: number; calls: number; tri
   return null;
 }
 
+// ──────────────────────────────────────────────
+// Crosshair targeting — each frame casts a ray straight through screen-centre and
+// resolves the first registered NFT it hits back to its unit index. This is what makes
+// selection precise (it's where you're *aiming*, not just what you're standing near).
+// ──────────────────────────────────────────────
+const MAX_TARGET_DIST = 18;
+function TargetingController({
+  targetsRef,
+  enabled,
+  onTarget,
+}: {
+  targetsRef: React.MutableRefObject<Map<number, THREE.Object3D>>;
+  enabled: boolean;
+  onTarget: (i: number | null) => void;
+}) {
+  const { camera } = useThree();
+  const ray = useRef(new THREE.Raycaster());
+  const center = useRef(new THREE.Vector2(0, 0));
+  const last = useRef<number | null>(null);
+  useFrame(() => {
+    if (!enabled) {
+      if (last.current !== null) { last.current = null; onTarget(null); }
+      return;
+    }
+    ray.current.far = MAX_TARGET_DIST;
+    ray.current.setFromCamera(center.current, camera);
+    const objs = Array.from(targetsRef.current.values());
+    const hits = ray.current.intersectObjects(objs, true);
+    let found: number | null = null;
+    for (const h of hits) {
+      let o: THREE.Object3D | null = h.object;
+      while (o && o.userData.unitIndex === undefined) o = o.parent;
+      if (o) { found = o.userData.unitIndex as number; break; }
+    }
+    if (found !== last.current) { last.current = found; onTarget(found); }
+  });
+  return null;
+}
+
 export default function MetaverseGallery() {
   const { open: openModal, token: activeModalToken } = useTokenViewer();
 
   const [tokens, setTokens] = useState<ObjktToken[]>([]);
+  const [playlist, setPlaylist] = useState<ObjktToken[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(true);
   const [score, setScore] = useState(0);
   const [discoveredIds, setDiscoveredIds] = useState<Set<string>>(new Set());
   const [boughtIds, setBoughtIds] = useState<Set<string>>(new Set());
   const playerPos = useRef(PLAYER_START.clone());
   const [isLocked, setIsLocked] = useState(false);
-  const [nearestFrame, setNearestFrame] = useState<number | null>(null);
+  // Crosshair-targeted frame (raycast) — drives the HUD, [E] and click-to-open.
+  const [targetedFrame, setTargetedFrame] = useState<number | null>(null);
+  const targetsRef = useRef<Map<number, THREE.Object3D>>(new Map());
+  // Currently-playing playlist track (so the HUD shows what's on screen, not the host).
+  const [playlistToken, setPlaylistToken] = useState<ObjktToken | null>(null);
   const [bonusText, setBonusText] = useState<string | null>(null);
   const playerControlsRef = useRef<PlayerControlsRef>(null);
-  const [playingVideoIndex, setPlayingVideoIndex] = useState<number | null>(null);
   // Frames close enough to load the full artwork + animate (perf gate).
   const [activeFrames, setActiveFrames] = useState<Set<number>>(new Set());
   const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
@@ -165,6 +217,19 @@ export default function MetaverseGallery() {
       .finally(() => setLoadingTokens(false));
   }, []);
 
+  // Fetch the curated playlist tokens (kept in the user-specified order).
+  useEffect(() => {
+    fetch(`/api/tokens?ids=${encodeURIComponent(PLAYLIST_IDS.join(","))}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const byKey = new Map<string, ObjktToken>(
+          ((d.tokens ?? []) as ObjktToken[]).map((t) => [`${t.fa_contract}:${t.token_id}`, t]),
+        );
+        setPlaylist(PLAYLIST_IDS.map((k) => byKey.get(k)).filter((t): t is ObjktToken => !!t));
+      })
+      .catch(() => {});
+  }, []);
+
   // Map tokens to frame spots (cycle if tokens < 34)
   // Limit to 10 on mobile, 20 on desktop to prevent overload
   const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
@@ -176,7 +241,7 @@ export default function MetaverseGallery() {
   const units = useMemo(() => {
     type Unit = {
       key: string; pos: [number, number, number]; rotY: number; w: number; h: number;
-      token: ObjktToken; meshDigits?: string;
+      token: ObjktToken; meshDigits?: string; curved?: boolean;
     };
     if (tokens.length === 0) return [] as Unit[];
     const out: Unit[] = [];
@@ -188,7 +253,7 @@ export default function MetaverseGallery() {
         // Single frame → painted directly onto its GLB mesh (Object_574.00X, where the
         // frame index s+1 is the suffix; "574" + zero-padded number → digit match key).
         const digits = "574" + String(s + 1).padStart(3, "0");
-        out.push({ key: `f${s}`, pos: spot.pos, rotY: spot.rotY, w: spot.w, h: spot.h, token: tokens[t % tokens.length], meshDigits: digits });
+        out.push({ key: `f${s}`, pos: spot.pos, rotY: spot.rotY, w: spot.w, h: spot.h, token: tokens[t % tokens.length], meshDigits: digits, curved: !!spot.curved });
         t++;
       } else {
         // Tall thin slot → 3 stacked artworks as floating planes (one mesh can't show 3).
@@ -203,6 +268,16 @@ export default function MetaverseGallery() {
     });
     return out;
   }, [tokens, initialFrameCount]);
+
+  // Tall "slots:3" panels render their artworks as floating planes, so their underlying
+  // GLB mesh is never painted and its beige placeholder shows through (z-fighting the
+  // floating black boxes). Black those meshes out. Mesh digit = "574" + (spotIndex+1),
+  // the same scheme MeshScreen uses for single frames.
+  const blackoutDigits = useMemo(() => {
+    return FRAME_SPOTS.slice(0, initialFrameCount)
+      .map((spot, s) => ((spot.slots && spot.slots > 1) ? "574" + String(s + 1).padStart(3, "0") : null))
+      .filter((d): d is string => d !== null);
+  }, [initialFrameCount]);
 
   // On-chain buy event → bonus score
   useEffect(() => {
@@ -226,9 +301,9 @@ export default function MetaverseGallery() {
     setTimeout(() => setBonusText(null), 4000);
   };
 
-  // Poll nearest frame spot + active set (rAF, no setState flood).
-  // Active = the few NEAREST frames (capped) so a compact gallery doesn't end up
-  // animating 27 GIFs at once. Radius alone was useless here.
+  // Poll the active set (rAF, no setState flood). Active = the few NEAREST frames
+  // (capped) — these buffer + play their video/GIF, so a compact gallery doesn't end up
+  // decoding every clip at once.
   useEffect(() => {
     const MAX_ACTIVE = 9;
     const MAX_ACTIVE_R2 = 13 * 13;
@@ -236,22 +311,16 @@ export default function MetaverseGallery() {
     const loop = () => {
       const pp = playerPos.current;
       const dists: { i: number; d2: number }[] = [];
-      let closest: number | null = null;
-      let minDist = 5.0; // interaction radius
       units.forEach((u, i) => {
         const dx = pp.x - u.pos[0];
         const dz = pp.z - u.pos[2];
-        const d2 = dx * dx + dz * dz;
-        dists.push({ i, d2 });
-        const dist = Math.sqrt(d2);
-        if (dist < minDist) { minDist = dist; closest = i; }
+        dists.push({ i, d2: dx * dx + dz * dz });
       });
       dists.sort((a, b) => a.d2 - b.d2);
       const next = new Set<number>();
       for (let j = 0; j < dists.length && j < MAX_ACTIVE; j++) {
         if (dists[j].d2 < MAX_ACTIVE_R2) next.add(dists[j].i);
       }
-      setNearestFrame((prev) => (prev !== closest ? closest : prev));
       setActiveFrames((prev) => {
         if (prev.size === next.size) {
           let same = true;
@@ -266,10 +335,22 @@ export default function MetaverseGallery() {
     return () => cancelAnimationFrame(rafId);
   }, [units]);
 
-  // [E] key handler
+  // The token to show/open for a unit — the live playlist track on the playlist host,
+  // otherwise the unit's own token.
+  const tokenForUnit = useCallback(
+    (i: number | null): ObjktToken | null => {
+      if (i === null || !units[i]) return null;
+      const u = units[i];
+      const isHost = PLAYLIST_HOST.test(u.token.name ?? "") && playlist.length > 0;
+      return isHost ? (playlistToken ?? playlist[0] ?? u.token) : u.token;
+    },
+    [units, playlist, playlistToken],
+  );
+
+  // Open the crosshair-targeted frame ([E] or click).
   const handleInteract = useCallback(() => {
-    if (nearestFrame === null || !units[nearestFrame]) return;
-    const { token } = units[nearestFrame];
+    const token = tokenForUnit(targetedFrame);
+    if (!token) return;
     const id = `${token.fa_contract}-${token.token_id}`;
 
     if (!discoveredIds.has(id)) {
@@ -283,24 +364,33 @@ export default function MetaverseGallery() {
       playClickSound();
     }
     openModal(token);
-  }, [nearestFrame, units, discoveredIds, openModal]);
+  }, [targetedFrame, tokenForUnit, discoveredIds, openModal]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "KeyE" && isLocked && !activeModalToken && nearestFrame !== null) {
+      if (e.code === "KeyE" && isLocked && !activeModalToken && targetedFrame !== null) {
         handleInteract();
       }
     };
+    // Left-click also opens the targeted frame while locked (precise: only fires when the
+    // crosshair is on an NFT).
+    const onClick = () => {
+      if (isLocked && !activeModalToken && targetedFrame !== null) handleInteract();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isLocked, activeModalToken, nearestFrame, handleInteract]);
+    window.addEventListener("mousedown", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onClick);
+    };
+  }, [isLocked, activeModalToken, targetedFrame, handleInteract]);
 
   const handleExit = () => {
     playClickSound();
     window.location.href = "/";
   };
 
-  const nearToken = nearestFrame !== null ? units[nearestFrame]?.token : null;
+  const nearToken = tokenForUnit(targetedFrame);
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden font-mono select-none">
@@ -337,17 +427,43 @@ export default function MetaverseGallery() {
         <pointLight position={[-2, 4.5, -6]} intensity={1.2} color="#ffe9cf" distance={24} decay={2} />
 
         <PerfProbe onStats={setPerf} />
+        <TargetingController
+          targetsRef={targetsRef}
+          enabled={isLocked && !activeModalToken}
+          onTarget={setTargetedFrame}
+        />
 
         <Suspense fallback={<LoadingOverlay />}>
           <Environment preset="apartment" />
           <GalleryScene />
 
+          {/* Black out the GLB meshes of the tall slotted panels so their beige
+              placeholder doesn't show behind / z-fight the stacked floating planes. */}
+          {blackoutDigits.map((d) => (
+            <BlackoutMesh key={`blackout-${d}`} digits={d} />
+          ))}
+
           {/* NFT render units: single frames painted on their GLB mesh, tall slots as
               stacked floating planes. */}
           {units.map((u, i) => {
             const id = `${u.token.fa_contract}-${u.token.token_id}`;
+            const isHost = PLAYLIST_HOST.test(u.token.name ?? "") && playlist.length > 0;
+            const unitPlaylist = isHost ? playlist : undefined;
+            const onPlaylistTrack = isHost ? setPlaylistToken : undefined;
             if (u.meshDigits) {
-              return <MeshScreen key={u.key} token={u.token} digits={u.meshDigits} isActive={activeFrames.has(i)} />;
+              return (
+                <MeshScreen
+                  key={u.key}
+                  token={u.token}
+                  digits={u.meshDigits}
+                  isActive={activeFrames.has(i)}
+                  playlist={unitPlaylist}
+                  onPlaylistTrack={onPlaylistTrack}
+                  flipU={u.curved}
+                  index={i}
+                  targetsRef={targetsRef}
+                />
+              );
             }
             return (
               <NftFrame
@@ -357,16 +473,14 @@ export default function MetaverseGallery() {
                 rotY={u.rotY}
                 maxW={u.w}
                 maxH={u.h}
-                isNear={nearestFrame === i}
                 isActive={activeFrames.has(i)}
+                isTargeted={targetedFrame === i}
                 isDiscovered={discoveredIds.has(id)}
                 isBought={boughtIds.has(String(u.token.token_id))}
-                onClick={() => {
-                  playerControlsRef.current?.unlock();
-                  openModal(u.token);
-                }}
-                isVideoPlaying={playingVideoIndex === i}
-                onVideoPlay={() => setPlayingVideoIndex(playingVideoIndex === i ? null : i)}
+                playlist={unitPlaylist}
+                onPlaylistTrack={onPlaylistTrack}
+                index={i}
+                targetsRef={targetsRef}
               />
             );
           })}
@@ -463,12 +577,12 @@ export default function MetaverseGallery() {
             ✕ EXIT
           </button>
 
-          {/* Crosshair */}
+          {/* Crosshair — turns cyan + grows when aimed at an NFT */}
           <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-            <div className="w-5 h-5 relative opacity-60">
-              <div className="absolute top-1/2 left-0 right-0 h-px bg-white" />
-              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white" />
-              <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 border border-white/60 rounded-full" />
+            <div className={`relative transition-all duration-100 ${nearToken ? "w-7 h-7 opacity-100" : "w-5 h-5 opacity-60"}`}>
+              <div className={`absolute top-1/2 left-0 right-0 h-px ${nearToken ? "bg-cyan-400" : "bg-white"}`} />
+              <div className={`absolute left-1/2 top-0 bottom-0 w-px ${nearToken ? "bg-cyan-400" : "bg-white"}`} />
+              <div className={`absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border ${nearToken ? "border-cyan-400 bg-cyan-400/30" : "border-white/60"}`} />
             </div>
           </div>
 
@@ -484,7 +598,7 @@ export default function MetaverseGallery() {
                   {lowestPriceXtz(nearToken) !== null
                     ? `${lowestPriceXtz(nearToken)} XTZ · `
                     : "ARCHIVE · "}
-                  <span className="text-cyan-400">PRESS [E] TO OPEN</span>
+                  <span className="text-cyan-400">PRESS [E] OR CLICK TO OPEN</span>
                 </div>
               </div>
             </div>
