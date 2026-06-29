@@ -48,7 +48,11 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
   const isVideo = kind === "video";
   const isAnimated = token.mime === "image/gif";
 
-  const thumbUri = token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri;
+  // For videos prefer the larger display_uri as the still — it's the crisp frame shown
+  // when this screen is over the concurrent-video budget (full quality, just not moving).
+  const thumbUri = isVideo
+    ? (token.display_uri ?? token.thumbnail_uri ?? token.artifact_uri)
+    : (token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri);
   const fullUri = token.artifact_uri ?? token.display_uri ?? thumbUri;
   const thumbUrl = proxied(thumbUri);
   const videoUrl = isVideo ? proxied(fullUri) : null;
@@ -171,7 +175,7 @@ export function useNftMedia(token: ObjktToken, opts: { active: boolean; videoAct
   // Keyed on `shouldLoadVideo` (not videoActive) so walking from "nearby" into
   // "playing" range does NOT tear down and re-download the element — the buffer it
   // built up while you approached is exactly what makes playback start instantly.
-  const shouldLoadVideo = isVideo && !!videoUrl && (active || videoActive);
+  const shouldLoadVideo = isVideo && !!videoUrl && videoActive;
   useEffect(() => {
     if (!shouldLoadVideo || !videoUrl) return;
     const video = document.createElement("video");

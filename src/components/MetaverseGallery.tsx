@@ -70,6 +70,44 @@ const PLAYLIST_IDS = [
 const PLAYLIST_HOST = /wicked\s*world/i;
 
 // ──────────────────────────────────────────────
+// Quality tiers — adapt to the machine. The decisive knob is `videoBudget`: the max number
+// of videos decoding/uploading at once (browsers fall back to slow software decode past
+// the hardware decoder limit). dpr scales render resolution; maxActive caps GIF/buffer work.
+// ──────────────────────────────────────────────
+type Quality = "low" | "medium" | "high";
+const TIERS: Record<Quality, { videoBudget: number; maxActive: number; dpr: [number, number] }> = {
+  // videoBudget is decoder-bound, not raw-GPU-bound: even a strong GPU (e.g. Arc A730M)
+  // stalls past ~5 concurrent HD videos because the browser runs out of hardware video
+  // decoders and falls back to software. So budgets stay conservative; dpr is the knob
+  // that actually scales with GPU power.
+  low: { videoBudget: 2, maxActive: 8, dpr: [1, 1] },
+  medium: { videoBudget: 5, maxActive: 16, dpr: [1, 1.25] },
+  high: { videoBudget: 8, maxActive: 24, dpr: [1, 1.4] },
+};
+
+function detectTier(): Quality {
+  if (typeof navigator === "undefined") return "medium";
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = (navigator as unknown as { deviceMemory?: number }).deviceMemory;
+  let renderer = "";
+  try {
+    const c = document.createElement("canvas");
+    const gl = (c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    const ext = gl?.getExtension("WEBGL_debug_renderer_info");
+    if (gl && ext) renderer = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || "").toLowerCase();
+  } catch { /* ignore */ }
+  // Software rasteriser or clearly weak machine → LOW.
+  if (/swiftshader|llvmpipe|software/.test(renderer)) return "low";
+  if ((mem !== undefined && mem <= 4) || cores <= 4) return "low";
+  // MEDIUM is the safe default — it's the realistic concurrent-video ceiling for almost
+  // every machine, laptop discrete GPUs (Arc/RTX-mobile) included. HIGH is opt-in (key 3)
+  // and only auto-selected for clearly top-end desktop GPUs.
+  const desktopBeast = /geforce rtx [3-9]0|radeon rx (6|7|8)\d00|rtx (40|50)\d0/.test(renderer);
+  if (desktopBeast && cores >= 12) return "high";
+  return "medium";
+}
+
+// ──────────────────────────────────────────────
 // Loading overlay (inside Canvas via Html)
 // ──────────────────────────────────────────────
 function LoadingOverlay() {
@@ -92,6 +130,39 @@ function LoadingOverlay() {
         </div>
       </div>
     </Html>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Asset loading HUD (DOM overlay). Reads three's DefaultLoadingManager via useProgress —
+// the GLB, the environment map and every NFT thumbnail (THREE.TextureLoader) report there,
+// so loaded/total is a real count. Stays up until everything settles so the user knows to
+// wait a moment, then disappears on its own.
+// ──────────────────────────────────────────────
+function AssetProgressHUD() {
+  const { active, loaded, total, progress } = useProgress();
+  if (!active && (total === 0 || loaded >= total)) return null;
+  return (
+    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+      <div className="bg-black/85 backdrop-blur border border-cyan-500/50 px-5 py-3 font-mono text-center space-y-2 min-w-[220px] shadow-[0_0_20px_rgba(0,255,240,0.15)]">
+        <div className="text-[8px] tracking-[0.5em] text-cyan-400 animate-pulse">
+          // LOADING_ASSETS
+        </div>
+        <div className="text-[14px] font-black text-white tracking-widest">
+          {loaded} <span className="text-gray-600">/</span> {total}
+          <span className="text-[9px] text-cyan-400 ml-2">{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full h-px bg-white/10 relative overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 bg-cyan-400 transition-all duration-200"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="text-[8px] tracking-[0.3em] text-white/30">
+          PLEASE WAIT — STREAMING TEZOS ARTWORKS
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -131,16 +202,21 @@ function TargetingController({
   targetsRef,
   enabled,
   onTarget,
+  camDirRef,
 }: {
   targetsRef: React.MutableRefObject<Map<number, THREE.Object3D>>;
   enabled: boolean;
   onTarget: (i: number | null) => void;
+  camDirRef: React.MutableRefObject<THREE.Vector3>;
 }) {
   const { camera } = useThree();
   const ray = useRef(new THREE.Raycaster());
   const center = useRef(new THREE.Vector2(0, 0));
   const last = useRef<number | null>(null);
   useFrame(() => {
+    // Always keep the camera's look direction current (the active-set loop uses it to
+    // prioritise which videos play by where you're looking).
+    camera.getWorldDirection(camDirRef.current);
     if (!enabled) {
       if (last.current !== null) { last.current = null; onTarget(null); }
       return;
@@ -180,7 +256,14 @@ export default function MetaverseGallery() {
   const playerControlsRef = useRef<PlayerControlsRef>(null);
   // Frames close enough to load the full artwork + animate (perf gate).
   const [activeFrames, setActiveFrames] = useState<Set<number>>(new Set());
+  // Subset of active VIDEO frames allowed to actually play (the gaze-prioritised budget).
+  const [videoPlayFrames, setVideoPlayFrames] = useState<Set<number>>(new Set());
   const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
+  // Quality tier — auto-detected on mount, overridable via the GFX selector.
+  const [quality, setQuality] = useState<Quality>("medium");
+  useEffect(() => { setQuality(detectTier()); }, []);
+  const tier = TIERS[quality];
+  const camDirRef = useRef(new THREE.Vector3(0, 0, -1));
 
   // Fetch SideQuest collection only, sort cheapest → priciest
   useEffect(() => {
@@ -241,11 +324,15 @@ export default function MetaverseGallery() {
   const units = useMemo(() => {
     type Unit = {
       key: string; pos: [number, number, number]; rotY: number; w: number; h: number;
-      token: ObjktToken; meshDigits?: string; curved?: boolean;
+      token: ObjktToken; meshDigits?: string; curved?: boolean; isVideo: boolean;
     };
     if (tokens.length === 0) return [] as Unit[];
     const out: Unit[] = [];
     let t = 0;
+    // A unit counts as "video" (for the concurrent budget) if its token is a video, or if
+    // it's the playlist host (which plays videos in place of its own token).
+    const unitIsVideo = (tk: ObjktToken) =>
+      PLAYLIST_HOST.test(tk.name ?? "") || detectKind(tk.mime) === "video";
     const spots = FRAME_SPOTS.slice(0, initialFrameCount);
     spots.forEach((spot, s) => {
       const n = spot.slots && spot.slots > 1 ? spot.slots : 1;
@@ -253,7 +340,8 @@ export default function MetaverseGallery() {
         // Single frame → painted directly onto its GLB mesh (Object_574.00X, where the
         // frame index s+1 is the suffix; "574" + zero-padded number → digit match key).
         const digits = "574" + String(s + 1).padStart(3, "0");
-        out.push({ key: `f${s}`, pos: spot.pos, rotY: spot.rotY, w: spot.w, h: spot.h, token: tokens[t % tokens.length], meshDigits: digits, curved: !!spot.curved });
+        const tk = tokens[t % tokens.length];
+        out.push({ key: `f${s}`, pos: spot.pos, rotY: spot.rotY, w: spot.w, h: spot.h, token: tk, meshDigits: digits, curved: !!spot.curved, isVideo: unitIsVideo(tk) });
         t++;
       } else {
         // Tall thin slot → 3 stacked artworks as floating planes (one mesh can't show 3).
@@ -261,7 +349,8 @@ export default function MetaverseGallery() {
         const subH = step * 0.92;
         for (let k = 0; k < n; k++) {
           const y = spot.pos[1] + ((n - 1) / 2 - k) * step; // top → bottom
-          out.push({ key: `f${s}_${k}`, pos: [spot.pos[0], y, spot.pos[2]], rotY: spot.rotY, w: spot.w, h: subH, token: tokens[t % tokens.length] });
+          const tk = tokens[t % tokens.length];
+          out.push({ key: `f${s}_${k}`, pos: [spot.pos[0], y, spot.pos[2]], rotY: spot.rotY, w: spot.w, h: subH, token: tk, isVideo: unitIsVideo(tk) });
           t++;
         }
       }
@@ -301,27 +390,21 @@ export default function MetaverseGallery() {
     setTimeout(() => setBonusText(null), 4000);
   };
 
-  // Poll the active set (rAF, no setState flood). Active = the few NEAREST frames
-  // (capped) — these buffer + play their video/GIF, so a compact gallery doesn't end up
-  // decoding every clip at once.
+  // Poll the active set (rAF, no setState flood).
+  //  · activeFrames = nearest frames within a radius → buffer + animate GIFs.
+  //  · videoPlayFrames = the few videos you're actually LOOKING at (gaze-prioritised),
+  //    capped to the tier's budget so we never exceed the GPU's video-decoder limit.
+  // Recomputed when the unit list or the quality tier changes.
   useEffect(() => {
-    const MAX_ACTIVE = 9;
-    const MAX_ACTIVE_R2 = 13 * 13;
+    const MAX_ACTIVE = tier.maxActive;
+    const MAX_ACTIVE_R2 = 11 * 11;
+    const VIDEO_BUDGET = tier.videoBudget;
     let rafId: number;
-    const loop = () => {
-      const pp = playerPos.current;
-      const dists: { i: number; d2: number }[] = [];
-      units.forEach((u, i) => {
-        const dx = pp.x - u.pos[0];
-        const dz = pp.z - u.pos[2];
-        dists.push({ i, d2: dx * dx + dz * dz });
-      });
-      dists.sort((a, b) => a.d2 - b.d2);
-      const next = new Set<number>();
-      for (let j = 0; j < dists.length && j < MAX_ACTIVE; j++) {
-        if (dists[j].d2 < MAX_ACTIVE_R2) next.add(dists[j].i);
-      }
-      setActiveFrames((prev) => {
+    const setIfChanged = (
+      setter: React.Dispatch<React.SetStateAction<Set<number>>>,
+      next: Set<number>,
+    ) => {
+      setter((prev) => {
         if (prev.size === next.size) {
           let same = true;
           for (const i of next) if (!prev.has(i)) { same = false; break; }
@@ -329,11 +412,42 @@ export default function MetaverseGallery() {
         }
         return next;
       });
+    };
+    const loop = () => {
+      const pp = playerPos.current;
+      const dir = camDirRef.current;
+      const dirX = dir.x, dirZ = dir.z;
+      const dirLen = Math.hypot(dirX, dirZ) || 1;
+      const items = units.map((u, i) => {
+        const dx = u.pos[0] - pp.x;
+        const dz = u.pos[2] - pp.z;
+        const d2 = dx * dx + dz * dz;
+        const dl = Math.hypot(dx, dz) || 1;
+        // dot ≈ 1 straight ahead, 0 to the side, <0 behind — how centred in view it is.
+        const dot = (dx * dirX + dz * dirZ) / (dl * dirLen);
+        return { i, d2, dot, isVideo: u.isVideo };
+      });
+      items.sort((a, b) => a.d2 - b.d2);
+
+      const active = new Set<number>();
+      for (let j = 0; j < items.length && active.size < MAX_ACTIVE; j++) {
+        if (items[j].d2 < MAX_ACTIVE_R2) active.add(items[j].i);
+      }
+
+      // Video budget: among active videos that are roughly in front of you, take the ones
+      // most centred in view (then nearest) up to the budget.
+      const vids = items.filter((x) => x.isVideo && active.has(x.i) && x.dot > -0.15);
+      vids.sort((a, b) => (b.dot - a.dot) || (a.d2 - b.d2));
+      const vset = new Set<number>();
+      for (let j = 0; j < vids.length && vset.size < VIDEO_BUDGET; j++) vset.add(vids[j].i);
+
+      setIfChanged(setActiveFrames, active);
+      setIfChanged(setVideoPlayFrames, vset);
       rafId = requestAnimationFrame(loop);
     };
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [units]);
+  }, [units, tier.maxActive, tier.videoBudget]);
 
   // The token to show/open for a unit — the live playlist track on the playlist host,
   // otherwise the unit's own token.
@@ -385,6 +499,23 @@ export default function MetaverseGallery() {
     };
   }, [isLocked, activeModalToken, targetedFrame, handleInteract]);
 
+  // Quality hotkeys (1/2/3) — work while pointer-locked, where the GFX buttons can't be
+  // clicked. Flashes the new mode on screen.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      let q: Quality | null = null;
+      if (e.code === "Digit1" || e.code === "Numpad1") q = "low";
+      else if (e.code === "Digit2" || e.code === "Numpad2") q = "medium";
+      else if (e.code === "Digit3" || e.code === "Numpad3") q = "high";
+      if (!q) return;
+      setQuality(q);
+      setBonusText(`GFX MODE: ${q.toUpperCase()}`);
+      setTimeout(() => setBonusText(null), 1500);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const handleExit = () => {
     playClickSound();
     window.location.href = "/";
@@ -398,8 +529,8 @@ export default function MetaverseGallery() {
       <Canvas
         shadows={false}
         // Cap pixel ratio — on a retina/4K display an uncapped dpr renders 4× the
-        // pixels and is the single biggest FPS killer here.
-        dpr={[1, 1.5]}
+        // pixels and is the single biggest FPS killer here. Scaled by quality tier.
+        dpr={tier.dpr}
         gl={{
           antialias: true,
           powerPreference: "high-performance",
@@ -431,6 +562,7 @@ export default function MetaverseGallery() {
           targetsRef={targetsRef}
           enabled={isLocked && !activeModalToken}
           onTarget={setTargetedFrame}
+          camDirRef={camDirRef}
         />
 
         <Suspense fallback={<LoadingOverlay />}>
@@ -457,6 +589,7 @@ export default function MetaverseGallery() {
                   token={u.token}
                   digits={u.meshDigits}
                   isActive={activeFrames.has(i)}
+                  shouldPlayVideo={videoPlayFrames.has(i)}
                   playlist={unitPlaylist}
                   onPlaylistTrack={onPlaylistTrack}
                   flipU={u.curved}
@@ -474,6 +607,7 @@ export default function MetaverseGallery() {
                 maxW={u.w}
                 maxH={u.h}
                 isActive={activeFrames.has(i)}
+                shouldPlayVideo={videoPlayFrames.has(i)}
                 isTargeted={targetedFrame === i}
                 isDiscovered={discoveredIds.has(id)}
                 isBought={boughtIds.has(String(u.token.token_id))}
@@ -504,6 +638,28 @@ export default function MetaverseGallery() {
         <span className="text-cyan-300">{perf.calls} draws</span>
         <span className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k tris</span>
         <span className="text-gray-500">active {activeFrames.size}</span>
+        <span className="text-gray-500">vid {videoPlayFrames.size}/{tier.videoBudget}</span>
+      </div>
+
+      {/* Quality selector (GFX) — auto-detected, user-overridable. Stops propagation so
+          clicking it doesn't trigger the click-to-enter lock. */}
+      <div
+        className="absolute top-16 right-4 z-50 flex items-center gap-1 bg-black/80 border border-white/10 p-1 font-mono"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <span className="text-[8px] tracking-[0.2em] text-gray-500 px-1">GFX</span>
+        {([["low", "1 LOW"], ["medium", "2 MED"], ["high", "3 HIGH"]] as [Quality, string][]).map(([q, label]) => (
+          <button
+            key={q}
+            onClick={() => setQuality(q)}
+            className={`text-[9px] px-2 py-1 tracking-wider transition-colors ${
+              quality === q ? "bg-cyan-500 text-black font-bold" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Cheap CSS vignette (replaces the GPU postprocessing pass) */}
@@ -511,6 +667,9 @@ export default function MetaverseGallery() {
         className="absolute inset-0 z-10 pointer-events-none"
         style={{ boxShadow: "inset 0 0 220px 60px rgba(0,0,0,0.65)" }}
       />
+
+      {/* Asset loading counter (loaded / total) — auto-hides when everything is in. */}
+      <AssetProgressHUD />
 
       {/* ──── CLICK TO ENTER OVERLAY ──── */}
       {!isLocked && !activeModalToken && (

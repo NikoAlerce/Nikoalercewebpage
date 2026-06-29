@@ -11,6 +11,9 @@ type Props = {
   position: [number, number, number];
   rotY: number;
   isActive: boolean;
+  // Allowed to actually play its video (within the concurrent-video budget). When false a
+  // video frame shows its full-res still instead.
+  shouldPlayVideo: boolean;
   isTargeted: boolean;
   isDiscovered: boolean;
   isBought: boolean;
@@ -33,6 +36,7 @@ export default function NftFrame({
   position,
   rotY,
   isActive,
+  shouldPlayVideo,
   isTargeted,
   isDiscovered,
   isBought,
@@ -48,18 +52,16 @@ export default function NftFrame({
 
   const groupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.PointLight>(null);
-  // Play whenever the frame is active (nearby), not just when it's the single closest —
-  // so a whole wall of videos is already running by the time you reach it.
-  const videoActive = isActive;
   const hasPlaylist = !!playlist?.length;
   // Both hooks run unconditionally (rules of hooks); the single-token one is parked
   // (inactive) when a playlist is driving this screen so it doesn't load needlessly.
+  // Video playback is gated by `shouldPlayVideo` (the budget); GIFs by `isActive`.
   const single = useNftMedia(token, {
     active: hasPlaylist ? false : isActive,
-    videoActive: hasPlaylist ? false : videoActive,
+    videoActive: hasPlaylist ? false : shouldPlayVideo,
   });
   const pl = usePlaylistMedia(hasPlaylist ? playlist! : [], {
-    active: isActive,
+    active: shouldPlayVideo,
     withSound: true,
     onTrack: onPlaylistTrack,
   });

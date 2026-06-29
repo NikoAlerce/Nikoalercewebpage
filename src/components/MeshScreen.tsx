@@ -9,6 +9,8 @@ import { useNftMedia, usePlaylistMedia } from "./useNftMedia";
 type Props = {
   token: ObjktToken;
   isActive: boolean;
+  // Allowed to actually play its video (within the concurrent-video budget).
+  shouldPlayVideo: boolean;
   // Digit sequence identifying the target GLB mesh, e.g. "574006" for Object_574.006.
   digits: string;
   // When set, this screen plays the given tokens as a looping video playlist (with sound).
@@ -127,15 +129,15 @@ export function BlackoutMesh({ digits }: { digits: string }) {
  * Paints an NFT's texture directly onto its GLB wall mesh (recomputing UVs + cover-fit),
  * so the artwork sits exactly on the gallery frame instead of a floating plane.
  */
-export default function MeshScreen({ token, isActive, digits, playlist, onPlaylistTrack, flipU, index, targetsRef }: Props) {
+export default function MeshScreen({ token, isActive, shouldPlayVideo, digits, playlist, onPlaylistTrack, flipU, index, targetsRef }: Props) {
   const { scene } = useThree();
   const hasPlaylist = !!playlist?.length;
   const single = useNftMedia(token, {
     active: hasPlaylist ? false : isActive,
-    videoActive: hasPlaylist ? false : isActive,
+    videoActive: hasPlaylist ? false : shouldPlayVideo,
   });
   const pl = usePlaylistMedia(hasPlaylist ? playlist! : [], {
-    active: isActive,
+    active: shouldPlayVideo,
     withSound: true,
     onTrack: onPlaylistTrack,
   });
