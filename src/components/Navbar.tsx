@@ -59,6 +59,10 @@ export default function Navbar() {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
+  // The 3D gallery is a full-screen immersive experience with its own EXIT button — hide the
+  // site chrome there (declutters the mobile HUD and removes the page's footer scroll).
+  if (pathname === "/metaverse") return null;
+
   return (
     <header
       className={clsx(
@@ -158,6 +162,28 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
+
+          {/* Wallet connect/disconnect — the desktop button is hidden on mobile, so surface
+              it here or phones can't connect a wallet to buy. */}
+          <li className="pt-3 mt-1 border-t border-white/10">
+            {address ? (
+              <button
+                onClick={() => { disconnect(); setOpen(false); }}
+                className="w-full px-4 py-3 border border-glitch-lime/40 text-glitch-lime flex items-center justify-center gap-2"
+              >
+                <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+                {address.slice(0, 6)}…{address.slice(-4)} · DISCONNECT
+              </button>
+            ) : (
+              <button
+                onClick={() => { connect(); setOpen(false); }}
+                disabled={connecting}
+                className="w-full px-4 py-3 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all disabled:opacity-50"
+              >
+                {connecting ? "CONNECTING…" : "CONNECT_WALLET"}
+              </button>
+            )}
+          </li>
         </ul>
       )}
     </header>

@@ -220,10 +220,11 @@ export default function TokenViewerModal() {
         </div>
       </header>
 
-      {/* BODY */}
-      <div className="flex-1 grid lg:grid-cols-[1fr_400px] overflow-hidden">
+      {/* BODY — on mobile it's a single scrolling column; on desktop a 2-col split with the
+          panel scrolling internally. */}
+      <div className="flex-1 grid lg:grid-cols-[1fr_400px] min-h-0 overflow-y-auto lg:overflow-hidden">
         {/* VIEWER */}
-        <div className="relative bg-black overflow-hidden min-h-[50vh] lg:min-h-0">
+        <div className="relative bg-black overflow-hidden min-h-[55vh] lg:min-h-0">
           {kind === "model" && artifact ? (
             <GlbViewer url={artifact} />
           ) : kind === "video" && artifact ? (
@@ -274,7 +275,7 @@ export default function TokenViewerModal() {
         </div>
 
         {/* PANEL */}
-        <aside className="border-l border-white/10 overflow-y-auto bg-void">
+        <aside className="border-t lg:border-t-0 lg:border-l border-white/10 lg:overflow-y-auto bg-void">
           <div className="p-6 space-y-6">
             <div>
               <div

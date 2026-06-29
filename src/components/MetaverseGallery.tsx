@@ -10,6 +10,7 @@ import PlayerControls, { PlayerControlsRef } from "./PlayerControls";
 import GalleryScene from "./GalleryScene";
 import NftFrame from "./NftFrame";
 import MeshScreen, { BlackoutMesh } from "./MeshScreen";
+import MobileControls from "./MobileControls";
 import type { ObjktToken } from "@/lib/types";
 import { lowestPriceXtz, isDisplayableToken, detectKind, ipfsToUrl } from "@/lib/objkt";
 import { optimizedVideoUrl } from "@/lib/optimizedMedia";
@@ -248,6 +249,12 @@ export default function MetaverseGallery() {
   const [boughtIds, setBoughtIds] = useState<Set<string>>(new Set());
   const playerPos = useRef(PLAYER_START.clone());
   const [isLocked, setIsLocked] = useState(false);
+  // Mobile: there's no pointer lock, so a tap "enters" the gallery instead.
+  const [mobileStarted, setMobileStarted] = useState(false);
+  // Touch input refs, written by <MobileControls>, read by <PlayerControls> in the r3f loop.
+  const moveRef = useRef({ x: 0, y: 0 });
+  const lookRef = useRef({ dx: 0, dy: 0 });
+  const jumpRef = useRef(false);
   // Crosshair-targeted frame (raycast) — drives the HUD, [E] and click-to-open.
   const [targetedFrame, setTargetedFrame] = useState<number | null>(null);
   const targetsRef = useRef<Map<number, THREE.Object3D>>(new Map());
@@ -264,9 +271,19 @@ export default function MetaverseGallery() {
   const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
   // Quality tier — auto-detected on mount, overridable via the GFX selector.
   const [quality, setQuality] = useState<Quality>("medium");
-  useEffect(() => { setQuality(detectTier()); }, []);
+  // Mobile detection (state so it's stable after hydration, not recomputed each render).
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  useEffect(() => {
+    const mobile =
+      window.innerWidth < 768 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobileDevice(mobile);
+    setQuality(mobile ? "low" : detectTier()); // phones can't sustain the desktop tiers
+  }, []);
   const tier = TIERS[quality];
   const camDirRef = useRef(new THREE.Vector3(0, 0, -1));
+  // On mobile a tap enters the gallery (no pointer lock); on desktop it's the lock state.
+  const interactive = isMobileDevice ? mobileStarted : isLocked;
 
   // Fetch SideQuest collection only, sort cheapest → priciest
   useEffect(() => {
@@ -316,9 +333,7 @@ export default function MetaverseGallery() {
       .catch(() => {});
   }, []);
 
-  // Map tokens to frame spots (cycle if tokens < 34)
-  // Limit to 10 on mobile, 20 on desktop to prevent overload
-  const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+  // Map tokens to frame spots (cycle if tokens < 34). Fewer frames on mobile to limit load.
   const initialFrameCount = isMobileDevice ? 18 : FRAME_SPOTS.length;
 
   // Expand frame spots into render UNITS. Tall thin slots (slots:3) split into 3 stacked
@@ -578,7 +593,7 @@ export default function MetaverseGallery() {
         <PerfProbe onStats={setPerf} />
         <TargetingController
           targetsRef={targetsRef}
-          enabled={isLocked && !activeModalToken}
+          enabled={interactive && !activeModalToken}
           onTarget={setTargetedFrame}
           camDirRef={camDirRef}
         />
@@ -646,41 +661,51 @@ export default function MetaverseGallery() {
           positionRef={playerPos}
           onLockChange={setIsLocked}
           paused={!!activeModalToken}
+          touchMode={isMobileDevice}
+          touchEnabled={isMobileDevice && mobileStarted}
+          moveRef={moveRef}
+          lookRef={lookRef}
+          jumpRef={jumpRef}
         />
 
       </Canvas>
 
-      {/* ──── PERF DIAGNOSTIC OVERLAY (temporary) ──── */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-cyan-500/50 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
-        <span className={perf.fps < 30 ? "text-red-400" : perf.fps < 50 ? "text-yellow-400" : "text-green-400"}>
-          {perf.fps} FPS
-        </span>
-        <span className="text-cyan-300">{perf.calls} draws</span>
-        <span className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k tris</span>
-        <span className="text-gray-500">active {activeFrames.size}</span>
-        <span className="text-gray-500">vid {videoPlayFrames.size}/{tier.videoBudget}</span>
-      </div>
+      {/* ──── PERF DIAGNOSTIC OVERLAY (temporary, desktop only) ──── */}
+      {!isMobileDevice && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-cyan-500/50 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
+          <span className={perf.fps < 30 ? "text-red-400" : perf.fps < 50 ? "text-yellow-400" : "text-green-400"}>
+            {perf.fps} FPS
+          </span>
+          <span className="text-cyan-300">{perf.calls} draws</span>
+          <span className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k tris</span>
+          <span className="text-gray-500">active {activeFrames.size}</span>
+          <span className="text-gray-500">vid {videoPlayFrames.size}/{tier.videoBudget}</span>
+        </div>
+      )}
 
-      {/* Quality selector (GFX) — auto-detected, user-overridable. Stops propagation so
-          clicking it doesn't trigger the click-to-enter lock. */}
-      <div
-        className="absolute top-16 right-4 z-50 flex items-center gap-1 bg-black/80 border border-white/10 p-1 font-mono"
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <span className="text-[8px] tracking-[0.2em] text-gray-500 px-1">GFX</span>
-        {([["low", "1 LOW"], ["medium", "2 MED"], ["high", "3 HIGH"]] as [Quality, string][]).map(([q, label]) => (
-          <button
-            key={q}
-            onClick={() => setQuality(q)}
-            className={`text-[9px] px-2 py-1 tracking-wider transition-colors ${
-              quality === q ? "bg-cyan-500 text-black font-bold" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Quality selector (GFX) — auto-detected, user-overridable. Desktop only (mobile is
+          locked to LOW and the top bar is too tight for it). Stops propagation so clicking
+          it doesn't trigger the click-to-enter lock. */}
+      {!isMobileDevice && (
+        <div
+          className="absolute top-16 right-4 z-50 flex items-center gap-1 bg-black/80 border border-white/10 p-1 font-mono"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <span className="text-[8px] tracking-[0.2em] text-gray-500 px-1">GFX</span>
+          {([["low", "1 LOW"], ["medium", "2 MED"], ["high", "3 HIGH"]] as [Quality, string][]).map(([q, label]) => (
+            <button
+              key={q}
+              onClick={() => setQuality(q)}
+              className={`text-[9px] px-2 py-1 tracking-wider transition-colors ${
+                quality === q ? "bg-cyan-500 text-black font-bold" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Cheap CSS vignette (replaces the GPU postprocessing pass) */}
       <div
@@ -691,12 +716,13 @@ export default function MetaverseGallery() {
       {/* Asset loading counter (loaded / total) — auto-hides when everything is in. */}
       <AssetProgressHUD />
 
-      {/* ──── CLICK TO ENTER OVERLAY ──── */}
-      {!isLocked && !activeModalToken && (
+      {/* ──── CLICK / TAP TO ENTER OVERLAY ──── */}
+      {!interactive && !activeModalToken && (
         <div
-          className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-8 cursor-pointer"
+          className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-8 cursor-pointer px-6"
           onClick={() => {
-            playerControlsRef.current?.lock();
+            if (isMobileDevice) setMobileStarted(true);
+            else playerControlsRef.current?.lock();
           }}
         >
           <div className="text-center space-y-3">
@@ -704,19 +730,30 @@ export default function MetaverseGallery() {
               // NIKO_ALERCE :: 3D_GALLERY_SYSTEM
             </div>
             <h2 className="font-display font-black text-white text-3xl md:text-5xl uppercase tracking-tight">
-              CLICK ANYWHERE
+              {isMobileDevice ? "TAP" : "CLICK ANYWHERE"}
               <br />
               <span className="text-cyan-400">TO ENTER</span>
             </h2>
           </div>
 
           <div className="border border-white/10 bg-black/60 p-6 text-[11px] tracking-[0.3em] leading-[2.2] text-gray-400 text-center space-y-0.5">
-            <p><span className="text-white font-bold">WASD / ARROWS</span> — WALK</p>
-            <p><span className="text-white font-bold">SHIFT</span> — SPRINT</p>
-            <p><span className="text-white font-bold">SPACE</span> — JUMP</p>
-            <p><span className="text-white font-bold">MOUSE</span> — LOOK</p>
-            <p><span className="text-cyan-400 font-bold">[E]</span> — ANALYZE ARTWORK NEAR YOU</p>
-            <p><span className="text-gray-600">ESC</span> — RELEASE CURSOR</p>
+            {isMobileDevice ? (
+              <>
+                <p><span className="text-white font-bold">LEFT STICK</span> — WALK</p>
+                <p><span className="text-white font-bold">DRAG RIGHT</span> — LOOK</p>
+                <p><span className="text-white font-bold">JUMP</span> — BUTTON</p>
+                <p><span className="text-cyan-400 font-bold">OPEN</span> — AIM AT ARTWORK + TAP</p>
+              </>
+            ) : (
+              <>
+                <p><span className="text-white font-bold">WASD / ARROWS</span> — WALK</p>
+                <p><span className="text-white font-bold">SHIFT</span> — SPRINT</p>
+                <p><span className="text-white font-bold">SPACE</span> — JUMP</p>
+                <p><span className="text-white font-bold">MOUSE</span> — LOOK</p>
+                <p><span className="text-cyan-400 font-bold">[E]</span> — ANALYZE ARTWORK NEAR YOU</p>
+                <p><span className="text-gray-600">ESC</span> — RELEASE CURSOR</p>
+              </>
+            )}
           </div>
 
           <div className="text-[9px] tracking-[0.4em]">
@@ -731,8 +768,8 @@ export default function MetaverseGallery() {
         </div>
       )}
 
-      {/* ──── HUD (only when locked) ──── */}
-      {isLocked && !activeModalToken && (
+      {/* ──── HUD (only when entered) ──── */}
+      {interactive && !activeModalToken && (
         <>
           {/* Score */}
           <div className="absolute top-4 left-4 z-30 bg-black/70 backdrop-blur border border-white/10 p-4 space-y-1.5">
@@ -751,7 +788,7 @@ export default function MetaverseGallery() {
           {/* Exit */}
           <button
             onClick={handleExit}
-            className="absolute top-4 right-4 z-30 px-4 py-2 bg-black/70 backdrop-blur border border-white/15 text-white hover:border-red-500 hover:text-red-400 transition-all text-[10px] tracking-[0.4em]"
+            className="absolute top-4 right-4 z-50 px-4 py-2 bg-black/70 backdrop-blur border border-white/15 text-white hover:border-red-500 hover:text-red-400 transition-all text-[10px] tracking-[0.4em]"
           >
             ✕ EXIT
           </button>
@@ -777,16 +814,29 @@ export default function MetaverseGallery() {
                   {lowestPriceXtz(nearToken) !== null
                     ? `${lowestPriceXtz(nearToken)} XTZ · `
                     : "ARCHIVE · "}
-                  <span className="text-cyan-400">PRESS [E] OR CLICK TO OPEN</span>
+                  <span className="text-cyan-400">{isMobileDevice ? "TAP OPEN TO VIEW" : "PRESS [E] OR CLICK TO OPEN"}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Controls hint */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-[8px] tracking-[0.3em] text-white/20 whitespace-nowrap">
-            WASD MOVE · SHIFT SPRINT · SPACE JUMP · [E] INTERACT · ESC RELEASE
-          </div>
+          {/* Controls hint (desktop only) */}
+          {!isMobileDevice && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-[8px] tracking-[0.3em] text-white/20 whitespace-nowrap">
+              WASD MOVE · SHIFT SPRINT · SPACE JUMP · [E] INTERACT · ESC RELEASE
+            </div>
+          )}
+
+          {/* On-screen touch controls (mobile) */}
+          {isMobileDevice && (
+            <MobileControls
+              moveRef={moveRef}
+              lookRef={lookRef}
+              jumpRef={jumpRef}
+              targeted={targetedFrame !== null}
+              onInteract={handleInteract}
+            />
+          )}
         </>
       )}
 

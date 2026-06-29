@@ -12,6 +12,8 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
+type Vec2 = { x: number; y: number };
+
 type Props = {
   startPosition: THREE.Vector3;
   positionRef: React.MutableRefObject<THREE.Vector3>;
@@ -20,6 +22,15 @@ type Props = {
   // Optional terrain follow: returns the ground height under (x,z), or null if none.
   // When omitted, the player walks on a flat floor at FLOOR_Y (legacy behaviour).
   getGroundY?: (x: number, z: number) => number | null;
+  // Touch mode (mobile): driven by on-screen MobileControls via these refs instead of
+  // PointerLockControls + keyboard. `touchMode` decides which control scheme to use (passed
+  // from the gallery so it matches its own mobile detection); `touchEnabled` gates movement
+  // until the user taps Enter.
+  touchMode?: boolean;
+  touchEnabled?: boolean;
+  moveRef?: React.MutableRefObject<Vec2>;       // analog joystick: x=strafe, y=forward (-1..1)
+  lookRef?: React.MutableRefObject<{ dx: number; dy: number }>; // accumulated look delta (px)
+  jumpRef?: React.MutableRefObject<boolean>;
 };
 
 export interface PlayerControlsRef {
@@ -43,23 +54,23 @@ const isMobile = () => {
          ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 };
 
-const PlayerControlsInner = function PlayerControls({ startPosition, positionRef, onLockChange, paused, getGroundY }: Props, ref: React.Ref<PlayerControlsRef>) {
+const LOOK_SENS = 0.004; // rad per px of touch drag
+const PITCH_LIMIT = 1.45; // ~83° up/down
+
+const PlayerControlsInner = function PlayerControls({ startPosition, positionRef, onLockChange, paused, getGroundY, touchMode, touchEnabled = false, moveRef, lookRef, jumpRef }: Props, ref: React.Ref<PlayerControlsRef>) {
   const controlsRef = useRef<any>(null);
   const { camera, scene } = useThree();
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  // Use the parent's mobile decision when provided, else fall back to local detection.
+  const [detectedTouch, setDetectedTouch] = useState(false);
+  const isTouchDevice = touchMode ?? detectedTouch;
 
   // Raycasting for collision detection
   const raycaster = useRef(new THREE.Raycaster());
   const playerBox = useRef(new THREE.Box3());
 
-  // Touch controls state
-  const touchMoveRef = useRef({ x: 0, y: 0 });
-  const touchLookRef = useRef({ x: 0, y: 0 });
-  const touchJumpRef = useRef(false);
-
-  // Detect touch device
+  // Local touch detection (only used when the parent doesn't pass touchMode).
   useEffect(() => {
-    setIsTouchDevice(isMobile());
+    setDetectedTouch(isMobile());
   }, []);
 
   // Expose lock/unlock methods via ref
@@ -90,6 +101,8 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
   const headBobT = useRef(0);
   const initialized = useRef(false);
   const currentVelocity = useRef(new THREE.Vector3()); // For smooth acceleration
+  const yaw = useRef(0);   // touch-mode camera yaw  (around Y)
+  const pitch = useRef(0); // touch-mode camera pitch (around X)
 
   // Set camera to start position once
   useEffect(() => {
@@ -137,106 +150,62 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     };
   }, []);
 
-  // Touch controls for mobile
+  // Seed touch yaw/pitch from the initial camera orientation so look starts where the
+  // camera is pointing (the gallery faces -Z → yaw 0).
   useEffect(() => {
     if (!isTouchDevice) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
-      for (let i = 0; i < e.touches.length; i++) {
-        const touch = e.touches[i];
-        const halfWidth = window.innerWidth / 2;
-        const halfHeight = window.innerHeight / 2;
-
-        // Left side of screen - movement joystick
-        if (touch.clientX < halfWidth) {
-          touchMoveRef.current.x = touch.clientX;
-          touchMoveRef.current.y = touch.clientY;
-        }
-        // Right side of screen - camera look
-        else {
-          touchLookRef.current.x = touch.clientX;
-          touchLookRef.current.y = touch.clientY;
-        }
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      for (let i = 0; i < e.touches.length; i++) {
-        const touch = e.touches[i];
-        const halfWidth = window.innerWidth / 2;
-
-        // Left side - movement
-        if (touch.clientX < halfWidth) {
-          const dx = touch.clientX - touchMoveRef.current.x;
-          const dy = touch.clientY - touchMoveRef.current.y;
-          // Update movement based on touch position
-          keys.current.w = dy < -20;
-          keys.current.s = dy > 20;
-          keys.current.a = dx < -20;
-          keys.current.d = dx > 20;
-        }
-        // Right side - camera look
-        else {
-          const dx = touch.clientX - touchLookRef.current.x;
-          const dy = touch.clientY - touchLookRef.current.y;
-          // Rotate camera based on touch movement
-          camera.rotation.y -= dx * 0.005;
-          camera.rotation.x -= dy * 0.005;
-          // Clamp vertical rotation
-          camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
-          touchLookRef.current.x = touch.clientX;
-          touchLookRef.current.y = touch.clientY;
-        }
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      e.preventDefault();
-      // Reset movement when touch ends
-      if (e.touches.length === 0) {
-        keys.current.w = false;
-        keys.current.s = false;
-        keys.current.a = false;
-        keys.current.d = false;
-      }
-    };
-
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd, { passive: false });
-
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
+    yaw.current = camera.rotation.y;
+    pitch.current = camera.rotation.x;
   }, [isTouchDevice, camera]);
 
   useFrame((_, dt) => {
-    const locked: boolean = controlsRef.current?.isLocked ?? false;
-    onLockChange(locked);
-
-    // If paused (modal open), ensure pointer lock is released
-    if (paused && locked) {
-      controlsRef.current?.unlock();
-      return;
+    if (!isTouchDevice) {
+      const locked: boolean = controlsRef.current?.isLocked ?? false;
+      onLockChange(locked);
+      // If paused (modal open), ensure pointer lock is released
+      if (paused && locked) {
+        controlsRef.current?.unlock();
+        return;
+      }
+      if (!locked) return;
+    } else {
+      // Touch mode: no movement until the user has tapped "enter" and no modal is open.
+      if (paused || !touchEnabled) return;
+      // Apply accumulated look drag → yaw/pitch, then drive the camera directly (YXZ order
+      // = yaw around Y then pitch around X, so there's never any roll).
+      const lr = lookRef?.current;
+      if (lr) {
+        yaw.current -= lr.dx * LOOK_SENS;
+        pitch.current -= lr.dy * LOOK_SENS;
+        pitch.current = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch.current));
+        lr.dx = 0; lr.dy = 0;
+      }
+      camera.rotation.order = "YXZ";
+      camera.rotation.set(pitch.current, yaw.current, 0);
     }
-
-    // On mobile, always allow movement (no pointer lock)
-    if (!locked && !isTouchDevice) return;
 
     // Use actual delta time - no clamping for smoothest movement
     const clampedDt = dt;
 
-    const fwd = keys.current.w || keys.current.ArrowUp;
-    const bck = keys.current.s || keys.current.ArrowDown;
-    const lft = keys.current.a || keys.current.ArrowLeft;
-    const rgt = keys.current.d || keys.current.ArrowRight;
-    const run = keys.current.ShiftLeft || keys.current.ShiftRight;
-    const jump = keys.current.Space;
-    const isMoving = fwd || bck || lft || rgt;
+    // Movement input: analog joystick on touch, keyboard on desktop.
+    let mvFwd: number; // forward(+)/back(-)
+    let mvStrafe: number; // right(+)/left(-)
+    let run = false;
+    if (isTouchDevice) {
+      const m = moveRef?.current ?? { x: 0, y: 0 };
+      mvFwd = m.y;
+      mvStrafe = m.x;
+    } else {
+      const fwd = keys.current.w || keys.current.ArrowUp;
+      const bck = keys.current.s || keys.current.ArrowDown;
+      const lft = keys.current.a || keys.current.ArrowLeft;
+      const rgt = keys.current.d || keys.current.ArrowRight;
+      run = keys.current.ShiftLeft || keys.current.ShiftRight;
+      mvFwd = (fwd ? 1 : 0) - (bck ? 1 : 0);
+      mvStrafe = (rgt ? 1 : 0) - (lft ? 1 : 0);
+    }
+    const jump = isTouchDevice ? (jumpRef?.current ?? false) : keys.current.Space;
+    const isMoving = Math.abs(mvFwd) > 0.05 || Math.abs(mvStrafe) > 0.05;
     const speed = run ? RUN_SPEED : WALK_SPEED;
 
     // Direction from camera yaw
@@ -246,13 +215,12 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     dir.normalize();
     const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0));
 
-    // Calculate target velocity
+    // Calculate target velocity (analog magnitude clamped to 1 so diagonal isn't faster)
     const targetVel = new THREE.Vector3();
-    if (fwd) targetVel.add(dir);
-    if (bck) targetVel.sub(dir);
-    if (lft) targetVel.sub(right);
-    if (rgt) targetVel.add(right);
-    if (targetVel.lengthSq() > 0) targetVel.normalize().multiplyScalar(speed);
+    targetVel.addScaledVector(dir, mvFwd);
+    targetVel.addScaledVector(right, mvStrafe);
+    if (targetVel.lengthSq() > 1) targetVel.normalize();
+    targetVel.multiplyScalar(speed);
 
     // Very smooth acceleration/deceleration with much lower lerp factor
     const vel = currentVelocity.current;
@@ -340,7 +308,8 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     camera.position.set(pos.x, pos.y + EYE_LEVEL, pos.z);
   });
 
-  return <PointerLockControls ref={controlsRef} pointerSpeed={0.9} />;
+  // On touch devices we drive the camera ourselves (PointerLockControls can't lock on touch).
+  return isTouchDevice ? null : <PointerLockControls ref={controlsRef} pointerSpeed={0.9} />;
 };
 
 export default forwardRef(PlayerControlsInner);

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import GlitchText from "./GlitchText";
 
 const socials = [
@@ -10,6 +11,9 @@ const socials = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+  // Hidden on the immersive 3D gallery (see Navbar).
+  if (pathname === "/metaverse") return null;
   return (
     <footer
       id="contact"
