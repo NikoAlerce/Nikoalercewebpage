@@ -64,11 +64,13 @@ export function useNftMedia(
   const optUrl = optimizedVideoUrl(token.artifact_uri ?? token.display_uri);
   const treatAsVideo = isVideo || !!optUrl;
 
-  // For video (and optimized animations) prefer the larger display_uri as the still — the
-  // crisp frame shown when the screen is over the concurrent-video budget. Never fall back to
-  // the heavy artifact (the original mp4/GIF) for these.
+  // Still frame shown until the video plays (and for every screen over the concurrent-video
+  // budget). Use the SMALL thumbnail_uri — all 57 screens load their still up front, so the
+  // bigger display_uri here meant downloading 57 large images and uploading them all to the
+  // GPU at once (slow first paint + maxed GPU). Never fall back to the heavy artifact (the
+  // original mp4/GIF) for video/optimized screens.
   const thumbUri = treatAsVideo
-    ? (token.display_uri ?? token.thumbnail_uri)
+    ? (token.thumbnail_uri ?? token.display_uri)
     : (token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri);
   const fullUri = token.artifact_uri ?? token.display_uri ?? thumbUri;
   const thumbUrl = proxied(thumbUri);
