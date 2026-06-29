@@ -38,6 +38,54 @@ function rememberFastest(cid: string, gw: string) {
   fastestGateway.set(cid, gw);
 }
 
+// Resolved direct URLs (after following any gateway redirect) per CID — used by the video
+// redirect path so the browser is sent straight to the final, CORS-enabled, Range-serving
+// URL. Best-effort: this Map is per-lambda-instance and may be cold, in which case we probe.
+const resolvedVideoUrl = new Map<string, string>();
+// Gateways that serve content (and CORS + Range) directly, preferred for the video redirect.
+const VIDEO_GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://ipfs.io/ipfs/",
+  "https://dweb.link/ipfs/",
+  "https://4everland.io/ipfs/",
+];
+const PROBE_TIMEOUT_MS = 5000;
+
+// Probe a gateway with a tiny Range request; resolves to the FINAL url (after redirects)
+// if it can serve the bytes. We only need the headers, so we cancel the body immediately.
+async function probeGateway(gw: string, cid: string, signal: AbortSignal): Promise<string> {
+  const res = await fetch(gw + cid, {
+    method: "GET",
+    redirect: "follow",
+    headers: { range: "bytes=0-1", accept: "video/*,*/*" },
+    signal,
+  });
+  if (!res.ok) throw new Error(`probe ${gw} -> ${res.status}`);
+  try { await res.body?.cancel(); } catch { /* ignore */ }
+  return res.url || gw + cid; // res.url is the resolved (post-redirect) location
+}
+
+// Pick a fast, working, CORS-enabled direct URL for this CID (pinned if known, else race).
+async function pickVideoUrl(cid: string): Promise<string | null> {
+  const pinned = resolvedVideoUrl.get(cid);
+  if (pinned) return pinned;
+  const racers = VIDEO_GATEWAYS.slice(0, RACE_COUNT);
+  const controllers = racers.map(() => new AbortController());
+  const timers = controllers.map((c) => setTimeout(() => c.abort(), PROBE_TIMEOUT_MS));
+  try {
+    const url = await Promise.any(racers.map((g, i) => probeGateway(g, cid, controllers[i].signal)));
+    timers.forEach(clearTimeout);
+    controllers.forEach((c) => c.abort());
+    if (resolvedVideoUrl.size > FASTEST_CACHE_CAP) resolvedVideoUrl.clear();
+    resolvedVideoUrl.set(cid, url);
+    return url;
+  } catch {
+    timers.forEach(clearTimeout);
+    controllers.forEach((c) => c.abort());
+    return null;
+  }
+}
+
 function buildHeaders(range: string | null): Record<string, string> {
   const h: Record<string, string> = { accept: "image/*,video/*,*/*" };
   if (range) h.range = range;
@@ -87,6 +135,25 @@ export async function GET(req: NextRequest) {
       : uri;
 
   const range = req.headers.get("range");
+
+  // 0) Video redirect path: send the <video> straight to a CORS-enabled gateway so the
+  // bytes never stream through this serverless function. Removes the double-hop + the
+  // per-invocation gateway re-racing that makes heavy video crawl on Vercel.
+  if (req.nextUrl.searchParams.get("redirect") === "1") {
+    const target = await pickVideoUrl(cid);
+    if (target) {
+      return new Response(null, {
+        status: 307,
+        headers: {
+          location: target,
+          "access-control-allow-origin": "*",
+          // Let the browser cache the redirect so repeat Range requests skip the lambda.
+          "cache-control": "public, max-age=86400",
+        },
+      });
+    }
+    // No gateway answered the probe → fall through and proxy the bytes as a last resort.
+  }
 
   // 1) Pinned fastest gateway for this CID (set by an earlier request) — go straight there.
   const pinned = fastestGateway.get(cid);

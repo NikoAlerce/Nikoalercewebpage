@@ -11,9 +11,15 @@ const MAX_CANVAS_PX = 512;
 
 // Route IPFS media through our own /api/ipfs proxy so the browser loads it same-origin
 // (WebGL textures need CORS; many public gateways don't send CORS headers / rate-limit).
-export function proxied(uri?: string | null): string | null {
+export function proxied(uri?: string | null, opts?: { redirect?: boolean }): string | null {
   if (!uri) return null;
-  return `/api/ipfs?uri=${encodeURIComponent(uri)}`;
+  const base = `/api/ipfs?uri=${encodeURIComponent(uri)}`;
+  // `redirect` videos straight to a CORS-enabled gateway (the proxy 307s instead of
+  // streaming the bytes). On Vercel, piping a 40MB mp4 through a serverless function for
+  // every Range request — re-racing gateways each time because the in-memory pin doesn't
+  // survive across invocations — is what makes video crawl. A redirect lets the <video>
+  // stream directly from the gateway with native Range, no lambda in the byte path.
+  return opts?.redirect ? `${base}&redirect=1` : base;
 }
 
 /**
@@ -58,7 +64,7 @@ export function useNftMedia(
     : (token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri);
   const fullUri = token.artifact_uri ?? token.display_uri ?? thumbUri;
   const thumbUrl = proxied(thumbUri);
-  const videoUrl = isVideo ? proxied(fullUri) : null;
+  const videoUrl = isVideo ? proxied(fullUri, { redirect: true }) : null;
 
   // ── Static first-frame texture (always) ──
   useEffect(() => {
@@ -281,7 +287,7 @@ export function usePlaylistMedia(
   const thumbUri = token?.thumbnail_uri ?? token?.display_uri ?? token?.artifact_uri;
   const fullUri = token?.artifact_uri ?? token?.display_uri ?? thumbUri;
   const thumbUrl = proxied(thumbUri);
-  const videoUrl = proxied(fullUri);
+  const videoUrl = proxied(fullUri, { redirect: true });
 
   // Report the current track up (for the HUD) whenever it changes.
   useEffect(() => {
