@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ObjktToken } from "@/lib/types";
 import { detectKind } from "@/lib/objkt";
+import { optimizedVideoUrl } from "@/lib/optimizedMedia";
 
 // Cap the working canvas so animated GIFs don't melt the GPU.
 const MAX_CANVAS_PX = 512;
@@ -57,14 +58,22 @@ export function useNftMedia(
   const isVideo = kind === "video";
   const isAnimated = token.mime === "image/gif";
 
-  // For videos prefer the larger display_uri as the still — it's the crisp frame shown
-  // when this screen is over the concurrent-video budget (full quality, just not moving).
-  const thumbUri = isVideo
-    ? (token.display_uri ?? token.thumbnail_uri ?? token.artifact_uri)
+  // Pre-transcoded local mp4 for a heavy GIF (built by scripts/optimize-nft-gifs.mjs). When
+  // present we play it via the cheap VideoTexture path instead of downloading + decoding the
+  // 14–40MB GIF frame-by-frame.
+  const optUrl = optimizedVideoUrl(token.artifact_uri ?? token.display_uri);
+  const treatAsVideo = isVideo || !!optUrl;
+
+  // For video (and optimized animations) prefer the larger display_uri as the still — the
+  // crisp frame shown when the screen is over the concurrent-video budget. Never fall back to
+  // the heavy artifact (the original mp4/GIF) for these.
+  const thumbUri = treatAsVideo
+    ? (token.display_uri ?? token.thumbnail_uri)
     : (token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri);
   const fullUri = token.artifact_uri ?? token.display_uri ?? thumbUri;
   const thumbUrl = proxied(thumbUri);
-  const videoUrl = isVideo ? proxied(fullUri, { redirect: true }) : null;
+  // Optimized mp4 is same-origin (no proxy needed); a real IPFS video redirects to a gateway.
+  const videoUrl = optUrl ?? (isVideo ? proxied(fullUri, { redirect: true }) : null);
 
   // ── Static first-frame texture (always) ──
   useEffect(() => {
@@ -109,8 +118,9 @@ export function useNftMedia(
       lastFrameIdxRef.current = -1;
     };
 
-    // A GIF is never a video, so videoActive doesn't apply here.
-    if (!active || !isAnimated) {
+    // A GIF is never a video, so videoActive doesn't apply here. Skip GIF decoding entirely
+    // when we have an optimized mp4 — it plays via the VideoTexture path instead.
+    if (!active || !isAnimated || optUrl) {
       cleanupFrames();
       setAnimTex((prev) => { prev?.dispose(); return null; });
       return;
@@ -192,7 +202,7 @@ export function useNftMedia(
   // pre-buffer (bufferActive). Pre-buffered videos download (preload=auto) but don't play
   // or upload a texture, so the bytes are already there the instant you look at one — which
   // is what kills the "load, then wait to play" delay on the cold production gateways.
-  const shouldLoadVideo = isVideo && !!videoUrl && (videoActive || bufferActive);
+  const shouldLoadVideo = treatAsVideo && !!videoUrl && (videoActive || bufferActive);
   useEffect(() => {
     if (!shouldLoadVideo || !videoUrl) return;
     const video = document.createElement("video");
@@ -267,7 +277,7 @@ export function useNftMedia(
   });
 
   const map = videoTexture ?? animTex ?? staticTex;
-  return { map, aspect, loading, error: loadError, isVideo };
+  return { map, aspect, loading, error: loadError, isVideo: treatAsVideo };
 }
 
 /**

@@ -12,6 +12,7 @@ import NftFrame from "./NftFrame";
 import MeshScreen, { BlackoutMesh } from "./MeshScreen";
 import type { ObjktToken } from "@/lib/types";
 import { lowestPriceXtz, isDisplayableToken, detectKind, ipfsToUrl } from "@/lib/objkt";
+import { optimizedVideoUrl } from "@/lib/optimizedMedia";
 
 // ============================================================
 // Frame positions for nuevagalery.glb — auto-extracted from the painting
@@ -331,10 +332,13 @@ export default function MetaverseGallery() {
     if (tokens.length === 0) return [] as Unit[];
     const out: Unit[] = [];
     let t = 0;
-    // A unit counts as "video" (for the concurrent budget) if its token is a video, or if
-    // it's the playlist host (which plays videos in place of its own token).
+    // A unit counts as "video" (for the concurrent budget) if its token is a video, an
+    // optimized GIF (now played as a local mp4), or the playlist host (which plays videos
+    // in place of its own token).
     const unitIsVideo = (tk: ObjktToken) =>
-      PLAYLIST_HOST.test(tk.name ?? "") || detectKind(tk.mime) === "video";
+      PLAYLIST_HOST.test(tk.name ?? "") ||
+      detectKind(tk.mime) === "video" ||
+      !!optimizedVideoUrl(tk.artifact_uri ?? tk.display_uri);
     const spots = FRAME_SPOTS.slice(0, initialFrameCount);
     spots.forEach((spot, s) => {
       const n = spot.slots && spot.slots > 1 ? spot.slots : 1;
