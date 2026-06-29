@@ -14,6 +14,45 @@ Todo el flujo de compra ya existía y se reutiliza.
 
 ---
 
+## Actualización (2026-06-29 · sesión 2) — GIFs pesados → mp4 local, redirect de gateway, reproducción por cercanía
+
+Síntoma reportado: **en local todo fluido, pero en Vercel los assets cargan y cuesta muchísimo que se reproduzcan al acercarse** ("me quedo esperando bocha de rato"). Diagnóstico y fixes:
+
+### 1) Reproducción por CERCANÍA, no por mirada (`MetaverseGallery.tsx`)
+El "play budget" (`videoPlayFrames`) ordenaba los videos **por mirada** (`dot`, qué tan centrado en la vista) → acercarse no alcanzaba, había que apuntar la cámara justo. Ahora ordena **por distancia** (`a.d2 - b.d2`); el único filtro de mirada que queda descarta lo que tenés casi a la espalda (`dot > -0.45`) para liberar el cupo de decoder. Caminar hacia una pieza ahora la reproduce.
+
+### 2) Causa raíz en Vercel: el proxy serverless en el camino de los bytes
+El proxy `/api/ipfs` transmitía **cada Range request del `<video>` a través de una función serverless**, re-buscando gateway cada vez (el `Map` `fastestGateway` en memoria **no sobrevive entre invocaciones serverless**) y haciendo doble salto del archivo entero. En local es un solo proceso caliente → por eso ahí volaba.
+- **Fix (`src/app/api/ipfs/route.ts`)**: las URLs de media animada llevan `&redirect=1`. En ese modo el route **prueba (probe Range bytes=0-1) un gateway rápido con CORS+Range, lo fija por CID y devuelve un `307` directo al gateway** (`pickVideoUrl`/`probeGateway`, `VIDEO_GATEWAYS`). El navegador baja directo, con Range nativo, **sin lambda en el camino de los bytes**. Imágenes/GIFs estáticos (miniaturas) siguen por el proxy normal (chicos, se cachean en el edge). Probado: pinata.cloud e ipfs.io sirven el mp4 directo con `access-control-allow-origin: *`.
+- `proxied(uri, { redirect: true })` en `useNftMedia` genera la URL con el flag (videos, playlist y el fetch del GIF para decode).
+
+### 3) Lo más importante: los GIFs son monstruosos → transcodificados a mp4 local
+La colección **sidequest** son **57 GIFs de 14–40MB cada uno** (vs. solo 3 videos). Eso es lo que realmente hacía que tardaran: bajar 14-40MB + decodificar todos los frames con `ImageDecoder`. El redirect ayuda pero un GIF de 40MB tarda igual.
+- **`scripts/optimize-nft-gifs.mjs`** (nuevo): baja cada GIF de un gateway y lo transcodifica con **ffmpeg → mp4 H.264, 640px, sin audio, `+faststart`** a `public/nft-opt/<cid>.mp4`, y anota los CIDs OK en `src/lib/optimizedManifest.json`. Es **resumible** (saltea los que ya existen) e idempotente. Correr con el dev server arriba en `:3000` (de ahí saca la lista de tokens): `node scripts/optimize-nft-gifs.mjs [limit]`. **Resultado: 799MB → 117MB** (~1–4MB c/u).
+- **`src/lib/optimizedMedia.ts`** (nuevo): `optimizedVideoUrl(uri)` → `/nft-opt/<cid>.mp4` si el CID está en el manifest, si no `null`.
+- **`useNftMedia.ts`**: si hay mp4 local, `treatAsVideo=true` → reproduce por el path **VideoTexture** (barato, mismo origen) y **saltea el decode del GIF**. La miniatura estática nunca usa el artifact pesado.
+- **`MetaverseGallery.tsx`**: `unitIsVideo` ahora cuenta también los GIFs optimizados → entran al presupuesto de videos concurrentes (animan ~6 a la vez, el resto muestra still). Fallback al pipeline IPFS original para cualquier CID que no esté en el manifest.
+- **Si el artista agrega/cambia GIFs**: re-correr el script (solo procesa los nuevos) y commitear `public/nft-opt/` + `optimizedManifest.json`.
+
+### 4) Bug arreglado (regresión introducida y corregida en esta misma sesión)
+Al marcar los GIFs como "video", el still pasó por error de `thumbnail_uri` (~1.3MB) a `display_uri` (~8.9MB). Como **los 57 cuadros cargan su still de entrada**, eran **~500MB de imágenes** bajando + subiendo a la GPU de golpe → "nunca termina de cargar" + **GPU al palo**. Revertido: el still vuelve a `thumbnail_uri` (chico).
+
+### Archivos tocados / nuevos (esta sesión)
+- `src/app/api/ipfs/route.ts` — modo `redirect=1`: 307 a gateway directo (probe + pin por CID).
+- `src/components/useNftMedia.ts` — `proxied(...,{redirect})`, `treatAsVideo`/mp4 local, skip de decode GIF, still = thumbnail.
+- `src/components/MetaverseGallery.tsx` — play budget por distancia; `unitIsVideo` incluye GIFs optimizados.
+- `scripts/optimize-nft-gifs.mjs` — **nuevo**: transcodificador GIF→mp4 (resumible).
+- `src/lib/optimizedMedia.ts` + `src/lib/optimizedManifest.json` — **nuevos**: mapa CID→mp4 local.
+- `public/nft-opt/*.mp4` — **nuevos**: los 57 GIFs optimizados (117MB).
+
+### Pendientes nuevos
+- **El repo creció +117MB** (los mp4 en `public/nft-opt`). Vercel los sirve por CDN sin problema, pero si molesta el peso del repo → mover a **Vercel Blob / CDN externo** y ajustar `optimizedVideoUrl` para apuntar ahí.
+- **VRAM de miniaturas**: 57 stills × ~1.3MB webp sigue siendo bastante textura. Si la GPU sigue cargada, **cap de tamaño de textura** (resize de thumbnails / `texture.minFilter` + dimensiones menores) es el próximo escalón.
+- **Los 3 videos reales** (mp4 en IPFS) siguen dependiendo del gateway público vía redirect; para esos, gateway dedicado (Pinata key) o re-hostear sigue siendo lo ideal.
+- (Sigue pendiente de antes) **esconder el overlay de diagnóstico** FPS/draws/tris/vid para usuarios finales.
+
+---
+
 ## Actualización (2026-06-29) — Performance de video, interacción por mira, playlist y tiers
 
 Sesión posterior: hacer la galería **fluida** y la reproducción de video **inmediata**, sumar una **playlist con sonido**, **selección por mira** y un **indicador de carga**.
