@@ -445,10 +445,12 @@ export default function MetaverseGallery() {
         bset.add(activeVideos[j].i);
       }
 
-      // Play budget: among active videos roughly in front of you, the ones most centred in
-      // view (then nearest) up to the budget.
-      const vids = activeVideos.filter((x) => x.dot > -0.15);
-      vids.sort((a, b) => (b.dot - a.dot) || (a.d2 - b.d2));
+      // Play budget: the videos you're NEAREST to play (so walking up to one starts it),
+      // up to the budget. We only drop the ones almost directly behind you (dot < -0.45) so
+      // a video you walked past and turned your back on frees its decoder slot for one ahead.
+      // Distance is the primary key (proximity-driven), gaze is just the behind-you cutoff.
+      const vids = activeVideos.filter((x) => x.dot > -0.45);
+      vids.sort((a, b) => a.d2 - b.d2);
       const vset = new Set<number>();
       for (let j = 0; j < vids.length && vset.size < VIDEO_BUDGET; j++) vset.add(vids[j].i);
 
