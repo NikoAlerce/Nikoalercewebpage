@@ -115,7 +115,11 @@ export function useNftMedia(
       setAnimTex((prev) => { prev?.dispose(); return null; });
       return;
     }
-    const url = proxied(fullUri);
+    // Redirect the full GIF download straight to the gateway too — these artifacts are
+    // 14-40MB, so double-hopping them through the serverless proxy on Vercel is what made
+    // them take forever to start animating. fetch() follows the 307 and the gateway sends
+    // CORS, so reading the arrayBuffer still works.
+    const url = proxied(fullUri, { redirect: true });
     const ImageDecoderCtor = (globalThis as unknown as { ImageDecoder?: unknown }).ImageDecoder;
     if (!url || typeof ImageDecoderCtor !== "function") return; // fallback: static texture stays
 
