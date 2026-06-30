@@ -1,133 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import GlitchText from "./GlitchText";
 
-const Scene3D = dynamic(() => import("./Scene3D"), {
+const HeroModel = dynamic(() => import("./HeroModel"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full grid place-items-center text-ash text-xs">
-      <span className="animate-pulse">// LOADING SHADERS...</span>
+    <div className="w-full h-full grid place-items-center">
+      <span className="text-ash/50 text-[10px] tracking-[0.5em] uppercase animate-pulse">Loading</span>
     </div>
   ),
 });
 
-type ObjktToken = {
-  artifact_uri?: string | null;
-  mime?: string | null;
-  name?: string | null;
-};
-
 export default function Hero() {
-  const [glbUrls, setGlbUrls] = useState<string[]>([]);
-
-  // Fetch GLB models from OBJKT API
-  useEffect(() => {
-    async function loadGlbs() {
-      try {
-        const res = await fetch("/api/objkt?alias=nikoalerce&limit=300");
-        if (!res.ok) return;
-        const data = await res.json();
-        const tokens: ObjktToken[] = data.tokens ?? [];
-        
-        // Filter only GLB/GLTF models
-        const models = tokens
-          .filter(
-            (t) =>
-              t.mime === "model/gltf-binary" ||
-              t.mime === "model/gltf+json",
-          )
-          .map((t) => t.artifact_uri!)
-          .filter(Boolean);
-
-        // Take up to 6 random GLBs for the hero
-        const shuffled = models.sort(() => Math.random() - 0.5);
-        setGlbUrls(shuffled.slice(0, 6));
-      } catch {
-        // Silently fail — hero works fine without GLBs
-      }
-    }
-    loadGlbs();
-  }, []);
-
   return (
     <section
       id="top"
-      className="relative min-h-[100svh] w-full overflow-hidden bg-void"
+      className="relative min-h-[100svh] w-full overflow-hidden"
+      style={{ background: "radial-gradient(ellipse at 50% 62%, #1b1b21 0%, #0a0a0c 55%, #050506 100%)" }}
     >
-      <div className="absolute inset-0 bg-grid opacity-20" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,0,64,0.05),transparent_70%)]" />
-
-      {/* Full-bleed 3D scene with shader orb + GLBs + interactive text carousel */}
+      {/* The piece is the hero — single optimized GLB, studio-lit. */}
       <div className="absolute inset-0">
-        <Scene3D className="absolute inset-0" glbUrls={glbUrls} />
+        <HeroModel className="absolute inset-0" />
       </div>
 
-      {/* Minimal overlay — artist identity */}
-      <div className="relative z-10 pointer-events-none max-w-[1800px] mx-auto px-6 md:px-12 pt-32 md:pt-40">
-        {/* Top-left meta coordinates */}
-        <div className="flex flex-col gap-1 text-[9px] tracking-[0.5em] text-ash/40 uppercase mb-8">
-          <div className="flex items-center gap-4">
-            <span className="text-glitch-red">//</span>
-            <span>SYSTEM_ORIGIN::PATAGONIA_VOID</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="w-1 h-1 bg-glitch-lime rounded-full animate-pulse" />
-            <span className="text-glitch-lime/60">
-              NODE_STATUS::SYNCHRONIZED
-              {glbUrls.length > 0 && ` · ${glbUrls.length}_MODELS_LOADED`}
-            </span>
-          </div>
-        </div>
+      {/* Soft top + bottom scrims so the type stays readable over the model. */}
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
 
-        {/* Artist name */}
-        <h1 className="font-display font-black leading-[0.8] tracking-tighter text-bone uppercase">
-          <span className="block text-[clamp(3rem,12vw,11rem)] opacity-90">
-            <GlitchText>NIKO</GlitchText>
-          </span>
-          <span className="block text-[clamp(3rem,12vw,11rem)] text-glitch-red -mt-[2vw] opacity-90">
-            <GlitchText>ALERCE</GlitchText>
-          </span>
-        </h1>
-
-        <p className="mt-6 text-sm md:text-base text-ash/70 max-w-lg leading-relaxed">
-          Full-stack creative from Patagonia — 3D art, music, and immersive
-          worlds, all under one roof. Move your cursor to interact. Click the
-          floating text to navigate.
-        </p>
-      </div>
-
-      {/* Bottom hint */}
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-40 pointer-events-none">
-        <span className="text-[9px] tracking-[0.5em] text-ash uppercase">SCROLL_TO_EXPLORE</span>
-        <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center p-1">
-          <div className="w-1 h-1 bg-bone rounded-full animate-bounce" />
+      {/* Kicker — top-left, quiet */}
+      <div className="absolute top-28 md:top-32 left-6 md:left-12 z-10 pointer-events-none">
+        <div className="flex items-center gap-3 text-[10px] md:text-[11px] tracking-[0.45em] uppercase text-ash/70">
+          <span className="w-6 h-px bg-ash/40" />
+          Multidisciplinary artist · Patagonia
         </div>
       </div>
 
-      {/* Marquee */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 overflow-hidden border-y border-white/10 py-2 bg-void/40 backdrop-blur-sm">
-        <div className="flex animate-marquee whitespace-nowrap text-xs tracking-[0.4em] text-ash">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex shrink-0">
-              {[
-                "3D_VISUAL_ARTIST",
-                "MUSIC_PRODUCER",
-                "EL_BOSQUECITO_RECORDS",
-                "DECENTRALAND_BUILDER",
-                "BLENDER_ADDON_DEV",
-                "OBJKT://NIKOALERCE",
-                "AR/VR_READY",
-                "EL_BOLSÓN//PATAGONIA",
-              ].map((w) => (
-                <span key={w} className="px-8 flex items-center gap-3">
-                  <span className="text-glitch-red">▌</span>
-                  {w}
-                </span>
-              ))}
-            </div>
-          ))}
+      {/* Name wordmark — bottom, the anchor of the page */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 px-6 md:px-12 pb-16 md:pb-20 pointer-events-none">
+        <div className="max-w-[1800px] mx-auto">
+          <h1 className="font-display font-semibold tracking-[-0.03em] leading-[0.9] text-bone">
+            <span className="block text-[clamp(3.2rem,13vw,11rem)]">Niko Alerce</span>
+          </h1>
+          <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-5">
+            <p className="text-sm md:text-base text-ash/80 max-w-md leading-relaxed font-light">
+              3D art, music and immersive worlds — a single creative studio from El Bolsón, Patagonia.
+            </p>
+            <a
+              href="#enter"
+              className="pointer-events-auto group inline-flex items-center gap-3 text-[11px] tracking-[0.35em] uppercase text-bone/80 hover:text-bone transition-colors self-start md:self-auto"
+            >
+              <span className="w-8 h-px bg-bone/50 group-hover:w-12 transition-all" />
+              Explore the work
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Scroll hint */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 hidden md:flex flex-col items-center gap-2 opacity-40 pointer-events-none">
+        <div className="w-5 h-9 border border-white/25 rounded-full flex justify-center p-1">
+          <div className="w-1 h-1.5 bg-bone rounded-full animate-bounce" />
         </div>
       </div>
     </section>
