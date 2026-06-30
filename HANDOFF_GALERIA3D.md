@@ -14,6 +14,65 @@ Todo el flujo de compra ya existía y se reutiliza.
 
 ---
 
+## 🎯 PRÓXIMA SESIÓN (planeado) — Refactor del HERO + estética: salir del glitch hacia algo más elegante, con UN solo GLB
+
+**Intención:** bajar el ruido "glitch/cyberpunk" del landing y llevarlo a algo **más elegante y editorial**, con **un único GLB** como protagonista del hero (en vez del orbe shader + anillos + partículas + 6 GLBs rotando + postproceso Glitch que hay hoy).
+
+### Estado actual del hero (lo que hay que reemplazar)
+- `src/components/Hero.tsx` → monta `Scene3D` (full-bleed) + overlay con nombre en `GlitchText`, coordenadas mono (`SYSTEM_ORIGIN::PATAGONIA_VOID`), marquee inferior y `bg-grid`.
+- `src/components/Scene3D.tsx` (716 líneas, **el corazón del look glitch**): `EnergyOrb` (shader con distorsión + bandas glitch), `Rings` (toros rojo/cian), `ReactiveParticles` (500 pts), `OrbitingLights` (rojo/cian), `CapturedGLB` (baja **6 GLBs random de objkt** y los cicla dentro del orbe), `TextCarousel` (palabras 3D orbitando como nav) y `EffectComposer` con **Bloom + Glitch + Noise + Vignette**.
+- Fetch del hero: `Hero.tsx` trae GLBs de `/api/objkt?alias=nikoalerce` filtrando `model/gltf-binary` y elige 6 al azar.
+
+### Dirección propuesta para el refactor
+1. **Un solo GLB protagonista, bien presentado.** Elegir **una pieza insignia** (no random), **optimizarla con Draco** y hostearla local en `public/` (carga instantánea, sin depender de IPFS). Reusar el pipeline `C:\niko\escritorio\bakup\mariokart2\tools` (`draco-one.mjs` / `optimize-one.mjs`). Presentación elegante: **iluminación de estudio** (`Environment` neutro tipo `studio`/`city` + key light suave + rim sutil), **contact shadow** (`ContactShadows` de drei), rotación lenta y **parallax sutil con el mouse**. Nada de orbe, anillos, partículas ni luces rojo/cian orbitando.
+2. **Sacar el postproceso glitch.** Quitar `Glitch` y `Noise`; dejar a lo sumo un **Bloom muy suave** (o nada). Mantener `Vignette` apenas. Esto solo ya cambia el tono drásticamente.
+3. **Paleta más sobria.** Hoy: doble neón `glitch-red #ff0040` + `glitch-cyan #00fff0` por todos lados (`tailwind.config.ts`). Propuesta: **neutros refinados** (off-white `bone`, un gris cálido) + **un único acento contenido** (idealmente derivado de la obra/GLB, o un color de marca). El glitch pasa a ser **puntuación ocasional**, no la identidad.
+4. **Tipografía / copy.** Bajar el `uppercase` + `tracking-[0.5em]` + mono omnipresente. Usar más `font-display` (Space Grotesk), sentence case, **mucho aire**. El H1 deja de ser `GlitchText` animado (nombre como wordmark tranquilo). Sacar/calmar el marquee y las "coordenadas" mono.
+5. **Alcance (no es solo el hero).** Tocará también: `tailwind.config.ts` (repensar tokens `glitch.*` y animaciones `glitch`/`rgb-split`/`noise-shift`), `src/app/globals.css` (utilidades `.glitch-text`/`.glitch-hover`/`bg-grid`), `Navbar.tsx` (menos neón), uso de `GlitchText` en todo el sitio, la sección brutalista de tarjetas en `src/app/page.tsx`, y los textos `// SYSTEM_*` de varias páginas.
+
+### Decisiones a confirmar con el usuario al arrancar
+- **¿Qué GLB** es la pieza insignia del hero? (necesito el archivo o el token de objkt).
+- **Color de acento** definitivo (¿uno derivado de la obra, o un color fijo de marca?).
+- **Alcance:** ¿solo rediseñar el hero, o el refactor estético completo del sitio (paleta + tipografía + sacar glitch en todas las páginas)?
+- **¿La galería 3D `/metaverse`** mantiene su HUD cyber, o también se "eleganta" para unificar con el nuevo landing?
+
+### Notas
+- Hacerlo en branch **`hero-redesign`** (ya mencionado en pendientes previos).
+- El flujo de compra (`TokenViewerModal` + wallet) y la galería 3D son **independientes** del look del landing — no romperlos.
+- `Scene3D` ya tiene buenas bases reutilizables: pausa por `IntersectionObserver`/visibilidad, soporte `prefers-reduced-motion`, `dpr` capado. Conservar esas optimizaciones en la versión nueva.
+
+---
+
+## Actualización (2026-06-29 · sesión mobile) — La página funciona bien en celular (controles táctiles + responsive)
+
+Pedido: que **todo el sitio + la galería 3D** anden bien en mobile, con la galería en **3D completa con controles táctiles**.
+
+### Galería 3D `/metaverse` en mobile (lo más roto → lo más trabajado)
+Antes en celular **te trababas en "CLICK TO ENTER"**: el pointer-lock no existe en touch, así que `isLocked` nunca pasaba a `true` y el overlay no se iba. Ahora:
+- **Controles táctiles nuevos** (`src/components/MobileControls.tsx`): **joystick** analógico abajo-izq (escribe `moveRef` x=strafe / y=adelante), **look-pad** a la derecha (acumula en `lookRef`), botones **JUMP** e **OPEN**. Todo por refs (sin re-render de React en el loop r3f).
+- **`PlayerControls.tsx`**: en touch maneja la cámara a mano con **yaw/pitch en orden `YXZ`** (arregla el bug de rotación/roll del touch viejo), movimiento analógico desde el joystick, y **no monta `PointerLockControls`**. La decisión "es mobile" la **recibe de la galería** (`touchMode`) para no divergir con su propia detección.
+- **`MetaverseGallery.tsx`**: estado `mobileStarted` (tap entra, sin lock); `interactive = isMobile ? mobileStarted : isLocked` reemplaza a `isLocked` en HUD/targeting/overlay; **tier LOW forzado** en mobile; overlays de diagnóstico (FPS/GFX) **ocultos** en mobile; instrucciones del overlay adaptadas a touch.
+- **Navbar y Footer ocultos en `/metaverse`** (experiencia inmersiva con su propio EXIT) → descontractura el top en mobile y elimina un scroll fantasma de 72px del footer.
+
+### Resto del sitio
+- **Wallet en mobile** (`Navbar.tsx`): el botón de conectar era `hidden lg:flex` y **faltaba en el menú hamburguesa** → sin eso, en celular no se podía conectar wallet ni comprar. Agregado al menú mobile.
+- **Modal de compra** (`TokenViewerModal.tsx`): en mobile el panel (descripción/stats/botón comprar) se cortaba sin scroll → ahora el body **scrollea** en una sola columna (`overflow-y-auto lg:overflow-hidden`), el panel pierde el `overflow` propio salvo en `lg`.
+- **Home**: verificada a 375px, **sin overflow horizontal** (los anchos son marquees clippeados, no bug).
+
+### Archivos tocados / nuevos (sesión mobile)
+- `src/components/MobileControls.tsx` — **nuevo**: joystick + look-pad + botones touch.
+- `src/components/PlayerControls.tsx` — modo touch (yaw/pitch YXZ, joystick analógico, sin pointer-lock), `touchMode` desde el padre.
+- `src/components/MetaverseGallery.tsx` — `mobileStarted`/`interactive`, tier LOW en mobile, oculta perf/GFX, tap-to-enter, render de `MobileControls`.
+- `src/components/Navbar.tsx` — wallet en menú mobile; oculto en `/metaverse`.
+- `src/components/Footer.tsx` — oculto en `/metaverse`.
+- `src/components/TokenViewerModal.tsx` — body scrolleable en mobile.
+
+### Pendientes mobile (menores)
+- Afinar a gusto **sensibilidad del look** (`LOOK_SENS` en `PlayerControls.tsx`) y **tamaño/posición de botones** (`MobileControls.tsx`).
+- Probar en teléfonos reales variados (el deploy de Vercel es la vía; el dev es `localhost`).
+
+---
+
 ## Actualización (2026-06-29 · sesión 2) — GIFs pesados → mp4 local, redirect de gateway, reproducción por cercanía
 
 Síntoma reportado: **en local todo fluido, pero en Vercel los assets cargan y cuesta muchísimo que se reproduzcan al acercarse** ("me quedo esperando bocha de rato"). Diagnóstico y fixes:
