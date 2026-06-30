@@ -117,18 +117,18 @@ function LoadingOverlay() {
   if (!active) return null;
   return (
     <Html fullscreen zIndexRange={[100, 0]}>
-      <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-6 font-mono">
-        <div className="text-[10px] tracking-[0.6em] text-cyan-400 animate-pulse">
-          DECODING_3D_ENVIRONMENT · {Math.round(progress)}%
+      <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-6">
+        <div className="font-mono text-[10px] tracking-[0.5em] uppercase text-ash animate-pulse">
+          Loading 3D environment · {Math.round(progress)}%
         </div>
         <div className="w-64 h-px bg-white/10 relative overflow-hidden">
           <div
-            className="absolute inset-y-0 left-0 bg-cyan-400 transition-all duration-200"
+            className="absolute inset-y-0 left-0 bg-accent transition-all duration-200"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="text-[9px] tracking-[0.3em] text-white/30">
-          nuevagalery.glb · {FRAME_SPOTS.length} FRAMES
+        <div className="font-mono text-[9px] tracking-[0.3em] text-white/30">
+          nuevagalery.glb · {FRAME_SPOTS.length} frames
         </div>
       </div>
     </Html>
@@ -146,22 +146,22 @@ function AssetProgressHUD() {
   if (!active && (total === 0 || loaded >= total)) return null;
   return (
     <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-      <div className="bg-black/85 backdrop-blur border border-cyan-500/50 px-5 py-3 font-mono text-center space-y-2 min-w-[220px] shadow-[0_0_20px_rgba(0,255,240,0.15)]">
-        <div className="text-[8px] tracking-[0.5em] text-cyan-400 animate-pulse">
-          // LOADING_ASSETS
+      <div className="bg-black/85 backdrop-blur border border-accent/40 px-5 py-3 font-mono text-center space-y-2 min-w-[220px]">
+        <div className="text-[8px] tracking-[0.4em] uppercase text-accent animate-pulse">
+          Loading assets
         </div>
-        <div className="text-[14px] font-black text-white tracking-widest">
+        <div className="text-[14px] font-bold text-bone tracking-widest">
           {loaded} <span className="text-gray-600">/</span> {total}
-          <span className="text-[9px] text-cyan-400 ml-2">{Math.round(progress)}%</span>
+          <span className="text-[9px] text-accent ml-2">{Math.round(progress)}%</span>
         </div>
         <div className="w-full h-px bg-white/10 relative overflow-hidden">
           <div
-            className="absolute inset-y-0 left-0 bg-cyan-400 transition-all duration-200"
+            className="absolute inset-y-0 left-0 bg-accent transition-all duration-200"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="text-[8px] tracking-[0.3em] text-white/30">
-          PLEASE WAIT — STREAMING TEZOS ARTWORKS
+        <div className="text-[8px] tracking-[0.3em] uppercase text-white/30">
+          Please wait — streaming Tezos artworks
         </div>
       </div>
     </div>
@@ -672,12 +672,12 @@ export default function MetaverseGallery() {
 
       {/* ──── PERF DIAGNOSTIC OVERLAY (temporary, desktop only) ──── */}
       {!isMobileDevice && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-cyan-500/50 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-white/15 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
           <span className={perf.fps < 30 ? "text-red-400" : perf.fps < 50 ? "text-yellow-400" : "text-green-400"}>
             {perf.fps} FPS
           </span>
-          <span className="text-cyan-300">{perf.calls} draws</span>
-          <span className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k tris</span>
+          <span className="text-bone/70">{perf.calls} draws</span>
+          <span className="text-bone/70">{(perf.tris / 1000).toFixed(0)}k tris</span>
           <span className="text-gray-500">active {activeFrames.size}</span>
           <span className="text-gray-500">vid {videoPlayFrames.size}/{tier.videoBudget}</span>
         </div>
@@ -698,7 +698,7 @@ export default function MetaverseGallery() {
               key={q}
               onClick={() => setQuality(q)}
               className={`text-[9px] px-2 py-1 tracking-wider transition-colors ${
-                quality === q ? "bg-cyan-500 text-black font-bold" : "text-gray-400 hover:text-white"
+                quality === q ? "bg-accent text-void font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
               {label}
@@ -725,14 +725,16 @@ export default function MetaverseGallery() {
             else playerControlsRef.current?.lock();
           }}
         >
-          <div className="text-center space-y-3">
-            <div className="text-[10px] tracking-[0.8em] text-red-500 font-black uppercase">
-              // NIKO_ALERCE :: 3D_GALLERY_SYSTEM
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-3 text-[10px] tracking-[0.5em] uppercase text-ash">
+              <span className="w-6 h-px bg-accent" />
+              Niko Alerce · 3D Gallery
+              <span className="w-6 h-px bg-accent" />
             </div>
-            <h2 className="font-display font-black text-white text-3xl md:text-5xl uppercase tracking-tight">
-              {isMobileDevice ? "TAP" : "CLICK ANYWHERE"}
+            <h2 className="font-graffiti text-bone leading-[0.95] text-4xl md:text-6xl">
+              {isMobileDevice ? "Tap" : "Click anywhere"}
               <br />
-              <span className="text-cyan-400">TO ENTER</span>
+              <span className="text-accent">to enter</span>
             </h2>
           </div>
 
@@ -742,7 +744,7 @@ export default function MetaverseGallery() {
                 <p><span className="text-white font-bold">LEFT STICK</span> — WALK</p>
                 <p><span className="text-white font-bold">DRAG RIGHT</span> — LOOK</p>
                 <p><span className="text-white font-bold">JUMP</span> — BUTTON</p>
-                <p><span className="text-cyan-400 font-bold">OPEN</span> — AIM AT ARTWORK + TAP</p>
+                <p><span className="text-accent font-bold">OPEN</span> — AIM AT ARTWORK + TAP</p>
               </>
             ) : (
               <>
@@ -750,18 +752,18 @@ export default function MetaverseGallery() {
                 <p><span className="text-white font-bold">SHIFT</span> — SPRINT</p>
                 <p><span className="text-white font-bold">SPACE</span> — JUMP</p>
                 <p><span className="text-white font-bold">MOUSE</span> — LOOK</p>
-                <p><span className="text-cyan-400 font-bold">[E]</span> — ANALYZE ARTWORK NEAR YOU</p>
+                <p><span className="text-accent font-bold">[E]</span> — ANALYZE ARTWORK NEAR YOU</p>
                 <p><span className="text-gray-600">ESC</span> — RELEASE CURSOR</p>
               </>
             )}
           </div>
 
-          <div className="text-[9px] tracking-[0.4em]">
+          <div className="text-[9px] tracking-[0.4em] uppercase">
             {loadingTokens ? (
-              <span className="text-cyan-400 animate-pulse">SYNCING TEZOS ARTWORKS...</span>
+              <span className="text-accent animate-pulse">Syncing Tezos artworks…</span>
             ) : (
-              <span className="text-green-400">
-                {tokens.length} ARTWORKS · {FRAME_SPOTS.length} FRAMES ACTIVE
+              <span className="text-bone/80">
+                {tokens.length} artworks · {FRAME_SPOTS.length} frames active
               </span>
             )}
           </div>
@@ -773,48 +775,48 @@ export default function MetaverseGallery() {
         <>
           {/* Score */}
           <div className="absolute top-4 left-4 z-30 bg-black/70 backdrop-blur border border-white/10 p-4 space-y-1.5">
-            <div className="text-[8px] tracking-[0.5em] text-red-500">// ARCHIVAL_SCORE</div>
-            <div className="text-2xl font-black text-white tracking-widest">
+            <div className="text-[8px] tracking-[0.4em] uppercase text-accent">Score</div>
+            <div className="text-2xl font-bold text-bone tracking-widest font-mono">
               {String(score).padStart(7, "0")}
-              <span className="text-[10px] text-cyan-400 ml-1">PTS</span>
+              <span className="text-[10px] text-accent ml-1">PTS</span>
             </div>
-            <div className="flex gap-4 text-[9px] tracking-[0.2em] text-gray-500">
-              <span>VIEWED <span className="text-cyan-400 font-bold">{discoveredIds.size}</span></span>
-              <span>OWNED <span className="text-green-400 font-bold">{boughtIds.size}</span></span>
-              <span>TOTAL <span className="text-gray-600">{FRAME_SPOTS.length}</span></span>
+            <div className="flex gap-4 text-[9px] tracking-[0.2em] uppercase text-gray-500">
+              <span>Viewed <span className="text-accent font-bold">{discoveredIds.size}</span></span>
+              <span>Owned <span className="text-bone font-bold">{boughtIds.size}</span></span>
+              <span>Total <span className="text-gray-600">{FRAME_SPOTS.length}</span></span>
             </div>
           </div>
 
           {/* Exit */}
           <button
             onClick={handleExit}
-            className="absolute top-4 right-4 z-50 px-4 py-2 bg-black/70 backdrop-blur border border-white/15 text-white hover:border-red-500 hover:text-red-400 transition-all text-[10px] tracking-[0.4em]"
+            className="absolute top-4 right-4 z-50 px-4 py-2 bg-black/70 backdrop-blur border border-white/15 text-white hover:border-accent hover:text-accent transition-all text-[10px] tracking-[0.4em] uppercase"
           >
-            ✕ EXIT
+            ✕ Exit
           </button>
 
-          {/* Crosshair — turns cyan + grows when aimed at an NFT */}
+          {/* Crosshair — turns red + grows when aimed at an NFT */}
           <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
             <div className={`relative transition-all duration-100 ${nearToken ? "w-7 h-7 opacity-100" : "w-5 h-5 opacity-60"}`}>
-              <div className={`absolute top-1/2 left-0 right-0 h-px ${nearToken ? "bg-cyan-400" : "bg-white"}`} />
-              <div className={`absolute left-1/2 top-0 bottom-0 w-px ${nearToken ? "bg-cyan-400" : "bg-white"}`} />
-              <div className={`absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border ${nearToken ? "border-cyan-400 bg-cyan-400/30" : "border-white/60"}`} />
+              <div className={`absolute top-1/2 left-0 right-0 h-px ${nearToken ? "bg-accent" : "bg-white"}`} />
+              <div className={`absolute left-1/2 top-0 bottom-0 w-px ${nearToken ? "bg-accent" : "bg-white"}`} />
+              <div className={`absolute top-1/2 left-1/2 w-1.5 h-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border ${nearToken ? "border-accent bg-accent/30" : "border-white/60"}`} />
             </div>
           </div>
 
           {/* Interaction prompt */}
           {nearToken && (
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-              <div className="bg-black/80 backdrop-blur border border-cyan-500/60 px-6 py-4 text-center space-y-2 shadow-[0_0_20px_rgba(0,255,240,0.2)]">
-                <div className="text-[8px] tracking-[0.5em] text-cyan-400">// ARTWORK_DETECTED</div>
-                <div className="text-[13px] font-bold text-white truncate max-w-[280px]">
+              <div className="bg-black/80 backdrop-blur border border-accent/50 px-6 py-4 text-center space-y-2">
+                <div className="text-[8px] tracking-[0.4em] uppercase text-accent">Artwork detected</div>
+                <div className="text-[14px] font-bold text-bone truncate max-w-[280px] font-display">
                   {nearToken.name ?? "untitled"}
                 </div>
-                <div className="text-[10px] tracking-[0.2em] text-gray-400">
+                <div className="text-[10px] tracking-[0.2em] uppercase text-gray-400">
                   {lowestPriceXtz(nearToken) !== null
                     ? `${lowestPriceXtz(nearToken)} XTZ · `
-                    : "ARCHIVE · "}
-                  <span className="text-cyan-400">{isMobileDevice ? "TAP OPEN TO VIEW" : "PRESS [E] OR CLICK TO OPEN"}</span>
+                    : "Archive · "}
+                  <span className="text-accent">{isMobileDevice ? "Tap open to view" : "Press [E] or click to open"}</span>
                 </div>
               </div>
             </div>
@@ -843,7 +845,7 @@ export default function MetaverseGallery() {
       {/* ──── BONUS POPUP ──── */}
       {bonusText && (
         <div className="absolute top-28 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-          <div className="bg-red-600 text-white px-6 py-2 font-black text-xs tracking-[0.3em] uppercase shadow-[0_0_25px_rgba(255,0,64,0.5)] animate-bounce">
+          <div className="bg-accent text-void px-6 py-2 font-bold text-xs tracking-[0.3em] uppercase shadow-[0_0_25px_rgba(227,50,43,0.5)] animate-bounce">
             {bonusText}
           </div>
         </div>

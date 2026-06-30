@@ -4,15 +4,15 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import GlitchText from "./GlitchText";
 import { useWallet } from "./WalletContext";
 
 const links = [
-  { href: "/works", label: "WORKS" },
-  { href: "/sidequest", label: "SIDEQUEST" },
+  { href: "/#top", label: "HOME" },
+  { href: "/art-on-tezos", label: "ART ON TEZOS" },
   { href: "/music", label: "MUSIC" },
   { href: "/metaverse", label: "3D GALLERY" },
   { href: "/decentraland", label: "DECENTRALAND" },
+  { href: "/ar-labs", label: "AR LABS" },
   { href: "/shop", label: "SHOP" },
   { href: "/#about", label: "BIO" },
 ];
@@ -72,65 +72,51 @@ export default function Navbar() {
           : "bg-transparent py-4",
       )}
     >
-      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between text-xs md:text-sm uppercase tracking-[0.4em] font-bold">
-        <Link href="/" className="flex items-center gap-4 group relative py-4">
-          <div className="relative w-3 h-3 overflow-hidden">
-            <span className="absolute inset-0 bg-glitch-red animate-pulse" />
-            <span className="absolute inset-0 bg-glitch-cyan translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div className="font-display font-black text-bone tracking-tighter text-lg leading-none group-hover:text-glitch-red transition-colors flex flex-col">
-            <span>NIKO</span>
-            <span className="text-[10px] tracking-[0.5em] -mt-1 opacity-60 group-hover:opacity-100">ALERCE</span>
-          </div>
+      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5 group py-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent group-hover:bg-bone transition-colors" />
+          <span className="font-display font-semibold text-bone text-xl md:text-2xl leading-none tracking-tight">
+            Niko Alerce
+          </span>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-5 lg:gap-8 xl:gap-11">
+        <ul className="hidden md:flex items-center gap-6 lg:gap-9 font-sans text-[11px] lg:text-xs tracking-[0.18em] uppercase">
           {links.map((l) => (
             <li key={l.href} className="relative group">
               <Link
                 href={l.href}
                 className={clsx(
-                  "transition-all duration-300 py-2 inline-block",
-                  isActive(l.href)
-                    ? "text-bone"
-                    : "text-ash/60 hover:text-bone",
+                  "transition-colors duration-300 py-2 inline-block",
+                  isActive(l.href) ? "text-bone" : "text-ash/65 hover:text-bone",
                 )}
               >
                 {l.label}
               </Link>
               <span className={clsx(
-                "absolute -bottom-1 left-0 h-0.5 bg-glitch-red transition-all duration-500",
-                isActive(l.href) ? "w-full" : "w-0 group-hover:w-full"
+                "absolute -bottom-0.5 left-0 h-px bg-bone/70 transition-all duration-500",
+                isActive(l.href) ? "w-full" : "w-0 group-hover:w-full",
               )} />
             </li>
           ))}
         </ul>
 
-        <div className="hidden lg:flex items-center gap-6">
-          <div className="flex flex-col items-end gap-0.5 opacity-40 hover:opacity-100 transition-opacity">
-            <span className="text-[8px] tracking-[0.6em] text-ash">NETWORK_STATUS</span>
-            <div className="flex items-center gap-2">
-              <span className="w-1 h-1 bg-glitch-lime rounded-full shadow-[0_0_8px_#39ff14]" />
-              <span className="text-bone">TEZOS_MAINNET</span>
-            </div>
-          </div>
-          <div className="w-[1px] h-8 bg-white/10" />
+        <div className="hidden lg:flex items-center">
           {address ? (
             <button
               onClick={() => disconnect()}
               title="Disconnect wallet"
-              className="px-4 py-2 border border-glitch-lime/40 text-glitch-lime hover:border-glitch-lime hover:bg-glitch-lime/10 transition-all flex items-center gap-2"
+              className="font-sans text-[11px] tracking-[0.15em] uppercase px-4 py-2 rounded-full border border-white/20 text-bone hover:border-accent hover:text-accent transition-all flex items-center gap-2"
             >
-              <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+              <span className="w-1.5 h-1.5 bg-accent rounded-full" />
               {address.slice(0, 6)}…{address.slice(-4)}
             </button>
           ) : (
             <button
               onClick={() => connect()}
               disabled={connecting}
-              className="px-4 py-2 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all disabled:opacity-50"
+              className="font-sans text-[11px] tracking-[0.15em] uppercase px-5 py-2 rounded-full border border-white/20 text-bone hover:border-bone hover:bg-bone hover:text-void transition-all disabled:opacity-50"
             >
-              {connecting ? "CONNECTING…" : "CONNECT_WALLET"}
+              {connecting ? "Connecting…" : "Connect"}
             </button>
           )}
         </div>
@@ -154,8 +140,8 @@ export default function Navbar() {
                 className={clsx(
                   "transition-colors",
                   isActive(l.href)
-                    ? "text-glitch-red"
-                    : "text-ash hover:text-glitch-red",
+                    ? "text-accent"
+                    : "text-ash hover:text-bone",
                 )}
               >
                 {l.label}
@@ -169,16 +155,16 @@ export default function Navbar() {
             {address ? (
               <button
                 onClick={() => { disconnect(); setOpen(false); }}
-                className="w-full px-4 py-3 border border-glitch-lime/40 text-glitch-lime flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 border border-white/20 text-bone flex items-center justify-center gap-2"
               >
-                <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+                <span className="w-1.5 h-1.5 bg-accent rounded-full" />
                 {address.slice(0, 6)}…{address.slice(-4)} · DISCONNECT
               </button>
             ) : (
               <button
                 onClick={() => { connect(); setOpen(false); }}
                 disabled={connecting}
-                className="w-full px-4 py-3 border border-white/15 text-bone hover:border-glitch-red hover:bg-glitch-red transition-all disabled:opacity-50"
+                className="w-full px-4 py-3 border border-white/15 text-bone hover:border-accent hover:bg-accent hover:text-void transition-all disabled:opacity-50"
               >
                 {connecting ? "CONNECTING…" : "CONNECT_WALLET"}
               </button>

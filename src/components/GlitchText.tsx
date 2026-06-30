@@ -9,6 +9,8 @@ type Props = {
   className?: string;
 };
 
+// Rebrand: the animated RGB-split glitch is retired. This stays as a thin
+// pass-through so existing call-sites keep working while rendering clean type.
 export default function GlitchText({
   children,
   as = "span",
@@ -16,10 +18,7 @@ export default function GlitchText({
 }: Props) {
   return createElement(
     as,
-    {
-      className: clsx("glitch-text relative", className),
-      "data-text": children,
-    },
+    { className: clsx("relative", className) },
     children,
   );
 }

@@ -1,7 +1,18 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
+
+// Throwup (W Type Foundry) — graffiti "throw-up" face for the big display titles.
+// We use the monochrome "Fill" layer so it can be recolored to the brand palette.
+// NOTE: the bundled license is *personal use* — secure the commercial license
+// from W Type Foundry before deploying this publicly.
+const graffiti = localFont({
+  src: "../../public/fonts/throwup-fill.otf",
+  variable: "--font-graffiti",
+  display: "swap",
+});
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -9,20 +20,24 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const display = Space_Grotesk({
+// Clean modern grotesque for everything that isn't a throwup title — secondary headings
+// AND body. One contemporary sans, no serif (pairs with the graffiti display for a
+// streetwear/editorial feel). Drives both --font-sans and --font-display.
+const grotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-sans",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nikoalerce.art"),
   title: {
-    default: "NIKO ALERCE // THE VOID",
-    template: "%s — NIKO ALERCE",
+    default: "Niko Alerce — 3D Artist, Animator & Music Producer",
+    template: "%s — Niko Alerce",
   },
   description:
-    "Niko Alerce — full-stack creative from El Bolsón, Patagonia. 3D art & animation, music production (El Bosquecito Records), Decentraland builds & wearables, and Tezos NFTs on Objkt.",
+    "Niko Alerce — multidisciplinary artist from El Bolsón, Patagonia. 3D art & animation, video, music production (El Bosquecito Records), Decentraland builds & wearables, and Tezos NFTs on Objkt.",
   keywords: [
     "Niko Alerce",
     "3D artist",
@@ -38,9 +53,9 @@ export const metadata: Metadata = {
     "Patagonia",
   ],
   openGraph: {
-    title: "NIKO ALERCE // THE VOID",
+    title: "Niko Alerce — 3D Artist, Animator & Music Producer",
     description:
-      "3D art, glitch, and immersive web experiences. Live NFT gallery from Objkt.",
+      "3D art, animation, video and immersive worlds. Live NFT gallery from Objkt.",
     type: "website",
   },
   twitter: {
@@ -60,8 +75,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${mono.variable} ${display.variable}`}>
-      <body className="bg-void text-bone scanlines crt-vignette">
+    <html lang="en" className={`${mono.variable} ${grotesk.variable} ${graffiti.variable}`}>
+      <body className="bg-void text-bone antialiased">
         <AppShell>{children}</AppShell>
       </body>
     </html>

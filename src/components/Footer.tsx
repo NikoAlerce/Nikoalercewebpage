@@ -1,13 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import GlitchText from "./GlitchText";
 
 const socials = [
-  { label: "OBJKT // NIKO", href: "https://objkt.com/@nikoalerce" },
-  { label: "OBJKT // SIDEQUEST", href: "https://objkt.com/@sidequest" },
-  { label: "INSTAGRAM", href: "https://www.instagram.com/nikoalerce.art/" },
-  { label: "TWITTER / X", href: "https://x.com/NikoAlerce" },
+  { label: "Objkt — Niko", href: "https://objkt.com/@nikoalerce" },
+  { label: "Objkt — Sidequest", href: "https://objkt.com/@sidequest" },
+  { label: "Instagram", href: "https://www.instagram.com/nikoalerce.art/" },
+  { label: "Twitter / X", href: "https://x.com/NikoAlerce" },
 ];
 
 export default function Footer() {
@@ -17,55 +16,61 @@ export default function Footer() {
   return (
     <footer
       id="contact"
-      className="relative border-t border-white/10 px-6 md:px-10 py-20 max-w-[1600px] mx-auto"
+      className="relative border-t border-white/10 px-6 md:px-10 py-24 md:py-28 max-w-[1500px] mx-auto"
     >
-      <div className="grid md:grid-cols-2 gap-16">
+      <div className="grid md:grid-cols-2 gap-16 items-end">
         <div>
-          <div className="text-[10px] tracking-[0.5em] text-glitch-cyan mb-4">
-            // SIGNAL_OUT
+          <div className="flex items-center gap-4 mb-6">
+            <span className="w-10 h-px rule-accent" />
+            <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
+              Get in touch
+            </span>
           </div>
-          <h3 className="font-display font-bold text-bone uppercase leading-[0.9] text-[clamp(2rem,6vw,5rem)]">
-            <GlitchText>LET&apos;S</GlitchText>
+          <h3 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5rem)]">
+            Let&apos;s build
             <br />
-            <GlitchText>BUILD</GlitchText>
+            <span className="text-accent">something.</span>
           </h3>
-          <p className="mt-6 text-sm text-ash max-w-md">
-            Commissions, collaborations, exhibitions, joint drops. If you
-            imagined it in 3D, we can materialize it.
+          <p className="mt-6 font-sans text-[15px] text-ash max-w-md leading-relaxed">
+            Commissions, collaborations, exhibitions, joint drops. If you can
+            imagine it in 3D, we can materialise it.
           </p>
           <a
             href="mailto:alercebolson@gmail.com"
-            className="mt-6 inline-flex items-center gap-3 text-bone hover:text-glitch-red glitch-hover text-base"
+            className="mt-7 inline-flex items-center gap-3 text-bone hover:text-accent transition-colors text-base md:text-lg font-sans group"
           >
-            alercebolson@gmail.com →
+            <span className="link-underline">alercebolson@gmail.com</span>
+            <span className="group-hover:translate-x-1 transition-transform">
+              →
+            </span>
           </a>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-px bg-white/5 border border-white/5">
           {socials.map((s) => (
             <a
               key={s.href}
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group border border-white/10 p-5 hover:border-glitch-red/60 transition-colors"
+              className="group bg-void hover:bg-ink transition-colors duration-500 p-5"
             >
-              <div className="text-[10px] tracking-[0.3em] text-ash group-hover:text-glitch-red transition-colors">
+              <div className="font-sans text-[10px] tracking-[0.3em] uppercase text-ash group-hover:text-accent transition-colors">
                 {s.label}
               </div>
-              <div className="mt-2 text-bone text-sm font-mono break-all group-hover:translate-x-1 transition-transform">
-                {s.href.replace("https://", "")} ↗
+              <div className="mt-2 text-bone/90 text-[13px] font-sans break-all group-hover:translate-x-0.5 transition-transform">
+                {s.href.replace("https://", "").replace(/\/$/, "")} ↗
               </div>
             </a>
           ))}
         </div>
       </div>
 
-      <div className="mt-20 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 text-[10px] tracking-[0.3em] text-ash">
-        <div>© {new Date().getFullYear()} NIKO_ALERCE :: ALL_RIGHTS_RESERVED</div>
+      <div className="mt-20 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 font-sans text-[10.5px] tracking-[0.25em] uppercase text-ash">
+        <div>© {new Date().getFullYear()} Niko Alerce — All rights reserved</div>
         <div className="flex items-center gap-3">
-          <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full animate-pulse" />
-          <span>POWERED_BY :: NEXT.JS · R3F · OBJKT_API · TEZOS</span>
+          <span className="w-1.5 h-1.5 bg-accent rounded-full" />
+          <span>Next.js · React Three Fiber · Objkt · Tezos</span>
         </div>
       </div>
     </footer>

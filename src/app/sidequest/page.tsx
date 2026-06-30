@@ -1,22 +1,6 @@
-import type { Metadata } from "next";
-import NFTGallery from "@/components/NFTGallery";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Side/Quest",
-  description:
-    "Niko Alerce's experimental alter ego. Iterations, drafts, and glitches.",
-};
-
+// Sidequest is now a sub-category of "Art on Tezos" — keep the old URL working.
 export default function SideQuestPage() {
-  return (
-    <div className="pt-20">
-      <NFTGallery
-        id="sidequest"
-        alias="sidequest"
-        title="SIDE/QUEST"
-        subtitle="Experimental alter ego. Iterations, drafts, and glitches that do not fit the main canon."
-        accent="cyan"
-      />
-    </div>
-  );
+  redirect("/art-on-tezos?tab=sidequest");
 }

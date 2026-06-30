@@ -22,8 +22,8 @@ import { useWallet } from "./WalletContext";
 const GlbViewer = dynamic(() => import("./GlbViewer"), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 grid place-items-center text-[10px] text-ash animate-pulse">
-      INITIALIZING_RENDERER...
+    <div className="absolute inset-0 grid place-items-center text-[10px] tracking-[0.3em] uppercase text-ash animate-pulse">
+      Loading 3D…
     </div>
   ),
 });
@@ -179,10 +179,10 @@ export default function TokenViewerModal() {
     >
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 md:px-6 h-14 border-b border-white/10 bg-void/80">
-        <div className="flex items-center gap-3 text-[10px] tracking-[0.4em] text-ash min-w-0">
-          <span className="w-1.5 h-1.5 bg-glitch-red animate-pulse shrink-0" />
-          <span className="truncate">
-            {(token.name ?? "untitled").toUpperCase()}
+        <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] uppercase text-ash min-w-0">
+          <span className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse shrink-0" />
+          <span className="truncate normal-case tracking-normal text-bone/90 font-sans">
+            {token.name ?? "untitled"}
           </span>
           <span className="hidden md:inline opacity-50">·</span>
           <span className="hidden md:inline opacity-50">
@@ -194,28 +194,28 @@ export default function TokenViewerModal() {
           {address ? (
             <button
               onClick={disconnect}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-[10px] tracking-[0.3em] border border-glitch-lime/30 text-glitch-lime hover:bg-glitch-lime/10"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase border border-white/20 text-bone hover:border-accent hover:text-accent transition-colors"
               title="Disconnect wallet"
             >
-              <span className="w-1.5 h-1.5 bg-glitch-lime rounded-full" />
+              <span className="w-1.5 h-1.5 bg-accent rounded-full" />
               {address.slice(0, 6)}…{address.slice(-4)}
             </button>
           ) : (
             <button
               onClick={connect}
               disabled={connecting}
-              className="hidden md:block px-3 py-1.5 text-[10px] tracking-[0.3em] border border-white/15 text-ash hover:border-bone hover:text-bone disabled:opacity-50"
+              className="hidden md:block px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase border border-white/15 text-ash hover:border-bone hover:text-bone disabled:opacity-50 transition-colors"
             >
-              {connecting ? "CONNECTING..." : "CONNECT WALLET"}
+              {connecting ? "Connecting…" : "Connect wallet"}
             </button>
           )}
           <button
             onClick={close}
             aria-label="Close"
-            className="flex items-center gap-2 px-4 py-2 text-[11px] tracking-[0.3em] border border-glitch-red/50 text-glitch-red hover:bg-glitch-red/10 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-[11px] tracking-[0.25em] uppercase border border-accent/50 text-accent hover:bg-accent/10 transition-colors"
           >
             <span>✕</span>
-            <span className="hidden md:inline">CLOSE</span>
+            <span className="hidden md:inline">Close</span>
           </button>
         </div>
       </header>
@@ -268,8 +268,8 @@ export default function TokenViewerModal() {
               className="w-full h-full object-contain bg-black"
             />
           ) : (
-            <div className="absolute inset-0 grid place-items-center text-[10px] text-ash">
-              NO_MEDIA
+            <div className="absolute inset-0 grid place-items-center text-[10px] tracking-[0.3em] uppercase text-ash">
+              No media
             </div>
           )}
         </div>
@@ -280,65 +280,66 @@ export default function TokenViewerModal() {
             <div>
               <div
                 className={
-                  "text-[10px] tracking-[0.4em] mb-2 " +
-                  (status === "for_sale"
-                    ? "text-glitch-lime"
-                    : status === "sold_out"
-                    ? "text-glitch-red"
-                    : "text-ash")
+                  "flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase mb-3 " +
+                  (status === "sold_out" ? "text-accent" : "text-ash")
                 }
               >
-                //{" "}
+                <span
+                  className={
+                    "w-1.5 h-1.5 rounded-full " +
+                    (status === "for_sale" ? "bg-accent" : "bg-ash/50")
+                  }
+                />
                 {status === "for_sale"
-                  ? "AVAILABLE"
+                  ? "Available"
                   : status === "sold_out"
-                  ? "SOLD OUT"
-                  : "ARCHIVE"}
+                  ? "Sold out"
+                  : "Archive"}
               </div>
-              <h3 className="font-display text-2xl md:text-3xl font-bold text-bone leading-tight">
+              <h3 className="font-display text-2xl md:text-3xl text-bone leading-tight">
                 {token.name ?? "untitled"}
               </h3>
-              <p className="mt-2 text-[11px] tracking-[0.2em] text-ash">
-                BY {creatorName.toUpperCase()}
+              <p className="mt-2 text-[12px] text-ash">
+                by {creatorName}
               </p>
             </div>
 
             {/* PURCHASE */}
             {status === "for_sale" && price !== null && (
-              <div className="border border-glitch-lime/40 bg-glitch-lime/5 p-5">
-                <div className="text-[10px] tracking-[0.4em] text-glitch-lime mb-1">
-                  // PRICE
+              <div className="border border-white/12 bg-white/[0.03] p-5">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-ash mb-1">
+                  Price
                 </div>
                 <div className="font-mono text-3xl text-bone">
                   {price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ
                 </div>
                 {amountLeft > 0 && (
-                  <div className="mt-1 text-[11px] tracking-[0.2em] text-ash">
-                    {amountLeft} EDITION{amountLeft !== 1 ? "S" : ""} AVAILABLE
+                  <div className="mt-1 text-[11px] tracking-[0.15em] text-ash">
+                    {amountLeft} edition{amountLeft !== 1 ? "s" : ""} available
                   </div>
                 )}
 
                 {/* Purchase state */}
                 {buyState.kind === "success" ? (
-                  <div className="mt-4 p-3 border border-glitch-lime bg-glitch-lime/10 text-[11px] tracking-[0.2em] text-glitch-lime">
-                    ✓ PURCHASE CONFIRMED
+                  <div className="mt-4 p-3 border border-accent/50 bg-accent/10 text-[11px] tracking-[0.15em] text-bone">
+                    ✓ Purchase confirmed
                     <a
                       href={`https://tzkt.io/${buyState.opHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block mt-1 text-bone underline truncate"
+                      className="block mt-1 text-accent link-underline truncate"
                     >
                       {buyState.opHash.slice(0, 12)}… ↗
                     </a>
                   </div>
                 ) : buyState.kind === "pending" ? (
-                  <div className="mt-4 p-3 border border-glitch-cyan/50 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan animate-pulse">
-                    ⟳ TX SENT · WAITING FOR CONFIRMATION...
+                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone animate-pulse">
+                    ⟳ Transaction sent · waiting for confirmation…
                     <a
                       href={`https://tzkt.io/${buyState.opHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block mt-1 text-bone underline truncate"
+                      className="block mt-1 text-accent link-underline truncate"
                     >
                       {buyState.opHash.slice(0, 12)}… ↗
                     </a>
@@ -346,60 +347,60 @@ export default function TokenViewerModal() {
                 ) : null}
 
                 {buyState.kind === "error" && (
-                  <div className="mt-4 p-3 border border-glitch-red/50 bg-glitch-red/5 text-[11px] tracking-[0.2em] text-glitch-red space-y-2">
-                    <div>✕ {buyState.message.toUpperCase()}</div>
+                  <div className="mt-4 p-3 border border-accent/50 bg-accent/5 text-[11px] tracking-[0.15em] text-accent space-y-2">
+                    <div>✕ {buyState.message}</div>
                     <button
                       onClick={handleResetWallet}
-                      className="w-full px-3 py-2 border border-glitch-red/60 text-glitch-red hover:bg-glitch-red/10 transition-colors"
+                      className="w-full px-3 py-2 border border-accent/60 text-accent hover:bg-accent/10 transition-colors uppercase tracking-[0.2em]"
                     >
-                      RESET WALLET CONNECTION ↻
+                      Reset wallet connection ↻
                     </button>
                   </div>
                 )}
 
                 {buyState.kind === "signing" && showStuckHint && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone space-y-2">
                     <div>
-                      // KUKAI / TEMPLE NOT SHOWING THE REQUEST? RESET PAIRING
-                      AND TRY AGAIN.
+                      Kukai / Temple not showing the request? Reset the pairing
+                      and try again.
                     </div>
                     <button
                       onClick={handleResetWallet}
-                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                      className="w-full px-3 py-2 border border-bone/40 text-bone hover:bg-white/5 transition-colors uppercase tracking-[0.2em]"
                     >
-                      RESET WALLET CONNECTION ↻
+                      Reset wallet connection ↻
                     </button>
                   </div>
                 )}
 
                 {canBuyOnSite && !address && !connecting && (
-                  <div className="mt-4 p-3 border border-white/15 bg-white/5 text-[10px] tracking-[0.25em] text-ash leading-relaxed">
-                    // KUKAI WILL OPEN IN A NEW TAB. IF NOTHING APPEARS,
-                    YOUR BROWSER IS BLOCKING POPUPS — CHECK THE ADDRESS BAR
-                    FOR A &quot;BLOCKED&quot; ICON OR ALLOW POPUPS FOR THIS
-                    SITE AND CLICK CONNECT AGAIN.
+                  <div className="mt-4 p-3 border border-white/15 bg-white/5 text-[11px] tracking-[0.1em] text-ash leading-relaxed">
+                    Kukai will open in a new tab. If nothing appears, your browser
+                    is blocking popups — check the address bar for a
+                    &quot;blocked&quot; icon, or allow popups for this site and
+                    click connect again.
                   </div>
                 )}
 
                 {canBuyOnSite && connecting && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan animate-pulse">
-                    ⟳ OPENING WALLET... PICK KUKAI / TEMPLE / UMAMI ON THE
-                    BEACON DIALOG.
+                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone animate-pulse">
+                    ⟳ Opening wallet… pick Kukai / Temple / Umami on the Beacon
+                    dialog.
                   </div>
                 )}
 
                 {canBuyOnSite && isOwnListing && (
-                  <div className="mt-4 p-3 border border-glitch-cyan/40 bg-glitch-cyan/5 text-[11px] tracking-[0.2em] text-glitch-cyan space-y-2">
+                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone space-y-2">
                     <div>
-                      // YOU ARE CONNECTED WITH THE SELLER WALLET
-                      ({address?.slice(0, 6)}…{address?.slice(-4)}). OBJKT
-                      WON&apos;T LET YOU FULFILL YOUR OWN ASK.
+                      You&apos;re connected with the seller wallet
+                      ({address?.slice(0, 6)}…{address?.slice(-4)}). Objkt
+                      won&apos;t let you fulfill your own ask.
                     </div>
                     <button
                       onClick={disconnect}
-                      className="w-full px-3 py-2 border border-glitch-cyan/60 text-glitch-cyan hover:bg-glitch-cyan/10 transition-colors"
+                      className="w-full px-3 py-2 border border-bone/40 text-bone hover:bg-white/5 transition-colors uppercase tracking-[0.2em]"
                     >
-                      DISCONNECT &amp; USE A DIFFERENT WALLET
+                      Disconnect &amp; use a different wallet
                     </button>
                   </div>
                 )}
@@ -418,18 +419,18 @@ export default function TokenViewerModal() {
                         ? "Connected wallet is the seller. Switch wallets to collect."
                         : undefined
                     }
-                    className="mt-4 group flex items-center justify-between gap-3 w-full px-5 py-3 bg-glitch-lime text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="mt-4 group flex items-center justify-between gap-3 w-full px-5 py-3 bg-accent text-void text-xs tracking-[0.25em] uppercase font-semibold hover:bg-accent-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <span>
                       {!address
-                        ? "CONNECT WALLET TO BUY"
+                        ? "Connect wallet to buy"
                         : isOwnListing
-                        ? "CAN'T BUY YOUR OWN LISTING"
+                        ? "Can't buy your own listing"
                         : buyState.kind === "signing"
-                        ? "SIGN IN YOUR WALLET..."
+                        ? "Sign in your wallet…"
                         : buyState.kind === "pending"
-                        ? "PROCESSING TX..."
-                        : `BUY · ${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ`}
+                        ? "Processing tx…"
+                        : `Buy · ${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ`}
                     </span>
                     <span className="group-hover:translate-x-1 transition-transform">
                       →
@@ -440,37 +441,37 @@ export default function TokenViewerModal() {
                     href={buyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 bg-glitch-lime text-void text-xs tracking-[0.3em] uppercase font-bold hover:bg-bone transition-colors"
+                    className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 bg-accent text-void text-xs tracking-[0.25em] uppercase font-semibold hover:bg-accent-soft transition-colors"
                   >
-                    <span>BUY ON OBJKT (FA TOKEN)</span>
+                    <span>Buy on Objkt (FA token)</span>
                     <span>↗</span>
                   </a>
                 )}
 
-                <p className="mt-2 text-[9px] tracking-[0.2em] text-ash/70 leading-relaxed">
-                  // SIGN WITH TEMPLE / KUKAI / UMAMI · ON-CHAIN TEZOS TX
+                <p className="mt-3 text-[10px] tracking-[0.15em] text-ash/70 leading-relaxed">
+                  Sign with Temple / Kukai / Umami · on-chain Tezos tx
                 </p>
               </div>
             )}
 
             {status === "sold_out" && (
-              <div className="border border-glitch-red/40 bg-glitch-red/5 p-5">
-                <div className="text-[10px] tracking-[0.4em] text-glitch-red mb-1">
-                  // STATUS
+              <div className="border border-accent/40 bg-accent/5 p-5">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-accent mb-1">
+                  Sold out
                 </div>
                 <div className="text-bone text-base">
                   All editions are sold.
                 </div>
-                <p className="mt-1 text-[11px] tracking-[0.2em] text-ash">
-                  TRY THE SECONDARY MARKET
+                <p className="mt-1 text-[11px] tracking-[0.15em] text-ash">
+                  Try the secondary market
                 </p>
                 <a
                   href={buyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-red hover:text-glitch-red transition-colors"
+                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.25em] uppercase text-bone hover:border-accent hover:text-accent transition-colors"
                 >
-                  <span>VIEW ON OBJKT</span>
+                  <span>View on Objkt</span>
                   <span>↗</span>
                 </a>
               </div>
@@ -478,8 +479,8 @@ export default function TokenViewerModal() {
 
             {status === "in_collection" && (
               <div className="border border-white/10 p-5">
-                <div className="text-[10px] tracking-[0.4em] text-ash mb-1">
-                  // ARCHIVE
+                <div className="text-[10px] tracking-[0.3em] uppercase text-ash mb-1">
+                  Archive
                 </div>
                 <div className="text-bone text-base">
                   Piece held by the creator, with no active listing.
@@ -488,9 +489,9 @@ export default function TokenViewerModal() {
                   href={buyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.3em] uppercase text-bone hover:border-glitch-cyan hover:text-glitch-cyan transition-colors"
+                  className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 border border-white/20 text-xs tracking-[0.25em] uppercase text-bone hover:border-accent hover:text-accent transition-colors"
                 >
-                  <span>VIEW ON OBJKT</span>
+                  <span>View on Objkt</span>
                   <span>↗</span>
                 </a>
               </div>
@@ -499,8 +500,8 @@ export default function TokenViewerModal() {
             {/* Description */}
             {token.description && (
               <div>
-                <div className="text-[10px] tracking-[0.4em] text-ash mb-2">
-                  // DESCRIPTION
+                <div className="text-[10px] tracking-[0.3em] uppercase text-ash mb-2">
+                  Description
                 </div>
                 <p className="text-sm text-bone/90 leading-relaxed whitespace-pre-line">
                   {token.description}
@@ -509,34 +510,34 @@ export default function TokenViewerModal() {
             )}
 
             {/* Stats */}
-            <div className="space-y-1.5 text-[11px] tracking-[0.25em] text-ash">
+            <div className="space-y-1.5 text-[11px] tracking-[0.15em] text-ash">
               <div className="flex justify-between gap-6 border-b border-white/5 pb-1.5">
-                <span>FORMAT</span>
+                <span className="uppercase tracking-[0.2em] text-[10px] self-center">Format</span>
                 <span className="text-bone font-mono">
                   {token.mime ?? "unknown"}
                 </span>
               </div>
               <div className="flex justify-between gap-6 border-b border-white/5 pb-1.5">
-                <span>EDITIONS</span>
+                <span className="uppercase tracking-[0.2em] text-[10px] self-center">Editions</span>
                 <span className="text-bone">{editions}</span>
               </div>
               <div className="flex justify-between gap-6 border-b border-white/5 pb-1.5">
-                <span>CREATOR HOLDS</span>
+                <span className="uppercase tracking-[0.2em] text-[10px] self-center">Creator holds</span>
                 <span className="text-bone">{heldByCreator}</span>
               </div>
               <div className="flex justify-between gap-6 border-b border-white/5 pb-1.5">
-                <span>TOKEN_ID</span>
+                <span className="uppercase tracking-[0.2em] text-[10px] self-center">Token ID</span>
                 <span className="text-bone font-mono">{token.token_id}</span>
               </div>
               <div className="flex justify-between gap-6 border-b border-white/5 pb-1.5">
-                <span>CONTRACT</span>
+                <span className="uppercase tracking-[0.2em] text-[10px] self-center">Contract</span>
                 <span className="text-bone font-mono truncate max-w-[200px]">
                   {token.fa_contract}
                 </span>
               </div>
               {token.timestamp && (
                 <div className="flex justify-between gap-6">
-                  <span>MINTED</span>
+                  <span className="uppercase tracking-[0.2em] text-[10px] self-center">Minted</span>
                   <span className="text-bone font-mono">
                     {new Date(token.timestamp).toLocaleDateString()}
                   </span>

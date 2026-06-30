@@ -1,29 +1,27 @@
 "use client";
 
-import GlitchText from "./GlitchText";
-
 // YouTube videos to feature. Titles can be edited freely.
 const YOUTUBE = [
-  { id: "GXFaNfs2b1k", title: "MÁS EMPATÍAS" },
-  { id: "I4w5zEgMXtU", title: "VIDEO // 02" },
+  { id: "GXFaNfs2b1k", title: "Más Empatías" },
+  { id: "I4w5zEgMXtU", title: "Video — 02" },
 ];
 
 // SoundCloud player embed URL helper.
 const sc = (url: string, visual = false) =>
   `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}` +
-  `&color=%23ff0040&auto_play=false&hide_related=true&show_comments=false` +
+  `&color=%23e3322b&auto_play=false&hide_related=true&show_comments=false` +
   `&show_user=true&show_reposts=false&show_teaser=false&visual=${visual}`;
 
 const SOUNDCLOUD = [
   {
-    label: "EL BOSQUECITO RECORDS",
+    label: "El Bosquecito Records",
     sub: "Label · full catalogue",
     url: "https://soundcloud.com/el-bosquecito-records",
     visual: true,
     height: 420,
   },
   {
-    label: "DJ SET · CASA IORI",
+    label: "DJ set · Casa Iori",
     sub: "Live set · Feb 2023",
     url: "https://soundcloud.com/al-er-ce/dj-set-casa-iori-2-feb-2023",
     visual: false,
@@ -38,6 +36,17 @@ const SERVICES = [
   "Original scores & custom tracks",
 ];
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-4 mb-5">
+      <span className="w-8 h-px rule-accent" />
+      <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
+        {children}
+      </span>
+    </div>
+  );
+}
+
 export default function Music() {
   return (
     <section
@@ -45,43 +54,44 @@ export default function Music() {
       className="relative py-24 md:py-32 px-6 md:px-10 max-w-[1600px] mx-auto border-t border-white/5"
     >
       {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
-        <div className="relative">
-          <div className="absolute -top-16 -left-8 text-[12rem] font-black text-white/[0.03] select-none pointer-events-none leading-none z-0">
-            SOUND
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14">
+        <div className="max-w-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <span className="w-10 h-px rule-accent" />
+            <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
+              El Bosquecito Records
+            </span>
           </div>
-          <div className="text-[11px] tracking-[0.8em] mb-4 font-black text-glitch-red relative z-10 uppercase">
-            // EL_BOSQUECITO_RECORDS
-          </div>
-          <h2 className="font-display font-black text-bone uppercase leading-[0.8] text-[clamp(3.5rem,12vw,10rem)] relative z-10">
-            <GlitchText>MUSIC</GlitchText>
+          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
+            Music
           </h2>
-          <p className="mt-6 max-w-xl text-base text-ash/80 relative z-10 leading-relaxed">
+          <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
             Original music produced, recorded, mixed and mastered in-house —
             hip-hop, trap, lo-fi and experimental electronic, released under my
             independent label El Bosquecito Records.
           </p>
         </div>
-        <div className="text-[10px] tracking-[0.3em] text-ash space-y-1 border-l border-glitch-red/30 pl-4">
-          <div className="flex justify-between gap-6">
-            <span>LABEL</span>
-            <span className="text-bone">EL BOSQUECITO</span>
-          </div>
-          <div className="flex justify-between gap-6">
-            <span>STREAMING</span>
-            <span className="text-bone">SPOTIFY · TIDAL · DEEZER</span>
-          </div>
-          <div className="flex justify-between gap-6">
-            <span>BASE</span>
-            <span className="text-bone">EL BOLSÓN, AR</span>
-          </div>
-        </div>
+        <dl className="text-[12px] font-sans shrink-0 md:min-w-[16rem]">
+          {[
+            { k: "Label", v: "El Bosquecito" },
+            { k: "Streaming", v: "Spotify · Tidal · Deezer" },
+            { k: "Base", v: "El Bolsón, AR" },
+          ].map((r) => (
+            <div
+              key={r.k}
+              className="flex justify-between gap-6 py-2 border-b border-white/8"
+            >
+              <dt className="text-ash tracking-[0.18em] uppercase text-[10px] self-center">
+                {r.k}
+              </dt>
+              <dd className="text-bone text-right">{r.v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       {/* ── Videos ── */}
-      <div className="text-[10px] tracking-[0.5em] text-glitch-cyan mb-5 uppercase">
-        // VIDEO
-      </div>
+      <SectionLabel>Video</SectionLabel>
       <div className="grid md:grid-cols-2 gap-3 md:gap-4 mb-16">
         {YOUTUBE.map((v) => (
           <div key={v.id} className="border border-white/10 bg-ink group">
@@ -96,16 +106,16 @@ export default function Music() {
               />
             </div>
             <div className="flex items-center justify-between gap-3 p-3 border-t border-white/5">
-              <span className="text-xs font-medium text-bone group-hover:text-glitch-red transition-colors truncate">
+              <span className="text-sm font-medium text-bone group-hover:text-accent transition-colors truncate">
                 {v.title}
               </span>
               <a
                 href={`https://www.youtube.com/watch?v=${v.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] tracking-[0.3em] text-ash hover:text-glitch-red whitespace-nowrap"
+                className="text-[10px] tracking-[0.3em] uppercase text-ash hover:text-accent whitespace-nowrap"
               >
-                YOUTUBE ↗
+                YouTube ↗
               </a>
             </div>
           </div>
@@ -113,24 +123,22 @@ export default function Music() {
       </div>
 
       {/* ── SoundCloud ── */}
-      <div className="text-[10px] tracking-[0.5em] text-glitch-cyan mb-5 uppercase">
-        // SOUNDCLOUD
-      </div>
+      <SectionLabel>SoundCloud</SectionLabel>
       <div className="grid lg:grid-cols-2 gap-3 md:gap-4 mb-16">
         {SOUNDCLOUD.map((s) => (
           <div key={s.url} className="border border-white/10 bg-ink p-3">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <div className="text-xs font-medium text-bone">{s.label}</div>
-                <div className="text-[10px] tracking-[0.2em] text-ash">{s.sub}</div>
+                <div className="text-sm font-medium text-bone">{s.label}</div>
+                <div className="text-[11px] text-ash">{s.sub}</div>
               </div>
               <a
                 href={s.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] tracking-[0.3em] text-ash hover:text-glitch-red whitespace-nowrap"
+                className="text-[10px] tracking-[0.3em] uppercase text-ash hover:text-accent whitespace-nowrap"
               >
-                OPEN ↗
+                Open ↗
               </a>
             </div>
             <iframe
@@ -150,16 +158,14 @@ export default function Music() {
       {/* ── Producer services ── */}
       <div className="border border-white/10 bg-void/40 p-6 md:p-10 grid md:grid-cols-[1fr_auto] gap-8 items-center">
         <div>
-          <div className="text-[10px] tracking-[0.5em] text-glitch-lime mb-3 uppercase">
-            // SERVICES · PRODUCER
-          </div>
-          <h3 className="font-display font-black text-bone uppercase text-3xl md:text-4xl leading-[0.9] mb-5">
-            WORK WITH ME
+          <SectionLabel>Producer services</SectionLabel>
+          <h3 className="font-display text-bone text-3xl md:text-4xl leading-[0.95] mb-5">
+            Work with me
           </h3>
-          <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-bone/90">
+          <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5 text-[15px] text-bone/90">
             {SERVICES.map((s) => (
-              <li key={s} className="flex items-start gap-2">
-                <span className="text-glitch-red mt-1">▌</span>
+              <li key={s} className="flex items-start gap-2.5">
+                <span className="text-accent mt-1.5 w-2 h-px shrink-0 bg-accent" />
                 <span>{s}</span>
               </li>
             ))}
@@ -167,9 +173,9 @@ export default function Music() {
         </div>
         <a
           href="mailto:alercebolson@gmail.com?subject=Music%20production%20inquiry"
-          className="group inline-flex items-center justify-center gap-3 whitespace-nowrap border border-glitch-lime/50 bg-glitch-lime/10 text-bone hover:bg-glitch-lime hover:text-void transition-colors px-6 py-4 text-xs tracking-[0.3em] uppercase font-bold"
+          className="group inline-flex items-center justify-center gap-3 whitespace-nowrap border border-bone/30 text-bone hover:bg-accent hover:border-accent hover:text-void transition-colors px-6 py-4 text-[11px] tracking-[0.25em] uppercase"
         >
-          START A PROJECT
+          Start a project
           <span className="group-hover:translate-x-1 transition-transform">→</span>
         </a>
       </div>
