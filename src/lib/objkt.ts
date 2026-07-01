@@ -259,6 +259,26 @@ export function ipfsToUrl(
 }
 
 /**
+ * objkt's own media CDN. It's CORS-enabled (`access-control-allow-origin: *`), globally
+ * cached and serves objkt tokens as WebP — so WebGL textures can load STRAIGHT from it
+ * instead of streaming through our /api/ipfs serverless function (which is what runs up
+ * Vercel's "Fast Origin Transfer"). Returns null for non-IPFS inputs so callers fall back
+ * to the proxy. `/artifact` serves the file at that CID as-is (no resize variants exist for
+ * these CIDs), so pass the smallest URI you have (thumbnail_uri).
+ */
+export function objktCdnUrl(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  let cid: string | null = null;
+  if (uri.startsWith("ipfs://")) cid = uri.slice("ipfs://".length);
+  else {
+    const m = uri.match(/\/ipfs\/([^/?#]+)/);
+    if (m) cid = m[1];
+  }
+  if (!cid) return null;
+  return `https://assets.objkt.media/file/assets-003/${cid}/artifact`;
+}
+
+/**
  * Given a CID (or ipfs:// URI), returns the URL with the gateway at the given index.
  */
 export function ipfsWithGateway(

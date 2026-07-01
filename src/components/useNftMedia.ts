@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ObjktToken } from "@/lib/types";
-import { detectKind } from "@/lib/objkt";
+import { detectKind, objktCdnUrl } from "@/lib/objkt";
 import { optimizedVideoUrl } from "@/lib/optimizedMedia";
 
 // Cap the working canvas so animated GIFs don't melt the GPU.
@@ -73,13 +73,17 @@ export function useNftMedia(
     ? (token.thumbnail_uri ?? token.display_uri)
     : (token.thumbnail_uri ?? token.display_uri ?? token.artifact_uri);
   const fullUri = token.artifact_uri ?? token.display_uri ?? thumbUri;
+  // Still image: load STRAIGHT from objkt's CORS CDN (off our serverless function → no Vercel
+  // origin transfer), falling back to the /api/ipfs proxy only if the CDN misses. Same bytes.
+  const thumbCdn = objktCdnUrl(thumbUri);
   const thumbUrl = proxied(thumbUri);
   // Optimized mp4 is same-origin (no proxy needed); a real IPFS video redirects to a gateway.
   const videoUrl = optUrl ?? (isVideo ? proxied(fullUri, { redirect: true }) : null);
 
   // ── Static first-frame texture (always) ──
   useEffect(() => {
-    if (!thumbUrl) { setLoadError(true); setLoading(false); return; }
+    const candidates = [thumbCdn, thumbUrl].filter((u): u is string => !!u);
+    if (candidates.length === 0) { setLoadError(true); setLoading(false); return; }
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin("anonymous");
     let cancelled = false;
@@ -87,28 +91,33 @@ export function useNftMedia(
       if (!cancelled) { setLoadError(true); setLoading(false); }
     }, 20000);
 
-    loader.load(
-      thumbUrl,
-      (tex) => {
-        if (cancelled) { tex.dispose(); return; }
-        clearTimeout(timeoutId);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        const img = tex.image as HTMLImageElement;
-        if (img?.width && img?.height) setAspect(img.width / img.height);
-        setStaticTex((prev) => { prev?.dispose(); return tex; });
-        setLoadError(false);
-        setLoading(false);
-      },
-      undefined,
-      () => {
-        if (cancelled) return;
-        clearTimeout(timeoutId);
-        setLoadError(true);
-        setLoading(false);
-      }
-    );
+    const tryLoad = (i: number) => {
+      loader.load(
+        candidates[i],
+        (tex) => {
+          if (cancelled) { tex.dispose(); return; }
+          clearTimeout(timeoutId);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          const img = tex.image as HTMLImageElement;
+          if (img?.width && img?.height) setAspect(img.width / img.height);
+          setStaticTex((prev) => { prev?.dispose(); return tex; });
+          setLoadError(false);
+          setLoading(false);
+        },
+        undefined,
+        () => {
+          if (cancelled) return;
+          // CDN miss → fall back to the next candidate (the proxy).
+          if (i + 1 < candidates.length) { tryLoad(i + 1); return; }
+          clearTimeout(timeoutId);
+          setLoadError(true);
+          setLoading(false);
+        },
+      );
+    };
+    tryLoad(0);
     return () => { cancelled = true; clearTimeout(timeoutId); };
-  }, [thumbUrl]);
+  }, [thumbCdn, thumbUrl]);
 
   // ── Animated GIF (active only) — decode every frame with WebCodecs ImageDecoder ──
   useEffect(() => {
@@ -302,7 +311,8 @@ export function usePlaylistMedia(
   const token = count ? tokens[idx % count] : null;
   const thumbUri = token?.thumbnail_uri ?? token?.display_uri ?? token?.artifact_uri;
   const fullUri = token?.artifact_uri ?? token?.display_uri ?? thumbUri;
-  const thumbUrl = proxied(thumbUri);
+  const thumbCdn = objktCdnUrl(thumbUri); // objkt CORS CDN first (off our function)
+  const thumbUrl = proxied(thumbUri); // proxy fallback
   const videoUrl = proxied(fullUri, { redirect: true });
 
   // Report the current track up (for the HUD) whenever it changes.
@@ -313,19 +323,28 @@ export function usePlaylistMedia(
 
   // Static thumbnail of the current track (shown until its video is ready / when idle).
   useEffect(() => {
-    if (!thumbUrl) return;
+    const candidates = [thumbCdn, thumbUrl].filter((u): u is string => !!u);
+    if (candidates.length === 0) return;
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin("anonymous");
     let cancelled = false;
-    loader.load(thumbUrl, (tex) => {
-      if (cancelled) { tex.dispose(); return; }
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const img = tex.image as HTMLImageElement;
-      if (img?.width && img?.height) setAspect(img.width / img.height);
-      setStaticTex((prev) => { prev?.dispose(); return tex; });
-    });
+    const tryLoad = (i: number) => {
+      loader.load(
+        candidates[i],
+        (tex) => {
+          if (cancelled) { tex.dispose(); return; }
+          tex.colorSpace = THREE.SRGBColorSpace;
+          const img = tex.image as HTMLImageElement;
+          if (img?.width && img?.height) setAspect(img.width / img.height);
+          setStaticTex((prev) => { prev?.dispose(); return tex; });
+        },
+        undefined,
+        () => { if (!cancelled && i + 1 < candidates.length) tryLoad(i + 1); },
+      );
+    };
+    tryLoad(0);
     return () => { cancelled = true; };
-  }, [thumbUrl]);
+  }, [thumbCdn, thumbUrl]);
 
   // Play the current track while the screen is active; advance to the next on 'ended'.
   useEffect(() => {
