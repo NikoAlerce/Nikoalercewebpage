@@ -8,11 +8,11 @@ import { useState } from "react";
 // light those up. Tezos is already live.
 // ─────────────────────────────────────────────────────────────────────────────
 const DONATE = {
-  // Fiat "buy me a coffee" — a full URL (e.g. https://ko-fi.com/nikoalerce).
-  coffee: "",
+  // Fiat "buy me a coffee".
+  coffee: "https://ko-fi.com/nikoalerce",
   // Crypto receiving addresses.
   tezos: "tz1WNzaqX3KWbBbGtDJRR4Z7ZcVQRpKqcizb",
-  eth: "",
+  eth: "0x70400e1B9Cf40151E5c76dF8B7C95c87001f51FB",
 };
 
 function CopyRow({ label, symbol, address }: { label: string; symbol: string; address: string }) {
@@ -67,12 +67,40 @@ export default function Support({ compact = false }: { compact?: boolean }) {
 
       {/* Honest, dignified note — edit freely. */}
       <p className="mt-6 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
-        I&apos;m an independent artist from El Bolsón, Patagonia, making all of this
-        on my own. A forest fire reached my home and I lost the house and nearly
-        everything in it — I&apos;m slowly rebuilding while I keep creating.
-        If my work means something to you, anything you can spare genuinely helps —
-        a coffee, a few coins, whatever feels right. Thank you for being here.
+        I&apos;m an independent artist from the Comarca Andina, Patagonia, making all
+        of this on my own. In January 2026 the wildfires that tore through Epuyén
+        reached <span className="text-bone">Bosque Gracias</span>, where I was living —
+        I lost my home and nearly everything in it. I&apos;m slowly rebuilding while I
+        keep creating. If my work means something to you, anything you can spare
+        genuinely helps — a coffee, a few coins, whatever feels right. Thank you for
+        being here.
       </p>
+
+      {/* Photos from the fire */}
+      <div className="mt-8 grid grid-cols-2 gap-3 max-w-2xl">
+        <figure>
+          <img
+            src="/fire-approaching.webp"
+            alt="The wildfire reaching my home in Bosque Gracias, near Epuyén — January 2026"
+            loading="lazy"
+            className="w-full h-56 md:h-64 object-cover border border-white/10"
+          />
+          <figcaption className="mt-2 font-sans text-[9px] tracking-[0.25em] uppercase text-ash/55">
+            The fire reaching home
+          </figcaption>
+        </figure>
+        <figure>
+          <img
+            src="/fire-aftermath.webp"
+            alt="What remained of my home after the fire"
+            loading="lazy"
+            className="w-full h-56 md:h-64 object-cover border border-white/10"
+          />
+          <figcaption className="mt-2 font-sans text-[9px] tracking-[0.25em] uppercase text-ash/55">
+            What was left
+          </figcaption>
+        </figure>
+      </div>
 
       {/* Fiat — buy me a coffee (only if a link is set) */}
       {DONATE.coffee && (
