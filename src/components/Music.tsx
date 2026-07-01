@@ -1,5 +1,7 @@
 "use client";
 
+import TitleCharacter from "@/components/TitleCharacter";
+
 // YouTube videos to feature. Titles can be edited freely.
 const YOUTUBE = [
   { id: "GXFaNfs2b1k", title: "Más Empatías" },
@@ -62,9 +64,12 @@ export default function Music() {
               El Bosquecito Records
             </span>
           </div>
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
-            Music
-          </h2>
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
+              Music
+            </h2>
+            <TitleCharacter clip="hiphop" size={470} flip className="shrink-0 hidden md:block" />
+          </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
             Original music produced, recorded, mixed and mastered in-house —
             hip-hop, trap, lo-fi and experimental electronic, released under my

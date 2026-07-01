@@ -184,8 +184,11 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
       camera.rotation.set(pitch.current, yaw.current, 0);
     }
 
-    // Use actual delta time - no clamping for smoothest movement
-    const clampedDt = dt;
+    // Clamp the delta time. On a frame hitch (the gallery streams + decodes videos, which
+    // routinely stalls a frame), an unclamped dt makes a single step move several metres —
+    // far enough to jump straight THROUGH a wall and eject the player outside the building.
+    // Capping dt bounds the per-frame step so collision can always catch the wall.
+    const clampedDt = Math.min(dt, 0.1);
 
     // Movement input: analog joystick on touch, keyboard on desktop.
     let mvFwd: number; // forward(+)/back(-)
@@ -230,24 +233,12 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
     // Snap to zero if very slow
     if (!isMoving && vel.length() < 0.01) vel.set(0, 0, 0);
 
-    // Apply horizontal movement with collision detection
+    // Apply horizontal movement with SWEPT collision detection.
     const pos = positionRef.current;
-    const newPos = new THREE.Vector3(
-      pos.x + vel.x * clampedDt,
-      pos.y,
-      pos.z + vel.z * clampedDt
-    );
-
-    // Collision detection using raycasting
     const playerRadius = 0.5;
-    const playerHeight = PLAYER_HEIGHT;
-
-    // Check collision in movement direction
-    raycaster.current.set(
-      new THREE.Vector3(pos.x, pos.y + EYE_LEVEL, pos.z),
-      new THREE.Vector3(newPos.x - pos.x, 0, newPos.z - pos.z).normalize()
-    );
-    raycaster.current.far = playerRadius + 0.5;
+    const stepX = vel.x * clampedDt;
+    const stepZ = vel.z * clampedDt;
+    const moveDist = Math.hypot(stepX, stepZ);
 
     // Get collidable objects from scene — cached and refreshed every 60 frames
     // (and while still empty, until the GLB has loaded) rather than every frame.
@@ -262,14 +253,29 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
       collidablesRef.current = list;
     }
 
-    const intersects = raycaster.current.intersectObjects(collidablesRef.current, false);
-
-    if (intersects.length > 0 && intersects[0].distance < playerRadius) {
-      // Collision detected, don't move
-      vel.set(0, 0, 0);
-    } else {
-      pos.x = newPos.x;
-      pos.z = newPos.z;
+    if (moveDist > 1e-5) {
+      const dirX = stepX / moveDist;
+      const dirZ = stepZ / moveDist;
+      // Cast the ray the FULL intended step (plus the body radius), not a fixed 1m. This way a
+      // fast move can never skip past a wall — it's always detected within the swept distance,
+      // which is what stops the "walked through the wall and got launched outside" ejection.
+      raycaster.current.set(
+        new THREE.Vector3(pos.x, pos.y + EYE_LEVEL, pos.z),
+        new THREE.Vector3(dirX, 0, dirZ),
+      );
+      raycaster.current.far = moveDist + playerRadius;
+      const hits = raycaster.current.intersectObjects(collidablesRef.current, false);
+      const wallDist = hits.length > 0 ? hits[0].distance : Infinity;
+      if (wallDist < moveDist + playerRadius) {
+        // Slide right up to the wall but never past it.
+        const allowed = Math.max(0, wallDist - playerRadius);
+        pos.x += dirX * allowed;
+        pos.z += dirZ * allowed;
+        vel.set(0, 0, 0);
+      } else {
+        pos.x += stepX;
+        pos.z += stepZ;
+      }
     }
 
     // Gravity
@@ -302,6 +308,17 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
       isGrounded.current = true;
     } else {
       isGrounded.current = false;
+    }
+
+    // Safety leash — only relevant when walking the flat gallery (no custom terrain). If the
+    // player has somehow ended up far OUTSIDE the building footprint (a tunnel-through from
+    // before this fix, or an extreme hitch), snap them back to the start so they're never
+    // stranded "outside, far away, unable to get back in". Bounds are generous — the gallery
+    // art spans roughly x[-32..10], z[-12..9], so this only fires on a true ejection.
+    if (!getGroundY && (pos.x < -50 || pos.x > 26 || pos.z < -34 || pos.z > 32)) {
+      pos.set(startPosition.x, startPosition.y, startPosition.z);
+      currentVelocity.current.set(0, 0, 0);
+      velocityY.current = 0;
     }
 
     // No head bob for smoother movement

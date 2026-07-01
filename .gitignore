@@ -18,3 +18,8 @@ next-env.d.ts
 /nuevagalery.glb
 # Local helper / debug scripts
 /scratch/
+
+# Raw Mixamo conversion dump — the per-animation GLBs + the rescued source texture.
+# These are inputs to scripts/build-character.mjs; the app only ships the single
+# optimized /public/characters/character.glb (mesh once + all clips + Draco + WebP).
+/public/fbx/

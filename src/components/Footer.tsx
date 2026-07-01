@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import TitleCharacter from "@/components/TitleCharacter";
 
 const socials = [
   { label: "Objkt — Niko", href: "https://objkt.com/@nikoalerce" },
@@ -26,11 +27,14 @@ export default function Footer() {
               Get in touch
             </span>
           </div>
-          <h3 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5rem)]">
-            Let&apos;s build
-            <br />
-            <span className="text-accent">something.</span>
-          </h3>
+          <div className="flex items-center gap-2 md:gap-4">
+            <h3 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5rem)]">
+              Let&apos;s build
+              <br />
+              <span className="text-accent">something.</span>
+            </h3>
+            <TitleCharacter clip="waving" size={470} flip className="shrink-0 hidden md:block" />
+          </div>
           <p className="mt-6 font-sans text-[15px] text-ash max-w-md leading-relaxed">
             Commissions, collaborations, exhibitions, joint drops. If you can
             imagine it in 3D, we can materialise it.

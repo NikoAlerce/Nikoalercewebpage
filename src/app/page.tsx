@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
+import TitleCharacter from "@/components/TitleCharacter";
 
 // The realms surfaced as an editorial index — the bridge from the bio into
 // the interior pages. (The pre-home "choose your portal" splash is retired;
@@ -54,17 +55,28 @@ export default function Home() {
         id="enter"
         className="relative px-6 md:px-10 py-28 md:py-40 max-w-[1500px] mx-auto border-t border-white/5"
       >
-        <header className="mb-16 md:mb-20 max-w-2xl">
+        <header className="relative mb-16 md:mb-20 max-w-3xl">
           <div className="flex items-center gap-4 mb-6">
             <span className="w-10 h-px rule-accent" />
             <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
               Index
             </span>
           </div>
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.4rem,6vw,4.5rem)]">
-            Five ways into the studio.
-          </h2>
-          <p className="mt-5 font-sans text-[15px] md:text-base text-ash leading-relaxed">
+          {/* Title + character live in one flex row: flex reserves the figure's
+              width so it can never overlap the words, and it stays vertically
+              centred on the headline. Same pattern reused on every section title. */}
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.4rem,6vw,4.5rem)]">
+              Five ways into the studio.
+            </h2>
+            <TitleCharacter
+              clip="waving"
+              size={470}
+              flip
+              className="shrink-0 hidden md:block"
+            />
+          </div>
+          <p className="mt-5 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
             One practice, many surfaces — art, sound, video and immersive
             worlds. Pick a thread and pull.
           </p>

@@ -1,9 +1,12 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
+import clsx from "clsx";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { Environment, Html, useProgress } from "@react-three/drei";
 import * as THREE from "three";
+import { NAV_LINKS } from "./Navbar";
 import { useTokenViewer } from "./TokenViewerContext";
 import { playClickSound, playUnlockSound, playCollectSound } from "@/lib/sound";
 import PlayerControls, { PlayerControlsRef } from "./PlayerControls";
@@ -519,16 +522,27 @@ export default function MetaverseGallery() {
         handleInteract();
       }
     };
-    // Left-click also opens the targeted frame while locked (precise: only fires when the
-    // crosshair is on an NFT).
-    const onClick = () => {
-      if (isLocked && !activeModalToken && targetedFrame !== null) handleInteract();
+    const onMouseDown = (e: MouseEvent) => {
+      // Right-click → release the cursor so the nav bar appears (change section / exit).
+      if (e.button === 2) {
+        if (isLocked) { e.preventDefault(); playerControlsRef.current?.unlock(); }
+        return;
+      }
+      // Left-click opens the targeted frame while locked (precise: only fires when the
+      // crosshair is on an NFT).
+      if (e.button === 0 && isLocked && !activeModalToken && targetedFrame !== null) {
+        handleInteract();
+      }
     };
+    // Suppress the browser context menu inside the gallery — we repurpose right-click.
+    const onContext = (e: MouseEvent) => e.preventDefault();
     window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onClick);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("contextmenu", onContext);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("contextmenu", onContext);
     };
   }, [isLocked, activeModalToken, targetedFrame, handleInteract]);
 
@@ -671,7 +685,8 @@ export default function MetaverseGallery() {
       </Canvas>
 
       {/* ──── PERF DIAGNOSTIC OVERLAY (temporary, desktop only) ──── */}
-      {!isMobileDevice && (
+      {/* Only while playing — when the cursor is released the nav bar takes the top strip. */}
+      {!isMobileDevice && interactive && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none bg-black/85 border border-white/15 px-4 py-2 font-mono text-[12px] tracking-wider flex gap-4">
           <span className={perf.fps < 30 ? "text-red-400" : perf.fps < 50 ? "text-yellow-400" : "text-green-400"}>
             {perf.fps} FPS
@@ -705,6 +720,36 @@ export default function MetaverseGallery() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* ──── SITE NAV (desktop) — appears whenever the cursor is released (right-click / ESC)
+          so you can jump to another section without leaving the gallery first. Sits in the top
+          strip on its own: the perf overlay is hidden while released and the GFX selector sits
+          just below it, so nothing overlaps. ──── */}
+      {!isMobileDevice && !isLocked && !activeModalToken && (
+        <nav className="absolute top-0 inset-x-0 z-[70] flex items-center justify-between gap-4 px-6 h-14 bg-void/85 backdrop-blur-md border-b border-white/10">
+          <Link href="/" className="flex items-center gap-2 shrink-0 group">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent group-hover:bg-bone transition-colors" />
+            <span className="font-display font-semibold text-bone text-lg leading-none tracking-tight">
+              Niko Alerce
+            </span>
+          </Link>
+          <ul className="flex items-center gap-5 overflow-x-auto no-scrollbar font-sans text-[10px] tracking-[0.18em] uppercase">
+            {NAV_LINKS.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className={clsx(
+                    "whitespace-nowrap transition-colors py-1",
+                    l.href === "/metaverse" ? "text-accent" : "text-ash/70 hover:text-bone",
+                  )}
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       )}
 
       {/* Cheap CSS vignette (replaces the GPU postprocessing pass) */}
@@ -753,6 +798,7 @@ export default function MetaverseGallery() {
                 <p><span className="text-white font-bold">SPACE</span> — JUMP</p>
                 <p><span className="text-white font-bold">MOUSE</span> — LOOK</p>
                 <p><span className="text-accent font-bold">[E]</span> — ANALYZE ARTWORK NEAR YOU</p>
+                <p><span className="text-white font-bold">RIGHT-CLICK</span> — MENU · CHANGE SECTION</p>
                 <p><span className="text-gray-600">ESC</span> — RELEASE CURSOR</p>
               </>
             )}

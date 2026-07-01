@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import TitleCharacter from "@/components/TitleCharacter";
 
 // AR Labs — Niko Alerce's augmented-reality studio (content from bosquestudio.art, in English).
 
@@ -151,11 +152,14 @@ export default function ArLabs() {
       <div className="grid lg:grid-cols-[1fr_auto] gap-12 lg:gap-16 items-center">
         <div className="max-w-2xl order-2 lg:order-1">
           <div className="text-[9px] tracking-[0.5em] text-ash uppercase mb-6">// AR Labs · Augmented Reality</div>
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5.6rem)]">
-            AR is not the future.
-            <br />
-            <span className="text-accent">It&apos;s now.</span>
-          </h2>
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5.6rem)]">
+              AR is not the future.
+              <br />
+              <span className="text-accent">It&apos;s now.</span>
+            </h2>
+            <TitleCharacter clip="breakdance" size={470} flip className="shrink-0 hidden md:block" />
+          </div>
           <p className="mt-7 text-lg text-ash leading-relaxed">
             A poster, a business card or a QR code becomes a doorway to a digital world. Point your
             phone and the image comes alive — video, 3D, sound and interaction layered straight onto

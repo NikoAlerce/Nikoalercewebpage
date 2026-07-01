@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import TitleCharacter from "@/components/TitleCharacter";
 
 const DclViewer = dynamic(() => import("./DclViewer"), { ssr: false });
 
@@ -220,11 +221,14 @@ export default function Decentraland() {
           </div>
         </div>
 
-        <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,9vw,6.5rem)]">
-          I build
-          <br />
-          <span className="text-accent">the metaverse.</span>
-        </h2>
+        <div className="flex items-center gap-2 md:gap-4">
+          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,9vw,6.5rem)]">
+            I build
+            <br />
+            <span className="text-accent">the metaverse.</span>
+          </h2>
+          <TitleCharacter clip="robot" size={470} flip className="shrink-0 hidden md:block" />
+        </div>
 
         <p className="mt-8 text-lg text-ash leading-relaxed">
           Decentraland is a 3D virtual world you explore with your own avatar. I

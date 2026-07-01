@@ -1,5 +1,7 @@
 "use client";
 
+import TitleCharacter from "@/components/TitleCharacter";
+
 type Product = {
   id: string;
   title: string;
@@ -58,9 +60,12 @@ export default function Shop() {
               Store
             </span>
           </div>
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
-            Shop
-          </h2>
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
+              Shop
+            </h2>
+            <TitleCharacter clip="searching" size={470} flip className="shrink-0 hidden md:block" />
+          </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
             Physical objects from the studio — limited editions that carry the
             work into the analog world.

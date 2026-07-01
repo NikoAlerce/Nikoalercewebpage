@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import clsx from "clsx";
+import TitleCharacter from "@/components/TitleCharacter";
 import NFTCard from "./NFTCard";
 import { isDisplayableToken, tokenStatus, detectKind } from "@/lib/objkt";
 import type { ObjktHolder, ObjktToken } from "@/lib/types";
@@ -165,9 +166,12 @@ export default function NFTGallery({
               {kicker}
             </span>
           </div>
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
-            {title}
-          </h2>
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
+              {title}
+            </h2>
+            <TitleCharacter clip="pointing" size={470} flip className="shrink-0 hidden md:block" />
+          </div>
           {tabsSlot && <div className="mt-6">{tabsSlot}</div>}
           {subtitle && (
             <p className="mt-5 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useWallet } from "./WalletContext";
 
-const links = [
+export const NAV_LINKS = [
   { href: "/#top", label: "HOME" },
   { href: "/art-on-tezos", label: "ART ON TEZOS" },
   { href: "/music", label: "MUSIC" },
@@ -81,7 +81,7 @@ export default function Navbar() {
         </Link>
 
         <ul className="hidden md:flex items-center gap-6 lg:gap-9 font-sans text-[11px] lg:text-xs tracking-[0.18em] uppercase">
-          {links.map((l) => (
+          {NAV_LINKS.map((l) => (
             <li key={l.href} className="relative group">
               <Link
                 href={l.href}
@@ -132,7 +132,7 @@ export default function Navbar() {
 
       {open && (
         <ul className="md:hidden flex flex-col bg-void/95 border-t border-white/5 px-6 py-4 gap-4 text-xs uppercase tracking-[0.2em]">
-          {links.map((l) => (
+          {NAV_LINKS.map((l) => (
             <li key={l.href}>
               <Link
                 href={l.href}

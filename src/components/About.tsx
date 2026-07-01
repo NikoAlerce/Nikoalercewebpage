@@ -1,3 +1,5 @@
+import TitleCharacter from "@/components/TitleCharacter";
+
 const STATS = [
   { k: "Status", v: "Available", live: true },
   { k: "Fields", v: "3D · Music · Video · XR" },
@@ -117,11 +119,14 @@ export default function About() {
                 Profile
               </span>
             </div>
-            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,8vw,6rem)]">
-              Full-stack
-              <br />
-              <span className="text-accent">creative.</span>
-            </h2>
+            <div className="flex items-center gap-2 md:gap-4">
+              <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,8vw,6rem)]">
+                Full-stack
+                <br />
+                <span className="text-accent">creative.</span>
+              </h2>
+              <TitleCharacter clip="pointing" size={470} flip className="shrink-0 hidden md:block" />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-x-12 gap-y-6 text-[15px] md:text-[16px] text-bone/85 leading-relaxed font-sans">

@@ -68,6 +68,14 @@ h3 {
     background: linear-gradient(90deg, #e3322b 0%, rgba(227, 50, 43, 0) 100%);
   }
 
+  /* Hide the scrollbar on horizontally-scrollable strips (e.g. the in-gallery nav). */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Quiet underline reveal for links. */
   .link-underline {
     background-image: linear-gradient(currentColor, currentColor);

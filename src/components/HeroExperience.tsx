@@ -146,6 +146,8 @@ function ActiveLabel({ index, onSelect }: { index: number; onSelect: (i: number)
   // right; lx < 0 → lives on the left, right-anchored, grows left.
   const anchorX: "left" | "right" = st.lx >= 0 ? "left" : "right";
   const fontSize = st.font;
+  const lxFrac = st.lx;
+  const maxWidth = 2.8;
 
   useEffect(() => { fade.current = 0; }, [index]);
 
@@ -159,7 +161,7 @@ function ActiveLabel({ index, onSelect }: { index: number; onSelect: (i: number)
     const cam = camera as THREE.PerspectiveCamera;
     const vH = 2 * LABEL_DIST * Math.tan((cam.fov * Math.PI) / 360);
     const vW = vH * cam.aspect;
-    tmp.set((st.lx * vW) / 2, (st.ly * vH) / 2, -LABEL_DIST)
+    tmp.set((lxFrac * vW) / 2, (st.ly * vH) / 2, -LABEL_DIST)
       .applyQuaternion(camera.quaternion)
       .add(camera.position);
     g.position.copy(tmp);
@@ -177,7 +179,7 @@ function ActiveLabel({ index, onSelect }: { index: number; onSelect: (i: number)
         fontSize={fontSize}
         anchorX={anchorX}
         anchorY="middle"
-        maxWidth={2.8}
+        maxWidth={maxWidth}
         textAlign={anchorX}
         renderOrder={20}
         onClick={(e) => { e.stopPropagation(); onSelect(index); }}
@@ -257,7 +259,9 @@ function Scene({ index, onSelect, mobile }: { index: number; onSelect: (i: numbe
         <Environment preset="city" />
         <Beast />
         <Motes count={mobile ? 70 : 130} />
-        <ActiveLabel index={index} onSelect={onSelect} />
+        {/* The in-scene 3D word can't fit a portrait phone's narrow frustum at a legible
+            size, so on mobile we drop it and render a crisp DOM caption instead (below). */}
+        {!mobile && <ActiveLabel index={index} onSelect={onSelect} />}
         <ContactShadows position={[0, 0, 0]} opacity={0.55} scale={9} blur={2.6} far={4} resolution={mobile ? 256 : 512} color="#000000" />
       </Suspense>
 
@@ -332,6 +336,29 @@ export default function HeroExperience({ className }: { className?: string }) {
       >
         <Scene index={index} onSelect={onSelect} mobile={mobile} />
       </Canvas>
+
+      {/* Mobile section caption — replaces the 3D word (which can't fit a narrow portrait
+          frustum legibly). Big, crisp, tappable: tap to enter the focused section; the arrows
+          + dots switch between them. Sits in the upper third, clear of the bottom wordmark. */}
+      {mobile && (
+        // Outer wrapper owns the centring transform; the inner button owns the fade-up
+        // animation — keeping them separate so the keyframe's transform doesn't clobber the
+        // -translate centring (both would otherwise write the same `transform` property).
+        <div className="absolute inset-x-0 top-[30%] -translate-y-1/2 z-20 flex justify-center px-6 pointer-events-none">
+          <button
+            key={index}
+            onClick={() => onSelect(index)}
+            className="text-center animate-fade-up pointer-events-auto"
+          >
+            <span className="block font-graffiti text-bone leading-[0.95] text-[clamp(2.5rem,14vw,4.5rem)]" style={{ textShadow: "0 2px 24px rgba(0,0,0,0.7)" }}>
+              {SECTIONS[index].label}
+            </span>
+            <span className="mt-2 inline-block font-sans text-[10px] tracking-[0.4em] uppercase text-accent">
+              Tap to enter
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Carousel arrows */}
       <button
