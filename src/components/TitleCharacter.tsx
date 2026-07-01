@@ -53,13 +53,26 @@ function CharacterModel({ clip, flip }: { clip: CharacterClip; flip: boolean }) 
   // Materials are shared with the cached GLTF (via SkeletonUtils.clone), so we DON'T mutate or
   // dispose them here.
   useEffect(() => {
+    const skeletons = new Set<THREE.Skeleton>();
     model.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       mesh.receiveShadow = false;
+      const sm = o as THREE.SkinnedMesh;
+      if (sm.isSkinnedMesh && sm.skeleton) skeletons.add(sm.skeleton);
     });
+    return () => {
+      // Each SkeletonUtils clone owns a UNIQUE skeleton, whose boneTexture is a GPU texture
+      // (bone matrices). Geometry/materials/diffuse are shared with the cached GLTF, but the
+      // boneTexture is per-instance and R3F does NOT dispose <primitive> objects — so without
+      // this it leaks one GPU texture per character on every route change.
+      for (const sk of skeletons) {
+        (sk.boneTexture as THREE.Texture | null)?.dispose();
+        (sk as unknown as { dispose?: () => void }).dispose?.();
+      }
+    };
   }, [model]);
 
   // Two problems to solve once, in the model's local space:
