@@ -68,8 +68,8 @@ export default function Support({ compact = false }: { compact?: boolean }) {
       {/* Honest, dignified note — edit freely. */}
       <p className="mt-6 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
         I&apos;m an independent artist from El Bolsón, Patagonia, making all of this
-        on my own. In 2024 a forest fire reached my home and I lost the house and
-        nearly everything in it — I&apos;m slowly rebuilding while I keep creating.
+        on my own. A forest fire reached my home and I lost the house and nearly
+        everything in it — I&apos;m slowly rebuilding while I keep creating.
         If my work means something to you, anything you can spare genuinely helps —
         a coffee, a few coins, whatever feels right. Thank you for being here.
       </p>
