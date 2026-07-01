@@ -73,7 +73,7 @@ export default function Home() {
               clip="waving"
               size={470}
               flip
-              className="shrink-0 hidden md:block"
+              className="shrink-0"
             />
           </div>
           <p className="mt-5 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">

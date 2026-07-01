@@ -125,7 +125,7 @@ export default function About() {
                 <br />
                 <span className="text-accent">creative.</span>
               </h2>
-              <TitleCharacter clip="pointing" size={470} flip className="shrink-0 hidden md:block" />
+              <TitleCharacter clip="pointing" size={470} flip className="shrink-0" />
             </div>
           </div>
 

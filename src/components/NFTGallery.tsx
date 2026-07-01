@@ -170,7 +170,7 @@ export default function NFTGallery({
             <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
               {title}
             </h2>
-            <TitleCharacter clip="pointing" size={470} flip className="shrink-0 hidden md:block" />
+            <TitleCharacter clip="pointing" size={470} flip className="shrink-0" />
           </div>
           {tabsSlot && <div className="mt-6">{tabsSlot}</div>}
           {subtitle && (

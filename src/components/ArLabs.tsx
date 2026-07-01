@@ -158,7 +158,7 @@ export default function ArLabs() {
               <br />
               <span className="text-accent">It&apos;s now.</span>
             </h2>
-            <TitleCharacter clip="breakdance" size={470} flip className="shrink-0 hidden md:block" />
+            <TitleCharacter clip="breakdance" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-7 text-lg text-ash leading-relaxed">
             A poster, a business card or a QR code becomes a doorway to a digital world. Point your

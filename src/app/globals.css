@@ -68,6 +68,20 @@ h3 {
     background: linear-gradient(90deg, #e3322b 0%, rgba(227, 50, 43, 0) 100%);
   }
 
+  /* Title character box — sized by CSS vars set inline (desktop px), scaled DOWN on phones
+     so the little character fits beside the title without stealing its width. The 3D figure
+     fills the box proportionally, so shrinking the box just makes the character smaller. */
+  .nk-char {
+    width: var(--nk-w);
+    height: var(--nk-h);
+  }
+  @media (max-width: 767px) {
+    .nk-char {
+      width: calc(var(--nk-w) * 0.3);
+      height: calc(var(--nk-h) * 0.3);
+    }
+  }
+
   /* Hide the scrollbar on horizontally-scrollable strips (e.g. the in-gallery nav). */
   .no-scrollbar {
     scrollbar-width: none;

@@ -68,7 +68,7 @@ export default function Music() {
             <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
               Music
             </h2>
-            <TitleCharacter clip="hiphop" size={470} flip className="shrink-0 hidden md:block" />
+            <TitleCharacter clip="hiphop" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
             Original music produced, recorded, mixed and mastered in-house —

@@ -33,7 +33,7 @@ export default function Footer() {
               <br />
               <span className="text-accent">something.</span>
             </h3>
-            <TitleCharacter clip="waving" size={470} flip className="shrink-0 hidden md:block" />
+            <TitleCharacter clip="waving" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 font-sans text-[15px] text-ash max-w-md leading-relaxed">
             Commissions, collaborations, exhibitions, joint drops. If you can

@@ -227,7 +227,7 @@ export default function Decentraland() {
             <br />
             <span className="text-accent">the metaverse.</span>
           </h2>
-          <TitleCharacter clip="robot" size={470} flip className="shrink-0 hidden md:block" />
+          <TitleCharacter clip="robot" size={470} flip className="shrink-0" />
         </div>
 
         <p className="mt-8 text-lg text-ash leading-relaxed">

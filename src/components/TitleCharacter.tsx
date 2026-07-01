@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useGLTF, useAnimations, View, PerspectiveCamera } from "@react-three/drei";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
@@ -156,8 +156,12 @@ export default function TitleCharacter({ clip, className, size = 300, flip = fal
   return (
     <View
       aria-hidden
-      className={className}
-      style={{ width: size * CANVAS_ASPECT, height: size, pointerEvents: "none" }}
+      className={`nk-char${className ? " " + className : ""}`}
+      style={{
+        ["--nk-w"]: `${size * CANVAS_ASPECT}px`,
+        ["--nk-h"]: `${size}px`,
+        pointerEvents: "none",
+      } as CSSProperties}
     >
       <PerspectiveCamera makeDefault fov={CAM_FOV} position={[0, 0, CAM_Z]} />
       <ambientLight intensity={0.9} color="#ffffff" />

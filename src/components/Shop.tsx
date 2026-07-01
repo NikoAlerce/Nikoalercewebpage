@@ -64,7 +64,7 @@ export default function Shop() {
             <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
               Shop
             </h2>
-            <TitleCharacter clip="searching" size={470} flip className="shrink-0 hidden md:block" />
+            <TitleCharacter clip="searching" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
             Physical objects from the studio — limited editions that carry the
