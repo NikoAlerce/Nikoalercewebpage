@@ -62,11 +62,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     creator: "@nikoalerce",
   },
-  icons: {
-    icon: "/icon",
-    shortcut: "/icon",
-    apple: "/icon",
-  },
+  // icon.png / apple-icon.png / opengraph-image.png in src/app/ are Next's file-convention
+  // metadata images — it wires up the <link>/<meta> tags for these automatically, no
+  // `icons`/`openGraph.images` entries needed here.
 };
 
 export default function RootLayout({
