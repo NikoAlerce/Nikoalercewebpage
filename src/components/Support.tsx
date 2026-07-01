@@ -66,15 +66,27 @@ export default function Support({ compact = false }: { compact?: boolean }) {
       </h2>
 
       {/* Honest, dignified note — edit freely. */}
-      <p className="mt-6 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
-        I&apos;m an independent artist from the Comarca Andina, Patagonia, making all
-        of this on my own. In January 2026 the wildfires that tore through Epuyén
-        reached <span className="text-bone">Bosque Gracias</span>, where I was living —
-        I lost my home and nearly everything in it. I&apos;m slowly rebuilding while I
-        keep creating. If my work means something to you, anything you can spare
-        genuinely helps — a coffee, a few coins, whatever feels right. Thank you for
-        being here.
-      </p>
+      <div className="mt-6 space-y-4 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
+        <p>
+          I&apos;m Niko — an independent 3D artist, animator and music producer from
+          the Comarca Andina, deep in the Patagonian mountains. Everything you see on
+          this site I make on my own, with a lot of love and very little else.
+        </p>
+        <p>
+          In January 2026 the wildfires that swept through Epuyén reached{" "}
+          <span className="text-bone">Bosque Gracias</span>, the place where I was
+          living. The fire took my home and nearly everything I had — the house, my
+          tools, and years of belongings and work. As a self-taught artist from the
+          global south I was already getting by on very little; now I&apos;m starting
+          over almost from zero.
+        </p>
+        <p>
+          I keep creating because it&apos;s what keeps me standing. If my work means
+          something to you, anything you can spare genuinely helps me rebuild — a
+          coffee, a few coins, collecting a piece, or simply sharing this page. From
+          the bottom of my heart: thank you for being here.
+        </p>
+      </div>
 
       {/* Photos from the fire */}
       <div className="mt-8 grid grid-cols-2 gap-3 max-w-2xl">
