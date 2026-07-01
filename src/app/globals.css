@@ -75,7 +75,8 @@ h3 {
     width: var(--nk-w);
     height: var(--nk-h);
   }
-  @media (max-width: 767px) {
+  /* Narrow viewports AND touch tablets (coarse pointer) get the small mobile character. */
+  @media (max-width: 767px), (pointer: coarse) {
     .nk-char {
       width: calc(var(--nk-w) * 0.3);
       height: calc(var(--nk-h) * 0.3);

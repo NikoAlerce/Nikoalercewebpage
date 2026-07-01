@@ -16,6 +16,7 @@ import MeshScreen, { BlackoutMesh } from "./MeshScreen";
 import MobileControls from "./MobileControls";
 import type { ObjktToken } from "@/lib/types";
 import { lowestPriceXtz, isDisplayableToken, detectKind, ipfsToUrl } from "@/lib/objkt";
+import { isMobileLike } from "@/lib/device";
 import { optimizedVideoUrl } from "@/lib/optimizedMedia";
 
 // ============================================================
@@ -277,11 +278,11 @@ export default function MetaverseGallery() {
   // Mobile detection (state so it's stable after hydration, not recomputed each render).
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   useEffect(() => {
-    const mobile =
-      window.innerWidth < 768 ||
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Touch-first (phone OR tablet) → touch controls. A width/UA check missed tablets
+    // (≥768px, iPadOS reports a desktop UA), so they got broken pointer-lock controls.
+    const mobile = isMobileLike();
     setIsMobileDevice(mobile);
-    setQuality(mobile ? "low" : detectTier()); // phones can't sustain the desktop tiers
+    setQuality(mobile ? "low" : detectTier()); // phones/tablets can't sustain the desktop tiers
   }, []);
   const tier = TIERS[quality];
   const camDirRef = useRef(new THREE.Vector3(0, 0, -1));

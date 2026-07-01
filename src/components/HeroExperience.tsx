@@ -6,6 +6,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useAnimations, Environment, ContactShadows, Text } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
+import { isMobileLike } from "@/lib/device";
 
 // Graffiti "throw-up" face for the 3D section labels (troika reads ttf/otf/woff, not woff2).
 const FONT = "/fonts/throwup-fill.otf";
@@ -335,7 +336,8 @@ export default function HeroExperience({ className }: { className?: string }) {
   }, []);
 
   useEffect(() => {
-    setMobile(window.innerWidth < 768);
+    // Touch tablets (≥768px) should get the crisp DOM caption too, not the 3D word.
+    setMobile(isMobileLike());
     if (!window.matchMedia) return;
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(mql.matches);

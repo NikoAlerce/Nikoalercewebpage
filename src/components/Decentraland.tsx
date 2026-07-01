@@ -112,29 +112,29 @@ const PRICING: {
 }[] = [
   {
     cat: "Builds",
-    blurb: "Scenes & venues — shops, galleries, clubs, full parcels.",
+    blurb: "Low-poly scenes & venues — shops, galleries, clubs, full parcels.",
     rows: [
-      { tier: "1×1 — Shop / Gallery / Club", price: "$650 – $950", time: "1 – 1.5 weeks" },
-      { tier: "3×3", price: "$2,000 – $2,700", time: "3 – 4 weeks" },
-      { tier: "5×5", price: "$4,000 – $4,800", time: "6 – 7 weeks" },
+      { tier: "1×1 — Shop / Gallery / Club", price: "$525", time: "4.5 days" },
+      { tier: "3×3", price: "$1,650", time: "2.25 weeks" },
+      { tier: "5×5", price: "$4,150", time: "4.5 weeks" },
     ],
   },
   {
     cat: "Wearables",
     blurb: "Avatar gear — armor, outfits, accessories, props.",
     rows: [
-      { tier: "Basic", price: "$550 – $700", time: "5 – 6 days" },
-      { tier: "Medium", price: "$700 – $900", time: "1 – 1.5 weeks" },
-      { tier: "Advanced", price: "$1,100 – $1,500", time: "1.5 – 2.5 weeks" },
+      { tier: "Basic", price: "$150", time: "4.5 days" },
+      { tier: "Medium", price: "$400", time: "1.25 weeks" },
+      { tier: "Advanced", price: "$800", time: "2 weeks" },
     ],
   },
   {
     cat: "Emotes",
     blurb: "Custom avatar animations, dances & signature moves.",
     rows: [
-      { tier: "Basic", price: "$550 – $700", time: "5 – 6 days" },
-      { tier: "Medium", price: "$700 – $950", time: "1 – 1.5 weeks" },
-      { tier: "Advanced", price: "$1,000 – $1,400", time: "1.5 – 2 weeks" },
+      { tier: "Basic", price: "$130", time: "4.5 days" },
+      { tier: "Medium", price: "$350", time: "1.25 weeks" },
+      { tier: "Advanced", price: "$700", time: "1.75 weeks" },
     ],
   },
 ];
