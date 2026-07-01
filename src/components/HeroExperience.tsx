@@ -18,6 +18,7 @@ const SECTIONS = [
   { label: "Decentraland", href: "/decentraland" },
   { label: "Shop", href: "/shop" },
   { label: "AR Labs", href: "/ar-labs" },
+  { label: "Tools", href: "/tools" },
 ];
 const N = SECTIONS.length;
 const PARTY_Y = 1.28;  // height of the grass platform / the characters (the "party")
@@ -41,6 +42,7 @@ const STATION_CFG: { az: number; polar: number; dist: number; ty: number; aim: n
   { az: 4.35, polar: 1.580, dist: 1.88, ty: PARTY_Y + 0.14, aim:  0.5, lx:  0.05, ly: -0.04, font: 0.2,  off: [0.05, -0.08] }, // 3 Decentraland — right (long word, smaller)
   { az: 5.55, polar: 1.595, dist: 1.78, ty: PARTY_Y + 0.10, aim: -0.5, lx: -0.22, ly:  0.18, font: 0.3,  off: [-0.03, 0.03] }, // 4 Shop — left
   { az: 6.10, polar: 1.585, dist: 1.82, ty: PARTY_Y + 0.12, aim:  0.5, lx:  0.18, ly:  0.40, font: 0.3,  off: [0.04, -0.04] }, // 5 AR Labs — upper-right
+  { az: 3.70, polar: 1.585, dist: 1.80, ty: PARTY_Y + 0.10, aim: -0.5, lx: -0.20, ly:  0.24, font: 0.3,  off: [-0.05, 0.05] }, // 6 Tools — left
 ];
 const STATIONS = SECTIONS.map((s, i) => {
   const c = STATION_CFG[i] ?? STATION_CFG[0];

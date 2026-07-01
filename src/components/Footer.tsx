@@ -70,7 +70,27 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mt-20 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 font-sans text-[10.5px] tracking-[0.25em] uppercase text-ash">
+      {/* ── Support an independent artist ── */}
+      <a
+        href="/support"
+        className="group mt-16 block overflow-hidden border border-accent/40 bg-accent/[0.04] hover:bg-accent/[0.08] transition-colors p-6 md:p-8"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="font-sans text-[10px] tracking-[0.35em] uppercase text-accent mb-2">
+              Support an independent artist
+            </div>
+            <div className="font-display text-bone text-xl md:text-2xl">
+              Rebuilding after a fire — a coffee goes a long way ☕
+            </div>
+          </div>
+          <span className="shrink-0 inline-flex items-center gap-3 border border-accent bg-accent text-void px-6 py-3.5 text-[11px] tracking-[0.25em] uppercase group-hover:bg-accent-soft group-hover:border-accent-soft transition-colors">
+            Support me ↗
+          </span>
+        </div>
+      </a>
+
+      <div className="mt-16 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 font-sans text-[10.5px] tracking-[0.25em] uppercase text-ash">
         <div>© {new Date().getFullYear()} Niko Alerce — All rights reserved</div>
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-1.5 bg-accent rounded-full" />

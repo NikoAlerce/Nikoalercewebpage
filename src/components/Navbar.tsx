@@ -6,15 +6,17 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useWallet } from "./WalletContext";
 
-export const NAV_LINKS = [
+export const NAV_LINKS: { href: string; label: string; accent?: boolean }[] = [
   { href: "/#top", label: "HOME" },
   { href: "/art-on-tezos", label: "ART ON TEZOS" },
   { href: "/music", label: "MUSIC" },
   { href: "/metaverse", label: "3D GALLERY" },
   { href: "/decentraland", label: "DECENTRALAND" },
   { href: "/ar-labs", label: "AR LABS" },
+  { href: "/tools", label: "TOOLS" },
   { href: "/shop", label: "SHOP" },
   { href: "/#about", label: "BIO" },
+  { href: "/support", label: "SUPPORT", accent: true },
 ];
 
 export default function Navbar() {
@@ -80,20 +82,23 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <ul className="hidden md:flex items-center gap-6 lg:gap-9 font-sans text-[11px] lg:text-xs tracking-[0.18em] uppercase">
+        <ul className="hidden lg:flex items-center gap-5 xl:gap-7 font-sans text-[11px] tracking-[0.16em] uppercase">
           {NAV_LINKS.map((l) => (
             <li key={l.href} className="relative group">
               <Link
                 href={l.href}
                 className={clsx(
                   "transition-colors duration-300 py-2 inline-block",
-                  isActive(l.href) ? "text-bone" : "text-ash/65 hover:text-bone",
+                  l.accent
+                    ? "text-accent hover:text-accent-soft font-semibold"
+                    : isActive(l.href) ? "text-bone" : "text-ash/65 hover:text-bone",
                 )}
               >
                 {l.label}
               </Link>
               <span className={clsx(
-                "absolute -bottom-0.5 left-0 h-px bg-bone/70 transition-all duration-500",
+                "absolute -bottom-0.5 left-0 h-px transition-all duration-500",
+                l.accent ? "bg-accent" : "bg-bone/70",
                 isActive(l.href) ? "w-full" : "w-0 group-hover:w-full",
               )} />
             </li>
@@ -123,7 +128,7 @@ export default function Navbar() {
 
         <button
           aria-label="menu"
-          className="md:hidden text-bone text-base"
+          className="lg:hidden text-bone text-base"
           onClick={() => setOpen((o) => !o)}
         >
           {open ? "✕" : "≡"}
@@ -131,7 +136,7 @@ export default function Navbar() {
       </nav>
 
       {open && (
-        <ul className="md:hidden flex flex-col bg-void/95 border-t border-white/5 px-6 py-4 gap-4 text-xs uppercase tracking-[0.2em]">
+        <ul className="lg:hidden flex flex-col bg-void/95 border-t border-white/5 px-6 py-4 gap-4 text-xs uppercase tracking-[0.2em]">
           {NAV_LINKS.map((l) => (
             <li key={l.href}>
               <Link
@@ -139,9 +144,11 @@ export default function Navbar() {
                 onClick={() => setOpen(false)}
                 className={clsx(
                   "transition-colors",
-                  isActive(l.href)
-                    ? "text-accent"
-                    : "text-ash hover:text-bone",
+                  l.accent
+                    ? "text-accent font-semibold"
+                    : isActive(l.href)
+                      ? "text-accent"
+                      : "text-ash hover:text-bone",
                 )}
               >
                 {l.label}
