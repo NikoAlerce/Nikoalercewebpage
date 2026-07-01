@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, type CSSProperties } from "react"
 import { useGLTF, useAnimations, View, PerspectiveCamera } from "@react-three/drei";
 import { clone as skeletonClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
+import { setCharacterVisible } from "@/lib/characterVisibility";
 
 // ────────────────────────────────────────────────────────────────────────────
 // A small animated character (the green-hoodie Mixamo guy) that sits next to a
@@ -165,9 +166,29 @@ type Props = {
 export default function TitleCharacter({ clip, className, size = 300, flip = false }: Props) {
   // <View> renders its OWN tracking div (carrying our className/size) and scissors the
   // character into it on the single shared <CharacterStage> canvas. It also skips drawing
-  // when its div is off-screen, so no extra gating is needed.
+  // when its div is off-screen. We additionally report on-screen state to the shared store so
+  // CharacterStage can PAUSE its render loop when no character is visible (frees the GPU while
+  // you read text or watch the showreel video → no more contention/jank).
+  const trackRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = trackRef.current;
+    if (!node) return;
+    let shown = false;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting === shown) return;
+        shown = e.isIntersecting;
+        setCharacterVisible(shown);
+      },
+      { rootMargin: "150px 0px" },
+    );
+    obs.observe(node);
+    return () => { obs.disconnect(); if (shown) setCharacterVisible(false); };
+  }, []);
+
   return (
     <View
+      ref={trackRef as never}
       aria-hidden
       className={`nk-char${className ? " " + className : ""}`}
       style={{

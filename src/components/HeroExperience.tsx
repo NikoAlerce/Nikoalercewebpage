@@ -58,7 +58,19 @@ const STATIONS = SECTIONS.map((s, i) => {
 const _dir = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _aim = new THREE.Vector3();
+const _mcam = new THREE.Vector3();
+const _off = new THREE.Vector3();
 const _UP = new THREE.Vector3(0, 1, 0);
+
+// On a portrait phone the stations (authored for desktop's wide frame, with the creature
+// pushed sideways to open a lane for the 3D word) crop and mis-aim the creature — and the
+// word isn't even in the scene on mobile (it's a DOM caption). So on mobile we pull the
+// camera back and centre the aim, framing the creature straight-on.
+// Fixed pullback (world units) added along each shot's view ray on mobile. Additive (not a
+// multiplier) so the close party shots gain the room they need while the wide establishing
+// shot — already far — barely moves.
+const MOBILE_PULLBACK = 0.8;
+const MOBILE_FOV = 42;
 
 // ── The animated GLB, centered on origin, feet at y=0, slow idle spin ──
 function Beast() {
@@ -86,7 +98,7 @@ function Beast() {
 }
 
 // ── Cinematic camera: damp toward the active station + a tiny idle drift ──
-function CameraRig({ index }: { index: number }) {
+function CameraRig({ index, mobile }: { index: number; mobile: boolean }) {
   const { camera, size } = useThree();
   const pos = useRef(new THREE.Vector3().copy(STATIONS[0].cam));
   const look = useRef(new THREE.Vector3().copy(STATIONS[0].target));
@@ -94,19 +106,28 @@ function CameraRig({ index }: { index: number }) {
 
   // The browser is wide & short; three's FOV is VERTICAL, so a fixed FOV crops the tall
   // "creature" and pitches the party shots into a high angle. Widen the vertical FOV as the
-  // viewport gets wider so widescreen regains headroom (square previews stay tighter).
+  // viewport gets wider so widescreen regains headroom (square previews stay tighter). On a
+  // portrait phone we hold a wider FOV so the tall creature fits without cropping.
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
     const aspect = size.width / Math.max(1, size.height);
-    cam.fov = THREE.MathUtils.clamp(31 + Math.max(0, aspect - 1.1) * 8, 31, 44);
+    cam.fov = mobile ? MOBILE_FOV : THREE.MathUtils.clamp(31 + Math.max(0, aspect - 1.1) * 8, 31, 44);
     cam.updateProjectionMatrix();
-  }, [camera, size.width, size.height]);
+  }, [camera, size.width, size.height, mobile]);
   useFrame((state, dt) => {
     const st = STATIONS[index];
+    // On mobile pull the camera straight back along its view ray so the creature fits the
+    // narrow portrait frame (the authored close party shots crop it otherwise).
+    let dest = st.cam;
+    if (mobile) {
+      _off.subVectors(st.cam, st.target);
+      const len = _off.length() || 1;
+      dest = _mcam.copy(st.target).addScaledVector(_off, (len + MOBILE_PULLBACK) / len);
+    }
     // Slow, cinematic glide. Higher base = more "remaining" each second = slower settle
     // (0.0016 ≈ snaps in ~0.5s; 0.18 ≈ a smooth ~2.5s drift between stations).
     const k = 1 - Math.pow(0.18, dt);
-    pos.current.lerp(st.cam, k);
+    pos.current.lerp(dest, k);
     look.current.lerp(st.target, k);
     const t = state.clock.elapsedTime;
     camera.position.set(
@@ -114,10 +135,11 @@ function CameraRig({ index }: { index: number }) {
       pos.current.y + Math.sin(t * 0.45) * 0.028,
       pos.current.z + Math.cos(t * 0.27) * 0.035,
     );
-    // Aim sideways off the creature so it sits off-centre, leaving a clear lane for the word.
+    // Desktop: aim sideways off the creature to open a lane for the 3D word. Mobile has no
+    // in-scene word, so centre the aim on the creature (no awkward off-frame push).
     _dir.subVectors(look.current, camera.position).normalize();
     _right.crossVectors(_dir, _UP).normalize();
-    _aim.copy(look.current).addScaledVector(_right, STATIONS[index].aim);
+    _aim.copy(look.current).addScaledVector(_right, mobile ? 0 : st.aim);
     camera.lookAt(_aim);
   });
   return null;
@@ -253,7 +275,7 @@ function Scene({ index, onSelect, mobile }: { index: number; onSelect: (i: numbe
       <pointLight position={[0, 3, -5]} intensity={0.8} color="#ffd9b0" distance={16} decay={2} />
 
       {/* CameraRig first so its per-frame camera update lands BEFORE ActiveLabel reads it. */}
-      <CameraRig index={index} />
+      <CameraRig index={index} mobile={mobile} />
 
       <Suspense fallback={null}>
         <Environment preset="city" />
