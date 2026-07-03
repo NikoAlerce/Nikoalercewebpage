@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import TitleCharacter from "@/components/TitleCharacter";
+import { useLang } from "@/lib/i18n";
 
 const socials = [
   { label: "Objkt — Niko", href: "https://objkt.com/@nikoalerce" },
@@ -12,6 +13,7 @@ const socials = [
 
 export default function Footer() {
   const pathname = usePathname();
+  const { lang } = useLang();
   // Hidden on the immersive 3D gallery (see Navbar).
   if (pathname === "/metaverse") return null;
   return (
@@ -78,14 +80,16 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="font-sans text-[10px] tracking-[0.35em] uppercase text-accent mb-2">
-              Emergency · support us
+              {lang === "es" ? "Emergencia · ayudanos" : "Emergency · support us"}
             </div>
             <div className="font-display text-bone text-xl md:text-2xl">
-              We lost our home to a fire — any help means the world ☕
+              {lang === "es"
+                ? "Perdimos nuestra casa en un incendio — cualquier ayuda vale el mundo ☕"
+                : "We lost our home to a fire — any help means the world ☕"}
             </div>
           </div>
           <span className="shrink-0 inline-flex items-center gap-3 border border-accent bg-accent text-void px-6 py-3.5 text-[11px] tracking-[0.25em] uppercase group-hover:bg-accent-soft group-hover:border-accent-soft transition-colors">
-            Support me ↗
+            {lang === "es" ? "Ayudanos ↗" : "Support us ↗"}
           </span>
         </div>
       </a>

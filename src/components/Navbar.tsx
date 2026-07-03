@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useWallet } from "./WalletContext";
+import { useLang } from "@/lib/i18n";
 
 export const NAV_LINKS: { href: string; label: string; accent?: boolean }[] = [
   { href: "/#top", label: "HOME" },
@@ -27,6 +28,7 @@ export default function Navbar() {
   const [banner, setBanner] = useState(false);
   const pathname = usePathname();
   const { address, connecting, connect, disconnect } = useWallet();
+  const { lang, setLang } = useLang();
 
   useEffect(() => {
     setBanner(localStorage.getItem("nikoalerce:banner-fire2") !== "dismissed");
@@ -93,7 +95,9 @@ export default function Navbar() {
               href="/support"
               className="font-sans text-[10px] md:text-[11px] tracking-[0.18em] uppercase font-semibold hover:underline text-center leading-snug"
             >
-              We lost our home to a fire — any help means the world · Support us →
+              {lang === "es"
+                ? "Perdimos nuestra casa en un incendio — cualquier ayuda vale el mundo · Ayudanos →"
+                : "We lost our home to a fire — any help means the world · Support us →"}
             </Link>
             <button
               aria-label="Dismiss"
@@ -141,7 +145,22 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <div className="hidden lg:flex items-center">
+        <div className="hidden lg:flex items-center gap-3">
+          {/* Language switch — manual override for the browser-language autodetect. */}
+          <div className="flex items-center border border-white/15 rounded-full overflow-hidden font-sans text-[10px] tracking-[0.1em]">
+            {(["en", "es"] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={clsx(
+                  "px-2.5 py-1.5 uppercase transition-colors",
+                  lang === l ? "bg-bone text-void font-bold" : "text-ash hover:text-bone",
+                )}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
           {address ? (
             <button
               onClick={() => disconnect()}
@@ -162,13 +181,23 @@ export default function Navbar() {
           )}
         </div>
 
-        <button
-          aria-label="menu"
-          className="lg:hidden text-bone text-base"
-          onClick={() => setOpen((o) => !o)}
-        >
-          {open ? "✕" : "≡"}
-        </button>
+        <div className="lg:hidden flex items-center gap-4">
+          {/* Compact language toggle (tap = switch) */}
+          <button
+            aria-label="language"
+            onClick={() => setLang(lang === "es" ? "en" : "es")}
+            className="font-sans text-[10px] tracking-[0.15em] uppercase border border-white/20 rounded-full px-2.5 py-1 text-ash hover:text-bone transition-colors"
+          >
+            {lang === "es" ? "ES" : "EN"}
+          </button>
+          <button
+            aria-label="menu"
+            className="text-bone text-base"
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? "✕" : "≡"}
+          </button>
+        </div>
       </nav>
 
       {open && (

@@ -8,9 +8,11 @@ import BackgroundMusic from "./BackgroundMusic";
 import CharacterStage from "./CharacterStage";
 import { TokenViewerProvider } from "./TokenViewerContext";
 import { WalletProvider } from "./WalletContext";
+import { LangProvider } from "@/lib/i18n";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
+    <LangProvider>
     <WalletProvider>
       <TokenViewerProvider>
         <Navbar />
@@ -22,5 +24,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <CharacterStage />
       </TokenViewerProvider>
     </WalletProvider>
+    </LangProvider>
   );
 }

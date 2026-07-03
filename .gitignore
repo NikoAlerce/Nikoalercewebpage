@@ -24,9 +24,11 @@ next-env.d.ts
 # optimized /public/characters/character.glb (mesh once + all clips + Draco + WebP).
 /public/fbx/
 
-# Raw fire photos (heavy phone JPGs) — the site ships the optimized /public/fire-*.webp.
+# Raw fire photos/videos (heavy phone originals) — the site ships the optimized
+# /public/fire-*.webp, /public/fire2-*.{webp,mp4} and /public/og-support.jpg.
 /public/20260109_215119.jpg
 /public/20260109_215535.jpg
 /public/IMG_20260111_111748.jpg
 /public/Screenshot_20260112_105653_Instagram.jpg
 /public/char-source-bust.png
+/public/WhatsApp*
