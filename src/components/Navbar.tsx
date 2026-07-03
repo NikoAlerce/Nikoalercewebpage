@@ -22,8 +22,19 @@ export const NAV_LINKS: { href: string; label: string; accent?: boolean }[] = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // Emergency campaign strip — dismissible, remembered per browser. Starts hidden so the
+  // server render matches, then shows unless previously dismissed.
+  const [banner, setBanner] = useState(false);
   const pathname = usePathname();
   const { address, connecting, connect, disconnect } = useWallet();
+
+  useEffect(() => {
+    setBanner(localStorage.getItem("nikoalerce:banner-fire2") !== "dismissed");
+  }, []);
+  const dismissBanner = () => {
+    setBanner(false);
+    localStorage.setItem("nikoalerce:banner-fire2", "dismissed");
+  };
 
   useEffect(() => {
     let raf = 0;
@@ -70,11 +81,36 @@ export default function Navbar() {
       className={clsx(
         "fixed top-0 left-0 right-0 z-[60] transition-all duration-500",
         scrolled
-          ? "backdrop-blur-xl bg-void/60 border-b border-white/5 py-2"
-          : "bg-transparent py-4",
+          ? "backdrop-blur-xl bg-void/60 border-b border-white/5"
+          : "bg-transparent",
       )}
     >
-      <nav className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
+      {/* ── Emergency campaign strip (dismissible) ── */}
+      {banner && !pathname.startsWith("/support") && (
+        <div className="bg-accent text-void">
+          <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-center gap-3 py-1.5">
+            <Link
+              href="/support"
+              className="font-sans text-[10px] md:text-[11px] tracking-[0.18em] uppercase font-semibold hover:underline text-center leading-snug"
+            >
+              We lost our home to a fire — any help means the world · Support us →
+            </Link>
+            <button
+              aria-label="Dismiss"
+              onClick={dismissBanner}
+              className="shrink-0 text-void/70 hover:text-void text-sm leading-none px-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      <nav
+        className={clsx(
+          "max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between transition-all duration-500",
+          scrolled ? "py-2" : "py-4",
+        )}
+      >
         <Link href="/" className="flex items-center gap-2.5 group py-3">
           <span className="w-1.5 h-1.5 rounded-full bg-accent group-hover:bg-bone transition-colors" />
           <span className="font-display font-semibold text-bone text-xl md:text-2xl leading-none tracking-tight">
