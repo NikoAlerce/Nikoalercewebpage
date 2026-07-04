@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useLang } from "@/lib/i18n";
 
 const HeroExperience = dynamic(() => import("./HeroExperience"), {
   ssr: false,
@@ -11,11 +12,26 @@ const HeroExperience = dynamic(() => import("./HeroExperience"), {
   ),
 });
 
+const T = {
+  en: {
+    role: "Multidisciplinary artist",
+    tagline: "3D art, animation, music & immersive worlds — one studio from El Bolsón, Patagonia.",
+    scroll: "Scroll",
+  },
+  es: {
+    role: "Artista multidisciplinario",
+    tagline: "Arte 3D, animación, música y mundos inmersivos — un estudio desde El Bolsón, Patagonia.",
+    scroll: "Bajá",
+  },
+};
+
 // Fine film grain (tasteful, not glitch) — adds a premium, photographed texture.
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 export default function Hero() {
+  const { lang } = useLang();
+  const t = T[lang];
   return (
     <section id="top" className="relative min-h-[100svh] w-full overflow-hidden bg-black">
       {/* Pure-black stage. The "magic" (drifting motes + bloom) lives inside the 3D scene. */}
@@ -38,7 +54,7 @@ export default function Hero() {
         <div className="flex items-start md:items-center gap-3 font-sans text-[10px] md:text-[11px] tracking-[0.38em] uppercase text-bone/85 leading-relaxed">
           <span className="w-7 h-px bg-accent shrink-0 mt-1.5 md:mt-0" />
           <span>
-            Multidisciplinary artist <span className="text-accent">·</span> Patagonia
+            {t.role} <span className="text-accent">·</span> Patagonia
           </span>
         </div>
       </div>
@@ -56,13 +72,13 @@ export default function Hero() {
           className="mt-4 font-sans text-sm md:text-[15px] text-bone/75 max-w-sm leading-relaxed"
           style={{ textShadow: "0 1px 16px rgba(0,0,0,0.6)" }}
         >
-          3D art, animation, music &amp; immersive worlds — one studio from El Bolsón, Patagonia.
+          {t.tagline}
         </p>
       </div>
 
       {/* Scroll cue — bottom-right, quiet. */}
       <div className="absolute bottom-12 md:bottom-16 right-6 md:right-12 z-10 pointer-events-none hidden sm:flex items-center gap-3 text-bone/45 animate-fade-up" style={{ animationDelay: "0.5s" }}>
-        <span className="font-sans text-[10px] tracking-[0.35em] uppercase">Scroll</span>
+        <span className="font-sans text-[10px] tracking-[0.35em] uppercase">{t.scroll}</span>
         <span className="w-px h-8 bg-gradient-to-b from-bone/50 to-transparent" />
       </div>
     </section>

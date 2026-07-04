@@ -7,17 +7,17 @@ import clsx from "clsx";
 import { useWallet } from "./WalletContext";
 import { useLang } from "@/lib/i18n";
 
-export const NAV_LINKS: { href: string; label: string; accent?: boolean }[] = [
-  { href: "/#top", label: "HOME" },
-  { href: "/art-on-tezos", label: "ART ON TEZOS" },
-  { href: "/music", label: "MUSIC" },
-  { href: "/metaverse", label: "3D GALLERY" },
-  { href: "/decentraland", label: "DECENTRALAND" },
-  { href: "/ar-labs", label: "AR LABS" },
-  { href: "/tools", label: "TOOLS" },
-  { href: "/shop", label: "SHOP" },
-  { href: "/#about", label: "BIO" },
-  { href: "/support", label: "SUPPORT", accent: true },
+export const NAV_LINKS: { href: string; label: string; labelEs?: string; accent?: boolean }[] = [
+  { href: "/#top", label: "HOME", labelEs: "INICIO" },
+  { href: "/art-on-tezos", label: "ART ON TEZOS", labelEs: "ARTE EN TEZOS" },
+  { href: "/music", label: "MUSIC", labelEs: "MÚSICA" },
+  { href: "/metaverse", label: "3D GALLERY", labelEs: "GALERÍA 3D" },
+  { href: "/decentraland", label: "DECENTRALAND", labelEs: "DECENTRALAND" },
+  { href: "/ar-labs", label: "AR LABS", labelEs: "AR LABS" },
+  { href: "/tools", label: "TOOLS", labelEs: "HERRAMIENTAS" },
+  { href: "/shop", label: "SHOP", labelEs: "TIENDA" },
+  { href: "/#about", label: "BIO", labelEs: "BIO" },
+  { href: "/support", label: "SUPPORT", labelEs: "AYUDA", accent: true },
 ];
 
 export default function Navbar() {
@@ -134,7 +134,7 @@ export default function Navbar() {
                     : isActive(l.href) ? "text-bone" : "text-ash/65 hover:text-bone",
                 )}
               >
-                {l.label}
+                {lang === "es" ? l.labelEs ?? l.label : l.label}
               </Link>
               <span className={clsx(
                 "absolute -bottom-0.5 left-0 h-px transition-all duration-500",
@@ -176,7 +176,7 @@ export default function Navbar() {
               disabled={connecting}
               className="font-sans text-[11px] tracking-[0.15em] uppercase px-5 py-2 rounded-full border border-white/20 text-bone hover:border-bone hover:bg-bone hover:text-void transition-all disabled:opacity-50"
             >
-              {connecting ? "Connecting…" : "Connect"}
+              {connecting ? (lang === "es" ? "Conectando…" : "Connecting…") : (lang === "es" ? "Conectar" : "Connect")}
             </button>
           )}
         </div>
@@ -216,7 +216,7 @@ export default function Navbar() {
                       : "text-ash hover:text-bone",
                 )}
               >
-                {l.label}
+                {lang === "es" ? l.labelEs ?? l.label : l.label}
               </Link>
             </li>
           ))}
@@ -230,7 +230,7 @@ export default function Navbar() {
                 className="w-full px-4 py-3 border border-white/20 text-bone flex items-center justify-center gap-2"
               >
                 <span className="w-1.5 h-1.5 bg-accent rounded-full" />
-                {address.slice(0, 6)}…{address.slice(-4)} · DISCONNECT
+                {address.slice(0, 6)}…{address.slice(-4)} · {lang === "es" ? "DESCONECTAR" : "DISCONNECT"}
               </button>
             ) : (
               <button
@@ -238,7 +238,7 @@ export default function Navbar() {
                 disabled={connecting}
                 className="w-full px-4 py-3 border border-white/15 text-bone hover:border-accent hover:bg-accent hover:text-void transition-all disabled:opacity-50"
               >
-                {connecting ? "CONNECTING…" : "CONNECT_WALLET"}
+                {connecting ? (lang === "es" ? "CONECTANDO…" : "CONNECTING…") : (lang === "es" ? "CONECTAR_WALLET" : "CONNECT_WALLET")}
               </button>
             )}
           </li>

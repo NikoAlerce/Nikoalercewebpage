@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import localFont from "next/font/local";
+import { cookies } from "next/headers";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 
@@ -72,8 +73,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = cookies();
+  const lang = cookieStore.get("nk_lang")?.value || "en";
   return (
-    <html lang="en" className={`${mono.variable} ${grotesk.variable} ${graffiti.variable}`}>
+    <html lang={lang} className={`${mono.variable} ${grotesk.variable} ${graffiti.variable}`}>
       <body className="bg-void text-bone antialiased">
         <AppShell>{children}</AppShell>
       </body>

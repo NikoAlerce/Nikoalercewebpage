@@ -3,38 +3,59 @@
 import { useState } from "react";
 import clsx from "clsx";
 import NFTGallery from "./NFTGallery";
+import { useLang } from "@/lib/i18n";
 
 // "Art on Tezos" groups the two Objkt collections as sub-categories: Works (the main
 // gallery) and Sidequest (the experimental alter ego). One page, instant tab switch —
 // NFTGallery re-fetches when the alias changes.
-const COLLECTIONS = [
-  {
-    key: "works",
-    label: "Works",
-    alias: "nikoalerce",
-    subtitle:
-      "The main gallery — 3D animation, illustration and pieces open to collect, synced live with Tezos.",
-  },
-  {
-    key: "sidequest",
-    label: "Sidequest",
-    alias: "sidequest",
-    subtitle:
-      "The experimental alter ego — iterations, drafts and happy accidents that don't fit the main canon.",
-  },
-] as const;
+const COLLECTIONS = {
+  en: [
+    {
+      key: "works" as const,
+      label: "Works",
+      alias: "nikoalerce",
+      subtitle:
+        "The main gallery — 3D animation, illustration and pieces open to collect, synced live with Tezos.",
+    },
+    {
+      key: "sidequest" as const,
+      label: "Sidequest",
+      alias: "sidequest",
+      subtitle:
+        "The experimental alter ego — iterations, drafts and happy accidents that don't fit the main canon.",
+    },
+  ],
+  es: [
+    {
+      key: "works" as const,
+      label: "Works",
+      alias: "nikoalerce",
+      subtitle:
+        "La galería principal — animación 3D, ilustración y piezas abiertas para coleccionar, sincronizadas en vivo con Tezos.",
+    },
+    {
+      key: "sidequest" as const,
+      label: "Sidequest",
+      alias: "sidequest",
+      subtitle:
+        "El alter ego experimental — iteraciones, borradores y accidentes felices que no entran en el canon principal.",
+    },
+  ],
+};
 
-type Key = (typeof COLLECTIONS)[number]["key"];
+type Key = "works" | "sidequest";
 
 export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
+  const { lang } = useLang();
+  const collections = COLLECTIONS[lang];
   const [active, setActive] = useState<Key>(
     initialTab === "sidequest" ? "sidequest" : "works",
   );
-  const col = COLLECTIONS.find((c) => c.key === active) ?? COLLECTIONS[0];
+  const col = collections.find((c) => c.key === active) ?? collections[0];
 
   const tabs = (
     <div className="inline-flex items-center border border-white/12 w-fit">
-      {COLLECTIONS.map((c) => (
+      {collections.map((c) => (
         <button
           key={c.key}
           onClick={() => setActive(c.key)}
@@ -55,8 +76,8 @@ export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
     <NFTGallery
       id="art-on-tezos"
       alias={col.alias}
-      title="Art on Tezos"
-      kicker="Live on Tezos"
+      title={lang === "es" ? "Arte en Tezos" : "Art on Tezos"}
+      kicker={lang === "es" ? "En vivo en Tezos" : "Live on Tezos"}
       subtitle={col.subtitle}
       tabsSlot={tabs}
     />

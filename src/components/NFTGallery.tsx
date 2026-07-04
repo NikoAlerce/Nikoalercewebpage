@@ -6,6 +6,7 @@ import TitleCharacter from "@/components/TitleCharacter";
 import NFTCard from "./NFTCard";
 import { isDisplayableToken, tokenStatus, detectKind } from "@/lib/objkt";
 import type { ObjktHolder, ObjktToken } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 type Filter = "all" | "for_sale" | "sold_out" | "in_collection";
 type MediaFilter = "all" | "image" | "gif" | "video" | "model" | "interactive";
@@ -39,6 +40,67 @@ type ApiResp = {
   tokens: ObjktToken[];
 };
 
+const TG = {
+  en: {
+    wallet: "Wallet",
+    pieces: "Pieces",
+    status: "Status",
+    fetching: "Fetching",
+    error: "Error",
+    synced: "Synced",
+    viewOnObjkt: "View on Objkt",
+    statusLabel: "Status",
+    typeLabel: "Type",
+    filterAll: "All",
+    filterForSale: "For sale",
+    filterSoldOut: "Sold out",
+    filterArchive: "Archive",
+    mediaAll: "All types",
+    mediaImage: "Image",
+    mediaGif: "GIF",
+    mediaVideo: "Video",
+    media3d: "3D",
+    mediaInteractive: "Interactive",
+    errorTitle: "Couldn\u2019t reach Objkt",
+    retry: "Retry",
+    emptyTitle: "Nothing here yet",
+    emptyType: "No pieces match the current type + status filter.",
+    emptyForSale: "No pieces have an active listing right now.",
+    emptySoldOut: "No pieces are fully sold out yet.",
+    emptyArchive: "No archived pieces were found for this filter.",
+    emptyDefault: "No pieces were found for",
+  },
+  es: {
+    wallet: "Wallet",
+    pieces: "Piezas",
+    status: "Estado",
+    fetching: "Cargando",
+    error: "Error",
+    synced: "Sincronizado",
+    viewOnObjkt: "Ver en Objkt",
+    statusLabel: "Estado",
+    typeLabel: "Tipo",
+    filterAll: "Todas",
+    filterForSale: "En venta",
+    filterSoldOut: "Agotadas",
+    filterArchive: "Archivo",
+    mediaAll: "Todos los tipos",
+    mediaImage: "Imagen",
+    mediaGif: "GIF",
+    mediaVideo: "Video",
+    media3d: "3D",
+    mediaInteractive: "Interactivo",
+    errorTitle: "No se pudo conectar con Objkt",
+    retry: "Reintentar",
+    emptyTitle: "Nada por acá todavía",
+    emptyType: "Ninguna pieza coincide con el filtro de tipo + estado actual.",
+    emptyForSale: "No hay piezas con listing activo en este momento.",
+    emptySoldOut: "Ninguna pieza está completamente agotada todavía.",
+    emptyArchive: "No se encontraron piezas archivadas para este filtro.",
+    emptyDefault: "No se encontraron piezas para",
+  },
+};
+
 /** Fisher-Yates shuffle, returns a new array */
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -57,6 +119,9 @@ export default function NFTGallery({
   tabsSlot,
   id,
 }: Props) {
+  const { lang } = useLang();
+  const t = TG[lang];
+
   const [tokens, setTokens] = useState<ObjktToken[]>([]);
   const [holder, setHolder] = useState<ObjktHolder | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,23 +191,23 @@ export default function NFTGallery({
   }, [tokens, filter, media]);
 
   const tabs: { key: Filter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "for_sale", label: "For sale" },
-    { key: "sold_out", label: "Sold out" },
-    { key: "in_collection", label: "Archive" },
+    { key: "all", label: t.filterAll },
+    { key: "for_sale", label: t.filterForSale },
+    { key: "sold_out", label: t.filterSoldOut },
+    { key: "in_collection", label: t.filterArchive },
   ];
 
   // Only show media-type tabs the artist actually has.
   const mediaTabs: { key: MediaFilter; label: string }[] = (
     [
-      { key: "all", label: "All types" },
-      { key: "image", label: "Image" },
-      { key: "gif", label: "GIF" },
-      { key: "video", label: "Video" },
-      { key: "model", label: "3D" },
-      { key: "interactive", label: "Interactive" },
+      { key: "all", label: t.mediaAll },
+      { key: "image", label: t.mediaImage },
+      { key: "gif", label: t.mediaGif },
+      { key: "video", label: t.mediaVideo },
+      { key: "model", label: t.media3d },
+      { key: "interactive", label: t.mediaInteractive },
     ] as { key: MediaFilter; label: string }[]
-  ).filter((t) => t.key === "all" || mediaCounts[t.key] > 0);
+  ).filter((tab) => tab.key === "all" || mediaCounts[tab.key] > 0);
 
   const tabClass = (active: boolean) =>
     clsx(
@@ -184,7 +249,7 @@ export default function NFTGallery({
         <dl className="text-[12px] font-sans shrink-0 md:min-w-[15rem]">
           <div className="flex justify-between gap-6 py-2 border-b border-white/8">
             <dt className="text-ash tracking-[0.18em] uppercase text-[10px] self-center">
-              Wallet
+              {t.wallet}
             </dt>
             <dd className="text-bone font-mono">
               {holder?.address
@@ -194,20 +259,20 @@ export default function NFTGallery({
           </div>
           <div className="flex justify-between gap-6 py-2 border-b border-white/8">
             <dt className="text-ash tracking-[0.18em] uppercase text-[10px] self-center">
-              Pieces
+              {t.pieces}
             </dt>
             <dd className="text-bone">{loading ? "…" : tokens.length}</dd>
           </div>
           <div className="flex justify-between gap-6 py-2 border-b border-white/8">
             <dt className="text-ash tracking-[0.18em] uppercase text-[10px] self-center">
-              Status
+              {t.status}
             </dt>
             <dd className="flex items-center gap-2 text-bone">
               {!loading && !error && (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               )}
               <span className={loading ? "text-ash animate-pulse" : error ? "text-accent" : ""}>
-                {loading ? "Fetching" : error ? "Error" : "Synced"}
+                {loading ? t.fetching : error ? t.error : t.synced}
               </span>
             </dd>
           </div>
@@ -217,7 +282,7 @@ export default function NFTGallery({
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-2 mt-3 text-bone/85 hover:text-accent transition-colors"
           >
-            <span className="link-underline">View on Objkt</span>
+            <span className="link-underline">{t.viewOnObjkt}</span>
             <span className="text-ash/50 group-hover:text-accent transition-colors">↗</span>
           </a>
         </dl>
@@ -229,7 +294,7 @@ export default function NFTGallery({
           {/* Status */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[10px] tracking-[0.3em] uppercase text-ash/50 w-12 shrink-0">
-              Status
+              {t.statusLabel}
             </span>
             <div className="flex flex-wrap items-center border border-white/10 w-fit">
               {tabs.map((tab) => (
@@ -249,7 +314,7 @@ export default function NFTGallery({
           {mediaTabs.length > 2 && (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-[10px] tracking-[0.3em] uppercase text-ash/50 w-12 shrink-0">
-                Type
+                {t.typeLabel}
               </span>
               <div className="flex flex-wrap items-center border border-white/10 w-fit">
                 {mediaTabs.map((tab) => (
@@ -284,14 +349,14 @@ export default function NFTGallery({
       {!loading && error && (
         <div className="border border-accent/40 bg-accent/5 p-6 text-sm text-bone">
           <div className="text-accent text-[11px] tracking-[0.25em] uppercase mb-2">
-            Couldn&apos;t reach Objkt
+            {t.errorTitle}
           </div>
           <div className="text-ash">{error}</div>
           <button
             onClick={load}
             className="mt-4 px-4 py-2 border border-white/20 text-[11px] tracking-[0.25em] uppercase hover:border-accent hover:text-accent transition-colors"
           >
-            Retry
+            {t.retry}
           </button>
         </div>
       )}
@@ -299,17 +364,17 @@ export default function NFTGallery({
       {/* Empty */}
       {!loading && !error && displayed.length === 0 && (
         <div className="border border-white/10 p-10 text-center text-ash">
-          <div className="font-display text-bone text-xl mb-2">Nothing here yet</div>
+          <div className="font-display text-bone text-xl mb-2">{t.emptyTitle}</div>
           <div className="text-sm">
             {media !== "all"
-              ? "No pieces match the current type + status filter."
+              ? t.emptyType
               : filter === "for_sale"
-              ? "No pieces have an active listing right now."
+              ? t.emptyForSale
               : filter === "sold_out"
-              ? "No pieces are fully sold out yet."
+              ? t.emptySoldOut
               : filter === "in_collection"
-              ? "No archived pieces were found for this filter."
-              : `No pieces were found for @${alias}.`}
+              ? t.emptyArchive
+              : `${t.emptyDefault} @${alias}.`}
           </div>
         </div>
       )}

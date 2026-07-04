@@ -1,6 +1,7 @@
 "use client";
 
 import TitleCharacter from "@/components/TitleCharacter";
+import { useLang } from "@/lib/i18n";
 
 // YouTube videos to feature. Titles can be edited freely.
 const YOUTUBE = [
@@ -17,26 +18,64 @@ const sc = (url: string, visual = false) =>
 const SOUNDCLOUD = [
   {
     label: "El Bosquecito Records",
-    sub: "Label · full catalogue",
+    subKey: "scCatalogueSub" as const,
     url: "https://soundcloud.com/el-bosquecito-records",
     visual: true,
     height: 420,
   },
   {
     label: "DJ set · Casa Iori",
-    sub: "Live set · Feb 2023",
+    subKey: "scLiveSub" as const,
     url: "https://soundcloud.com/al-er-ce/dj-set-casa-iori-2-feb-2023",
     visual: false,
     height: 166,
   },
 ];
 
-const SERVICES = [
-  "Music production & beatmaking",
-  "Recording, mixing & mastering",
-  "Sound design for video & 3D / XR",
-  "Original scores & custom tracks",
-];
+const T = {
+  en: {
+    sectionTitle: "Music",
+    description: "Original music produced, recorded, mixed and mastered in-house — hip-hop, trap, lo-fi and experimental electronic, released under my independent label El Bosquecito Records.",
+    specLabel: "Label",
+    specStreaming: "Streaming",
+    specBase: "Base",
+    videoLabel: "Video",
+    scLabel: "SoundCloud",
+    scCatalogueSub: "Label · full catalogue",
+    scLiveSub: "Live set · Feb 2023",
+    open: "Open ↗",
+    servicesLabel: "Producer services",
+    workWithMe: "Work with me",
+    services: [
+      "Music production & beatmaking",
+      "Recording, mixing & mastering",
+      "Sound design for video & 3D / XR",
+      "Original scores & custom tracks",
+    ],
+    startProject: "Start a project",
+  },
+  es: {
+    sectionTitle: "Música",
+    description: "Música original producida, grabada, mezclada y masterizada in-house — hip-hop, trap, lo-fi y electrónica experimental, publicada bajo mi sello independiente El Bosquecito Records.",
+    specLabel: "Sello",
+    specStreaming: "Streaming",
+    specBase: "Base",
+    videoLabel: "Video",
+    scLabel: "SoundCloud",
+    scCatalogueSub: "Sello · catálogo completo",
+    scLiveSub: "Set en vivo · Feb 2023",
+    open: "Abrir ↗",
+    servicesLabel: "Servicios de producción",
+    workWithMe: "Trabajá conmigo",
+    services: [
+      "Producción musical y beatmaking",
+      "Grabación, mezcla y mastering",
+      "Diseño de sonido para video y 3D / XR",
+      "Scores originales y tracks a medida",
+    ],
+    startProject: "Empezar un proyecto",
+  },
+};
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -50,6 +89,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function Music() {
+  const { lang } = useLang();
+  const t = T[lang];
+
   return (
     <section
       id="music"
@@ -66,21 +108,19 @@ export default function Music() {
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
-              Music
+              {t.sectionTitle}
             </h2>
             <TitleCharacter clip="hiphop" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
-            Original music produced, recorded, mixed and mastered in-house —
-            hip-hop, trap, lo-fi and experimental electronic, released under my
-            independent label El Bosquecito Records.
+            {t.description}
           </p>
         </div>
         <dl className="text-[12px] font-sans shrink-0 md:min-w-[16rem]">
           {[
-            { k: "Label", v: "El Bosquecito" },
-            { k: "Streaming", v: "Spotify · Tidal · Deezer" },
-            { k: "Base", v: "El Bolsón, AR" },
+            { k: t.specLabel, v: "El Bosquecito" },
+            { k: t.specStreaming, v: "Spotify · Tidal · Deezer" },
+            { k: t.specBase, v: "El Bolsón, AR" },
           ].map((r) => (
             <div
               key={r.k}
@@ -96,7 +136,7 @@ export default function Music() {
       </div>
 
       {/* ── Videos ── */}
-      <SectionLabel>Video</SectionLabel>
+      <SectionLabel>{t.videoLabel}</SectionLabel>
       <div className="grid md:grid-cols-2 gap-3 md:gap-4 mb-16">
         {YOUTUBE.map((v) => (
           <div key={v.id} className="border border-white/10 bg-ink group">
@@ -128,14 +168,14 @@ export default function Music() {
       </div>
 
       {/* ── SoundCloud ── */}
-      <SectionLabel>SoundCloud</SectionLabel>
+      <SectionLabel>{t.scLabel}</SectionLabel>
       <div className="grid lg:grid-cols-2 gap-3 md:gap-4 mb-16">
         {SOUNDCLOUD.map((s) => (
           <div key={s.url} className="border border-white/10 bg-ink p-3">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
                 <div className="text-sm font-medium text-bone">{s.label}</div>
-                <div className="text-[11px] text-ash">{s.sub}</div>
+                <div className="text-[11px] text-ash">{t[s.subKey]}</div>
               </div>
               <a
                 href={s.url}
@@ -143,7 +183,7 @@ export default function Music() {
                 rel="noopener noreferrer"
                 className="text-[10px] tracking-[0.3em] uppercase text-ash hover:text-accent whitespace-nowrap"
               >
-                Open ↗
+                {t.open}
               </a>
             </div>
             <iframe
@@ -163,12 +203,12 @@ export default function Music() {
       {/* ── Producer services ── */}
       <div className="border border-white/10 bg-void/40 p-6 md:p-10 grid md:grid-cols-[1fr_auto] gap-8 items-center">
         <div>
-          <SectionLabel>Producer services</SectionLabel>
+          <SectionLabel>{t.servicesLabel}</SectionLabel>
           <h3 className="font-display text-bone text-3xl md:text-4xl leading-[0.95] mb-5">
-            Work with me
+            {t.workWithMe}
           </h3>
           <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5 text-[15px] text-bone/90">
-            {SERVICES.map((s) => (
+            {t.services.map((s) => (
               <li key={s} className="flex items-start gap-2.5">
                 <span className="text-accent mt-1.5 w-2 h-px shrink-0 bg-accent" />
                 <span>{s}</span>
@@ -180,7 +220,7 @@ export default function Music() {
           href="mailto:alercebolson@gmail.com?subject=Music%20production%20inquiry"
           className="group inline-flex items-center justify-center gap-3 whitespace-nowrap border border-bone/30 text-bone hover:bg-accent hover:border-accent hover:text-void transition-colors px-6 py-4 text-[11px] tracking-[0.25em] uppercase"
         >
-          Start a project
+          {t.startProject}
           <span className="group-hover:translate-x-1 transition-transform">→</span>
         </a>
       </div>

@@ -5,15 +5,21 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 // ─────────────────────────────────────────────────────────────────────────────
 // Tiny site-wide language context (en / es).
 //
-// Detection: a manual choice (persisted in localStorage) always wins; otherwise
-// we use the BROWSER language — a better signal than IP geolocation (an
-// Argentine abroad still reads Spanish; an English speaker in Argentina still
-// reads English), needs no external service, and resolves instantly on the
-// client. The navbar switch covers any wrong guess.
+// Detection priority: a manual choice via the switch (persisted in the `nk_lang`
+// cookie) always wins → else the country by IP (middleware.ts sets the same
+// cookie on first visit from the Vercel geo header) → else the browser language
+// (fallback for local dev / no-geo). The cookie is shared with the middleware so
+// server and client agree.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Lang = "en" | "es";
-const STORAGE_KEY = "nikoalerce:lang";
+const COOKIE_KEY = "nk_lang";
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({
   lang: "en",
@@ -25,7 +31,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = readCookie(COOKIE_KEY); // set by the switch, or by IP in middleware
     if (saved === "en" || saved === "es") {
       setLangState(saved);
       return;
@@ -36,7 +42,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
   const setLang = (l: Lang) => {
     setLangState(l);
-    localStorage.setItem(STORAGE_KEY, l);
+    document.cookie = `${COOKIE_KEY}=${l}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   };
 
   return <LangContext.Provider value={{ lang, setLang }}>{children}</LangContext.Provider>;

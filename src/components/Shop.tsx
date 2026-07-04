@@ -1,6 +1,7 @@
 "use client";
 
 import TitleCharacter from "@/components/TitleCharacter";
+import { useLang } from "@/lib/i18n";
 
 type Product = {
   id: string;
@@ -46,7 +47,47 @@ const products: Product[] = [
   },
 ];
 
+const T = {
+  en: {
+    kicker: "Store",
+    sectionTitle: "Shop",
+    description: "Physical objects from the studio — limited editions that carry the work into the analog world.",
+    underConstruction: "Under construction · store not yet live",
+    specShipping: "Shipping",
+    specShippingVal: "Worldwide",
+    specPayment: "Payment",
+    specStock: "Stock",
+    specStockVal: "Limited",
+    inStock: "In stock",
+    coming: "Coming",
+    soldOut: "Sold out",
+    addToCart: "Add to cart",
+    notifyMe: "Notify me",
+    checkoutNote: "Checkout integration ready — Stripe / Shopify / Tezos",
+  },
+  es: {
+    kicker: "Tienda",
+    sectionTitle: "Tienda",
+    description: "Objetos físicos del estudio — ediciones limitadas que llevan la obra al mundo analógico.",
+    underConstruction: "En construcción · tienda aún no activa",
+    specShipping: "Envío",
+    specShippingVal: "Mundial",
+    specPayment: "Pago",
+    specStock: "Stock",
+    specStockVal: "Limitado",
+    inStock: "En stock",
+    coming: "Próximamente",
+    soldOut: "Agotado",
+    addToCart: "Agregar al carrito",
+    notifyMe: "Avisame",
+    checkoutNote: "Integración de checkout lista — Stripe / Shopify / Tezos",
+  },
+};
+
 export default function Shop() {
+  const { lang } = useLang();
+  const t = T[lang];
+
   return (
     <section
       id="shop"
@@ -57,32 +98,31 @@ export default function Shop() {
           <div className="flex items-center gap-4 mb-6">
             <span className="w-10 h-px rule-accent" />
             <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
-              Store
+              {t.kicker}
             </span>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">
-              Shop
+              {t.sectionTitle}
             </h2>
             <TitleCharacter clip="searching" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 max-w-xl text-[15px] md:text-base text-ash leading-relaxed">
-            Physical objects from the studio — limited editions that carry the
-            work into the analog world.
+            {t.description}
           </p>
           <div className="mt-6 inline-flex items-center gap-3 border border-white/15 bg-white/[0.03] px-4 py-2">
             <span className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
             <span className="text-[10px] tracking-[0.3em] text-bone/80 uppercase">
-              Under construction · store not yet live
+              {t.underConstruction}
             </span>
           </div>
         </div>
 
         <dl className="text-[12px] font-sans shrink-0 md:min-w-[15rem]">
           {[
-            { k: "Shipping", v: "Worldwide" },
-            { k: "Payment", v: "Card · USDT · XTZ" },
-            { k: "Stock", v: "Limited" },
+            { k: t.specShipping, v: t.specShippingVal },
+            { k: t.specPayment, v: "Card · USDT · XTZ" },
+            { k: t.specStock, v: t.specStockVal },
           ].map((r) => (
             <div
               key={r.k}
@@ -109,10 +149,10 @@ export default function Shop() {
               </div>
               <div className="absolute top-2 left-2 text-[9px] tracking-[0.2em] uppercase px-1.5 py-0.5 bg-void/80 border border-white/10 text-ash">
                 {p.status === "available"
-                  ? "In stock"
+                  ? t.inStock
                   : p.status === "soon"
-                  ? "Coming"
-                  : "Sold out"}
+                  ? t.coming
+                  : t.soldOut}
               </div>
             </div>
 
@@ -132,9 +172,9 @@ export default function Shop() {
                 className="mt-4 w-full text-[11px] tracking-[0.2em] uppercase border border-white/10 px-3 py-2 hover:border-accent hover:text-accent disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:text-ash transition-colors"
               >
                 {p.status === "available"
-                  ? "Add to cart"
+                  ? t.addToCart
                   : p.status === "soon"
-                  ? "Notify me"
+                  ? t.notifyMe
                   : "—"}
               </button>
             </div>
@@ -143,7 +183,7 @@ export default function Shop() {
       </div>
 
       <p className="mt-8 text-[11px] tracking-[0.2em] uppercase text-ash/60 text-center">
-        Checkout integration ready — Stripe / Shopify / Tezos
+        {t.checkoutNote}
       </p>
     </section>
   );

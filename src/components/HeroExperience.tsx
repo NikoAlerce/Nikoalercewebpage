@@ -7,6 +7,7 @@ import { useGLTF, useAnimations, Environment, ContactShadows, Text } from "@reac
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { isMobileLike } from "@/lib/device";
+import { useLang } from "@/lib/i18n";
 
 // Graffiti "throw-up" face for the 3D section labels (troika reads ttf/otf/woff, not woff2).
 const FONT = "/fonts/throwup-fill.otf";
@@ -20,6 +21,15 @@ const SECTIONS = [
   { label: "AR Labs", href: "/ar-labs" },
   { label: "Tools", href: "/tools" },
 ];
+const SECTIONS_LABEL: Record<string, { en: string; es: string }> = {
+  "Art on Tezos": { en: "Art on Tezos", es: "Arte en Tezos" },
+  "Music": { en: "Music", es: "Música" },
+  "Gallery": { en: "Gallery", es: "Galería" },
+  "Decentraland": { en: "Decentraland", es: "Decentraland" },
+  "Shop": { en: "Shop", es: "Tienda" },
+  "AR Labs": { en: "AR Labs", es: "AR Labs" },
+  "Tools": { en: "Tools", es: "Herramientas" },
+};
 const N = SECTIONS.length;
 const PARTY_Y = 1.28;  // height of the grass platform / the characters (the "party")
 
@@ -160,6 +170,7 @@ const LABEL_DIST = 2.1;     // how far in front of the camera the word floats
 function ActiveLabel({ index, onSelect }: { index: number; onSelect: (i: number) => void }) {
   const st = STATIONS[index];
   const { camera } = useThree();
+  const { lang } = useLang();
   const grp = useRef<THREE.Group>(null);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const fade = useRef(0);
@@ -211,7 +222,7 @@ function ActiveLabel({ index, onSelect }: { index: number; onSelect: (i: number)
         onPointerOver={() => { setHover(true); document.body.style.cursor = "pointer"; }}
         onPointerOut={() => { setHover(false); document.body.style.cursor = "auto"; }}
       >
-        {st.label}
+        {SECTIONS_LABEL[st.label]?.[lang] || st.label}
         <meshBasicMaterial
           ref={mat}
           color={hover ? "#e3322b" : "#f7f5ef"}
@@ -302,6 +313,7 @@ function Scene({ index, onSelect, mobile }: { index: number; onSelect: (i: numbe
 
 export default function HeroExperience({ className }: { className?: string }) {
   const router = useRouter();
+  const { lang } = useLang();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [active, setActive] = useState(true);
@@ -377,10 +389,10 @@ export default function HeroExperience({ className }: { className?: string }) {
             className="text-center animate-fade-up pointer-events-auto"
           >
             <span className="block font-graffiti text-bone leading-[0.95] text-[clamp(2.5rem,14vw,4.5rem)]" style={{ textShadow: "0 2px 24px rgba(0,0,0,0.7)" }}>
-              {SECTIONS[index].label}
+              {SECTIONS_LABEL[SECTIONS[index].label]?.[lang] || SECTIONS[index].label}
             </span>
             <span className="mt-2 inline-block font-sans text-[10px] tracking-[0.4em] uppercase text-accent">
-              Tap to enter
+              {lang === "es" ? "Tocá para entrar" : "Tap to enter"}
             </span>
           </button>
         </div>
@@ -388,14 +400,14 @@ export default function HeroExperience({ className }: { className?: string }) {
 
       {/* Carousel arrows */}
       <button
-        aria-label="Previous"
+        aria-label={lang === "es" ? "Anterior" : "Previous"}
         onClick={() => go(-1)}
         className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-14 h-14 md:w-[4.5rem] md:h-[4.5rem] grid place-items-center rounded-full border border-white/20 bg-black/30 backdrop-blur-sm text-bone/80 hover:text-bone hover:border-accent hover:bg-black/50 transition-colors"
       >
         <span className="text-4xl md:text-5xl leading-none -mt-1">‹</span>
       </button>
       <button
-        aria-label="Next"
+        aria-label={lang === "es" ? "Siguiente" : "Next"}
         onClick={() => go(1)}
         className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-14 h-14 md:w-[4.5rem] md:h-[4.5rem] grid place-items-center rounded-full border border-white/20 bg-black/30 backdrop-blur-sm text-bone/80 hover:text-bone hover:border-accent hover:bg-black/50 transition-colors"
       >
@@ -404,14 +416,17 @@ export default function HeroExperience({ className }: { className?: string }) {
 
       {/* Station dots */}
       <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5">
-        {SECTIONS.map((s, i) => (
-          <button
-            key={s.href}
-            aria-label={s.label}
-            onClick={() => setIndex(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? "w-6 bg-accent" : "w-1.5 bg-white/25 hover:bg-white/50"}`}
-          />
-        ))}
+        {SECTIONS.map((s, i) => {
+          const labelText = SECTIONS_LABEL[s.label]?.[lang] || s.label;
+          return (
+            <button
+              key={s.href}
+              aria-label={labelText}
+              onClick={() => setIndex(i)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? "w-6 bg-accent" : "w-1.5 bg-white/25 hover:bg-white/50"}`}
+            />
+          );
+        })}
       </div>
     </div>
   );

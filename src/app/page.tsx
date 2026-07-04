@@ -1,50 +1,49 @@
+"use client";
+
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import TitleCharacter from "@/components/TitleCharacter";
+import { useLang } from "@/lib/i18n";
 
 // The realms surfaced as an editorial index — the bridge from the bio into
 // the interior pages. (The pre-home "choose your portal" splash is retired;
 // visitors land straight in the hero.)
-const REALMS = [
-  {
-    n: "01",
-    href: "/art-on-tezos",
-    title: "Art on Tezos",
-    blurb:
-      "Two collections synced live with Tezos — Works (the main gallery) and Sidequest (the experiments) — open to collect on-chain.",
+const REALMS = {
+  en: [
+    { n: "01", href: "/art-on-tezos", title: "Art on Tezos", blurb: "Two collections synced live with Tezos — Works (the main gallery) and Sidequest (the experiments) — open to collect on-chain." },
+    { n: "02", href: "/music", title: "Music", blurb: "El Bosquecito Records. Composed, recorded, mixed and mastered in-house — out on every platform." },
+    { n: "03", href: "/metaverse", title: "3D Gallery", blurb: "Walk a first-person gallery of the work, rendered in real time in your browser." },
+    { n: "04", href: "/decentraland", title: "Decentraland", blurb: "Virtual real estate and wearables — designed, built and deployed on-chain." },
+    { n: "05", href: "/shop", title: "Shop", blurb: "Physical objects: prints, sculptures and limited drops with their digital counterparts." },
+  ],
+  es: [
+    { n: "01", href: "/art-on-tezos", title: "Arte en Tezos", blurb: "Dos colecciones sincronizadas en vivo con Tezos — Works (la galería principal) y Sidequest (los experimentos) — abiertas para coleccionar on-chain." },
+    { n: "02", href: "/music", title: "Música", blurb: "El Bosquecito Records. Compuesto, grabado, mezclado y masterizado en casa — en todas las plataformas." },
+    { n: "03", href: "/metaverse", title: "Galería 3D", blurb: "Recorré una galería en primera persona de la obra, renderizada en tiempo real en tu navegador." },
+    { n: "04", href: "/decentraland", title: "Decentraland", blurb: "Bienes raíces virtuales y wearables — diseñados, construidos y deployados on-chain." },
+    { n: "05", href: "/shop", title: "Tienda", blurb: "Objetos físicos: prints, esculturas y drops limitados con su contraparte digital." },
+  ],
+};
+
+const T = {
+  en: {
+    index: "Index",
+    title: "Five ways into the studio.",
+    intro: "One practice, many surfaces — art, sound, video and immersive worlds. Pick a thread and pull.",
   },
-  {
-    n: "02",
-    href: "/music",
-    title: "Music",
-    blurb:
-      "El Bosquecito Records. Composed, recorded, mixed and mastered in-house — out on every platform.",
+  es: {
+    index: "Índice",
+    title: "Cinco puertas al estudio.",
+    intro: "Una práctica, muchas superficies — arte, sonido, video y mundos inmersivos. Elegí un hilo y tirá.",
   },
-  {
-    n: "03",
-    href: "/metaverse",
-    title: "3D Gallery",
-    blurb:
-      "Walk a first-person gallery of the work, rendered in real time in your browser.",
-  },
-  {
-    n: "04",
-    href: "/decentraland",
-    title: "Decentraland",
-    blurb:
-      "Virtual real estate and wearables — designed, built and deployed on-chain.",
-  },
-  {
-    n: "05",
-    href: "/shop",
-    title: "Shop",
-    blurb:
-      "Physical objects: prints, sculptures and limited drops with their digital counterparts.",
-  },
-];
+};
 
 export default function Home() {
+  const { lang } = useLang();
+  const t = T[lang];
+  const realms = REALMS[lang];
+
   return (
     <>
       <Hero />
@@ -59,31 +58,30 @@ export default function Home() {
           <div className="flex items-center gap-4 mb-6">
             <span className="w-10 h-px rule-accent" />
             <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
-              Index
+              {t.index}
             </span>
           </div>
           {/* Title + character live in one flex row: flex reserves the figure's
               width so it can never overlap the words, and it stays vertically
               centred on the headline. Same pattern reused on every section title. */}
           <div className="flex items-center gap-2 md:gap-4">
-            <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.4rem,6vw,4.5rem)]">
-              Five ways into the studio.
+            <h2 className="flex-1 font-graffiti text-bone leading-[1] text-[clamp(2.4rem,6vw,4.5rem)]">
+              {t.title}
             </h2>
             <TitleCharacter
               clip="waving"
-              size={470}
+              size={340}
               flip
-              className="shrink-0"
+              className="shrink-0 hidden md:block"
             />
           </div>
           <p className="mt-5 font-sans text-[15px] md:text-base text-ash leading-relaxed max-w-2xl">
-            One practice, many surfaces — art, sound, video and immersive
-            worlds. Pick a thread and pull.
+            {t.intro}
           </p>
         </header>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5 border border-white/5">
-          {REALMS.map((r) => (
+          {realms.map((r) => (
             <Link
               key={r.href}
               href={r.href}

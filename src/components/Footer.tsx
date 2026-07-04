@@ -11,9 +11,37 @@ const socials = [
   { label: "Twitter / X", href: "https://x.com/NikoAlerce" },
 ];
 
+const T = {
+  en: {
+    getInTouch: "Get in touch",
+    headline1: "Let's build",
+    headline2: "something.",
+    description:
+      "Commissions, collaborations, exhibitions, joint drops. If you can imagine it in 3D, we can materialise it.",
+    emergency: "Emergency · support us",
+    emergencyText:
+      "We lost our home to a fire — any help means the world ☕",
+    emergencyCta: "Support us ↗",
+    rights: "All rights reserved",
+  },
+  es: {
+    getInTouch: "Hablemos",
+    headline1: "Construyamos",
+    headline2: "algo.",
+    description:
+      "Encargos, colaboraciones, exhibiciones, drops conjuntos. Si lo podés imaginar en 3D, lo materializamos.",
+    emergency: "Emergencia · ayudanos",
+    emergencyText:
+      "Perdimos nuestra casa en un incendio — cualquier ayuda vale el mundo ☕",
+    emergencyCta: "Ayudanos ↗",
+    rights: "Todos los derechos reservados",
+  },
+};
+
 export default function Footer() {
   const pathname = usePathname();
   const { lang } = useLang();
+  const t = T[lang];
   // Hidden on the immersive 3D gallery (see Navbar).
   if (pathname === "/metaverse") return null;
   return (
@@ -26,20 +54,19 @@ export default function Footer() {
           <div className="flex items-center gap-4 mb-6">
             <span className="w-10 h-px rule-accent" />
             <span className="font-sans text-[11px] tracking-[0.4em] uppercase text-ash">
-              Get in touch
+              {t.getInTouch}
             </span>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <h3 className="font-graffiti text-bone leading-[1] text-[clamp(2.6rem,7vw,5rem)]">
-              Let&apos;s build
+              {t.headline1}
               <br />
-              <span className="text-accent">something.</span>
+              <span className="text-accent">{t.headline2}</span>
             </h3>
             <TitleCharacter clip="waving" size={470} flip className="shrink-0" />
           </div>
           <p className="mt-6 font-sans text-[15px] text-ash max-w-md leading-relaxed">
-            Commissions, collaborations, exhibitions, joint drops. If you can
-            imagine it in 3D, we can materialise it.
+            {t.description}
           </p>
           <a
             href="mailto:alercebolson@gmail.com"
@@ -80,22 +107,20 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="font-sans text-[10px] tracking-[0.35em] uppercase text-accent mb-2">
-              {lang === "es" ? "Emergencia · ayudanos" : "Emergency · support us"}
+              {t.emergency}
             </div>
             <div className="font-display text-bone text-xl md:text-2xl">
-              {lang === "es"
-                ? "Perdimos nuestra casa en un incendio — cualquier ayuda vale el mundo ☕"
-                : "We lost our home to a fire — any help means the world ☕"}
+              {t.emergencyText}
             </div>
           </div>
           <span className="shrink-0 inline-flex items-center gap-3 border border-accent bg-accent text-void px-6 py-3.5 text-[11px] tracking-[0.25em] uppercase group-hover:bg-accent-soft group-hover:border-accent-soft transition-colors">
-            {lang === "es" ? "Ayudanos ↗" : "Support us ↗"}
+            {t.emergencyCta}
           </span>
         </div>
       </a>
 
       <div className="mt-16 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 font-sans text-[10.5px] tracking-[0.25em] uppercase text-ash">
-        <div>© {new Date().getFullYear()} Niko Alerce — All rights reserved</div>
+        <div>© {new Date().getFullYear()} Niko Alerce — {t.rights}</div>
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-1.5 bg-accent rounded-full" />
           <span>Next.js · React Three Fiber · Objkt · Tezos</span>
