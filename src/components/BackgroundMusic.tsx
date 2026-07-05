@@ -32,7 +32,10 @@ export default function BackgroundMusic() {
     const a = new Audio("/audio.mp3");
     a.loop = true;
     a.volume = 0.4;
-    a.preload = "auto";
+    // Don't fetch the track on page load (it was pulling ~2 MB on every page for
+    // everyone, competing with the render on weak connections). The browser only
+    // downloads it once play() runs — i.e. after the visitor opts into the music.
+    a.preload = "none";
     audioRef.current = a;
     return () => {
       a.pause();
