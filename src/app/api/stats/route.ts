@@ -19,7 +19,11 @@ import { NextRequest, NextResponse } from "next/server";
 //   GOATCOUNTER_SITE       — optional, defaults to the known site URL
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const revalidate = 3600; // 1 hour
+// Rendered dynamically (reads a query param) — we do our OWN caching below so
+// that all six GoatCounter calls are cached together as one coherent snapshot,
+// rather than each fetch caching on its own clock (which let the header show an
+// old total while the breakdowns showed a newer one).
+export const dynamic = "force-dynamic";
 
 const SITE = process.env.GOATCOUNTER_SITE || "https://nikoalerce.goatcounter.com";
 const TOKEN = process.env.GOATCOUNTER_API_TOKEN;
@@ -35,6 +39,11 @@ function isoDaysAgo(days: number): string {
 
 type Row = { name: string; id?: string; count: number };
 
+// One coherent snapshot per range, cached in-process for a few minutes. Keeps
+// all six widgets in sync (same instant) and spares GoatCounter's rate limit.
+const snapshots = new Map<string, { at: number; body: unknown }>();
+const SNAPSHOT_TTL = 5 * 60_000; // 5 minutes
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // GoatCounter's limit is 4 req/s. We space calls out (below) to stay under it,
@@ -42,7 +51,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function gc<T>(path: string, attempt = 0): Promise<T> {
   const res = await fetch(`${SITE}/api/v0${path}`, {
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-    next: { revalidate },
+    cache: "no-store", // freshness is handled by our own snapshot cache (see GET)
   });
   if (res.status === 429 && attempt < 3) {
     const reset = Number(res.headers.get("x-rate-limit-reset")) || 1;
@@ -67,6 +76,13 @@ export async function GET(req: NextRequest) {
   if (!TOKEN) return NextResponse.json({ enabled: false });
 
   const range = req.nextUrl.searchParams.get("range") || "all";
+
+  // Serve a recent coherent snapshot if we have one (all six widgets in sync).
+  const cached = snapshots.get(range);
+  if (cached && Date.now() - cached.at < SNAPSHOT_TTL) {
+    return NextResponse.json(cached.body, { headers: { "cache-control": "private, no-store" } });
+  }
+
   const start = range === "7d" ? isoDaysAgo(7) : range === "30d" ? isoDaysAgo(30) : SINCE;
   const q = `start=${encodeURIComponent(start)}`;
 
@@ -92,20 +108,32 @@ export async function GET(req: NextRequest) {
 
     const rows = (r?: Row[]) => (r ?? []).map((s) => ({ name: s.name, id: s.id, count: s.count }));
 
-    return NextResponse.json(
-      {
-        enabled: true,
-        range,
-        total: hits.total ?? 0,
-        pages: (hits.hits ?? []).map((h) => ({ path: h.path, title: h.title, count: h.count })),
-        referrers: rows(refs.stats),
-        browsers: rows(browsers.stats),
-        systems: rows(systems.stats),
-        locations: rows(locations.stats),
-        sizes: rows(sizes.stats),
-      },
-      { headers: { "cache-control": "private, no-store" } },
-    );
+    // GoatCounter returns screen sizes with an empty name and the bucket in `id`
+    // (phone / tablet / desktop…) — give them a readable label.
+    const SIZE_LABELS: Record<string, string> = {
+      phone: "Phone",
+      largephone: "Large phone",
+      tablet: "Tablet",
+      desktop: "Desktop",
+      largescreen: "Large screen",
+    };
+    const sizeRows = (r?: Row[]) =>
+      (r ?? []).map((s) => ({ name: s.name || SIZE_LABELS[s.id ?? ""] || "Unknown", id: s.id, count: s.count }));
+
+    const body = {
+      enabled: true,
+      range,
+      total: hits.total ?? 0,
+      pages: (hits.hits ?? []).map((h) => ({ path: h.path, title: h.title, count: h.count })),
+      referrers: rows(refs.stats),
+      browsers: rows(browsers.stats),
+      systems: rows(systems.stats),
+      locations: rows(locations.stats),
+      sizes: sizeRows(sizes.stats),
+    };
+
+    snapshots.set(range, { at: Date.now(), body });
+    return NextResponse.json(body, { headers: { "cache-control": "private, no-store" } });
   } catch (e) {
     return NextResponse.json({ enabled: true, error: String(e) }, { status: 502 });
   }
