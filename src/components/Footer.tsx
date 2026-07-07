@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import TitleCharacter from "@/components/TitleCharacter";
+import VisitCounter from "@/components/VisitCounter";
 import { useLang } from "@/lib/i18n";
 
 const socials = [
@@ -121,6 +122,7 @@ export default function Footer() {
 
       <div className="mt-16 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between gap-4 font-sans text-[10.5px] tracking-[0.25em] uppercase text-ash">
         <div>© {new Date().getFullYear()} Niko Alerce — {t.rights}</div>
+        <VisitCounter />
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-1.5 bg-accent rounded-full" />
           <span>Next.js · React Three Fiber · Objkt · Tezos</span>
