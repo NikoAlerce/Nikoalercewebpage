@@ -4,53 +4,57 @@ import { useEffect, useState } from "react";
 import { useLang } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Visitor counter. Reads from GoatCounter — the SAME service that Analytics.tsx
-// already feeds — so what we display is exactly what we track (single source of
-// truth), and it still costs ZERO Vercel resources (the browser talks to the
-// counter endpoint directly; no function, no KV, no card).
+// Public visitor counter (footer). Reads from /api/stats/public — our own
+// token-backed endpoint — instead of GoatCounter's /counter widget, which is
+// heavily cached (updates ~hourly) and lagged behind reality. Ours refreshes
+// every 5 min and is accurate. It exposes only total + countries (never
+// referrers/pages), so it's safe to show to anyone.
 //
-// GoatCounter's count.js records the pageview itself, so here we only READ:
-//   GET /counter/TOTAL.json → { "count": "1,234", "count_unique": "1,000" }
-// We show count_unique ("people who visited"), not raw pageviews. The endpoint
-// must have the "visitor counter" enabled in the GoatCounter site settings.
-// If it's ever unreachable the component renders nothing, so the footer never
-// shows a broken widget.
+// Shows "N visitas" plus a compact "· desde M países" whose tooltip lists the
+// top countries. If the endpoint is unreachable it renders nothing, so the
+// footer never shows a broken widget.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const COUNTER_URL = "https://nikoalerce.goatcounter.com/counter/TOTAL.json";
+type Country = { name: string; count: number };
 
 export default function VisitCounter() {
   const { lang } = useLang();
-  const [count, setCount] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(COUNTER_URL)
+    fetch("/api/stats/public")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: { count_unique?: string }) => {
-        // GoatCounter returns formatted strings (e.g. "1,234") — strip anything
-        // that isn't a digit before parsing so separators never break it.
-        const n = parseInt(String(d.count_unique ?? "").replace(/\D/g, ""), 10);
-        if (cancelled || !Number.isFinite(n)) return;
-        setCount(n);
+      .then((d: { total?: number; countries?: Country[] }) => {
+        if (cancelled || typeof d.total !== "number") return;
+        setTotal(d.total);
+        setCountries((d.countries ?? []).filter((c) => c.count > 0));
       })
       .catch(() => {
-        /* counter service unreachable — show nothing */
+        /* endpoint unreachable — show nothing */
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (count === null) return null;
+  if (total === null) return null;
+
+  const nf = new Intl.NumberFormat(lang === "es" ? "es-AR" : "en-US");
+  const countryTip = countries.map((c) => `${c.name} (${nf.format(c.count)})`).join(" · ");
 
   return (
-    <div className="flex items-center gap-2" title={lang === "es" ? "Personas que visitaron el sitio" : "People who visited the site"}>
-      <span className="w-1.5 h-1.5 bg-accent/70 rounded-full" />
+    <div className="flex items-center gap-2" title={lang === "es" ? "Visitas al sitio" : "Site visits"}>
+      <span className="h-1.5 w-1.5 rounded-full bg-accent/70" />
       <span>
-        {count.toLocaleString(lang === "es" ? "es-AR" : "en-US")}{" "}
-        {lang === "es" ? "visitas" : "visits"}
+        {nf.format(total)} {lang === "es" ? "visitas" : "visits"}
       </span>
+      {countries.length > 0 && (
+        <span className="text-ash/70" title={countryTip}>
+          · {lang === "es" ? `desde ${countries.length} ${countries.length === 1 ? "país" : "países"}` : `from ${countries.length} ${countries.length === 1 ? "country" : "countries"}`}
+        </span>
+      )}
     </div>
   );
 }
