@@ -89,15 +89,19 @@ export default function StatsDashboard() {
   const t = T[lang];
 
   const [key, setKey] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [input, setInput] = useState("");
   const [range, setRange] = useState<RangeKey>("all");
   const [data, setData] = useState<Stats | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "unauth" | "error">("idle");
 
-  // Restore a saved password on mount.
+  // Restore a saved password on mount, then mark ready. Doing the load only once
+  // `ready` is set (below) means there's a SINGLE load path — no null-key probe
+  // racing the real load and clobbering good data with the password gate.
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
     if (saved) setKey(saved);
+    setReady(true);
   }, []);
 
   const load = useCallback(
@@ -108,6 +112,9 @@ export default function StatsDashboard() {
         if (k) params.set("key", k);
         const res = await fetch(`/api/stats?${params.toString()}`, { cache: "no-store" });
         if (res.status === 401) {
+          // A stored key that no longer works: drop it so a refresh doesn't keep
+          // re-sending a bad password.
+          if (k && typeof window !== "undefined") localStorage.removeItem(LS_KEY);
           setState("unauth");
           setData(null);
           return;
@@ -122,16 +129,11 @@ export default function StatsDashboard() {
     [],
   );
 
-  // (Re)load whenever we have a key (or none is required) and when range changes.
+  // Single load path: once the saved key is resolved, fetch with it (or null).
+  // Also refires when the range switches or the user submits a password.
   useEffect(() => {
-    if (key !== null) load(key, range);
-  }, [key, range, load]);
-
-  // First paint with no saved key: probe once — the API may not require a key.
-  useEffect(() => {
-    if (key === null) load(null, range);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (ready) load(key, range);
+  }, [ready, key, range, load]);
 
   function submitKey(e: React.FormEvent) {
     e.preventDefault();
