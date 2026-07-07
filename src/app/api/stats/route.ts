@@ -35,11 +35,20 @@ function isoDaysAgo(days: number): string {
 
 type Row = { name: string; id?: string; count: number };
 
-async function gc<T>(path: string): Promise<T> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// GoatCounter's limit is 4 req/s. We space calls out (below) to stay under it,
+// but also retry on 429 with backoff so a transient burst never breaks the page.
+async function gc<T>(path: string, attempt = 0): Promise<T> {
   const res = await fetch(`${SITE}/api/v0${path}`, {
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
     next: { revalidate },
   });
+  if (res.status === 429 && attempt < 3) {
+    const reset = Number(res.headers.get("x-rate-limit-reset")) || 1;
+    await sleep(Math.min(reset, 3) * 1000 + 250);
+    return gc<T>(path, attempt + 1);
+  }
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -67,11 +76,18 @@ export async function GET(req: NextRequest) {
     // Note: /stats/total 404s on this GoatCounter version — but /stats/hits
     // already returns the grand `total` alongside the per-page list, so we read
     // the headline number from there and skip the extra (broken) call.
+    // ~300ms between calls keeps us at ~3 req/s, comfortably under the 4/s cap.
+    const gap = () => sleep(300);
     const hits = await gc<{ hits?: { path: string; title: string; count: number }[]; total?: number }>(`/stats/hits?${q}&limit=15`);
+    await gap();
     const refs = await gc<{ stats?: Row[] }>(`/stats/toprefs?${q}&limit=12`);
+    await gap();
     const browsers = await gc<{ stats?: Row[] }>(`/stats/browsers?${q}&limit=8`);
+    await gap();
     const systems = await gc<{ stats?: Row[] }>(`/stats/systems?${q}&limit=8`);
+    await gap();
     const locations = await gc<{ stats?: Row[] }>(`/stats/locations?${q}&limit=12`);
+    await gap();
     const sizes = await gc<{ stats?: Row[] }>(`/stats/sizes?${q}&limit=6`);
 
     const rows = (r?: Row[]) => (r ?? []).map((s) => ({ name: s.name, id: s.id, count: s.count }));
