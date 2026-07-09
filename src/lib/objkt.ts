@@ -57,6 +57,7 @@ const TOKENS_BY_CREATOR = gql`
     token(
       where: {
         creators: { creator_address: { _eq: $address } }
+        name: { _nilike: "G0dz #%" }
       }
       order_by: { timestamp: desc }
       limit: $limit

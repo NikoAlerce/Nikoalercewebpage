@@ -138,10 +138,8 @@ export default function NFTGallery({
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ApiResp = await res.json();
-      // Exclude tokens named "G0dz #..." and randomize the order.
-      const filtered = (data.tokens ?? []).filter(
-        (t) => isDisplayableToken(t) && !t.name?.match(/^G0dz\s*#/i),
-      );
+      // G0dz tokens are excluded server-side via the GraphQL query's _nilike filter.
+      const filtered = (data.tokens ?? []).filter(isDisplayableToken);
       setTokens(shuffle(filtered));
       setHolder(data.holder ?? null);
     } catch (e) {
