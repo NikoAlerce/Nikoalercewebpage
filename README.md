@@ -41,6 +41,12 @@ Las pruebas unitarias cubren importes exactos de compra, monedas no nativas, rut
 
 `/api/ipfs` distribuye contenido por gateways con soporte Range. Acepta CIDs con rutas sin traversal; las respuestas llevan una política sandbox para que HTML o SVG no ejecuten código con el origen de la web.
 
+Works y Sidequest permiten ordenar por fecha de creación (recientes/antiguas) o precio (mayor/menor). Las piezas sin precio de venta quedan al final en ambos órdenes por precio. La lista ya no se mezcla aleatoriamente.
+
+La pestaña Transient usa `/api/transient`, limitada al perfil NikoAlerce (ID público 13262), con paginación y caché de cinco minutos. Muestra obras creadas, su colección y red; cada tarjeta abre su página en Transient. No intenta comprarlas mediante la wallet Tezos. Se puede entrar directamente con `/art-on-tezos?tab=transient`.
+
+Las tarjetas cargan vistas previas estáticas cerca del viewport. `/api/thumbnail` reduce imágenes IPFS a WebP de hasta 640 px, decodifica solo el primer fotograma y permite cachear el resultado por CID. Solo consulta gateways fijos, limita descarga a 32 MiB y decodificación a 40 megapíxeles, y devuelve errores sin caché. Los videos/MP4 optimizados se cargan al pasar el mouse; los originales se conservan en el visor. Transient usa su CDN reducido antes de recurrir al archivo original. Sharp 0.35.4 se incluye como dependencia de producción.
+
 ## Tienda y compras NFT
 
 La tienda física es un catálogo de muestra. Sus enlaces abren una consulta por correo; precios, stock, pagos y envíos deben confirmarse con el artista. No hay carrito ni checkout de productos físicos.

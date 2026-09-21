@@ -4,7 +4,7 @@ import ArtOnTezos from "@/components/ArtOnTezos";
 export const metadata: Metadata = {
   title: "Art on Tezos",
   description:
-    "Art on Tezos by Niko Alerce — two collections synced live with Objkt: Works (the main gallery) and Sidequest (the experiments). Open a piece to collect it on-chain.",
+    "Art by Niko Alerce — Works and Sidequest on Tezos, plus artworks on Transient. Explore collections and sort Tezos pieces by date or price.",
 };
 
 export default async function ArtOnTezosPage({

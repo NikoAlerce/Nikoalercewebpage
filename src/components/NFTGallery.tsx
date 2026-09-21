@@ -4,7 +4,9 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import clsx from "clsx";
 import TitleCharacter from "@/components/TitleCharacter";
 import NFTCard from "./NFTCard";
-import { isDisplayableToken, tokenStatus, detectKind } from "@/lib/objkt";
+import { isDisplayableToken, tokenStatus, detectKind, lowestPriceXtz } from "@/lib/objkt";
+import { sortArtworks, type GalleryOrder } from "@/lib/gallerySort";
+import GalleryOrderSelect from "./GalleryOrderSelect";
 import type { ObjktHolder, ObjktToken } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 
@@ -101,16 +103,6 @@ const TG = {
   },
 };
 
-/** Fisher-Yates shuffle, returns a new array */
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function NFTGallery({
   alias,
   title,
@@ -129,6 +121,7 @@ export default function NFTGallery({
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [media, setMedia] = useState<MediaFilter>("all");
+  const [order, setOrder] = useState<GalleryOrder>("newest");
 
   const load = useCallback(async () => {
     request.current?.abort();
@@ -146,7 +139,7 @@ export default function NFTGallery({
       if (controller.signal.aborted) return;
       // G0dz tokens are excluded server-side via the GraphQL query's _nilike filter.
       const filtered = (data.tokens ?? []).filter(isDisplayableToken);
-      setTokens(shuffle(filtered));
+      setTokens(filtered);
       setHolder(data.holder ?? null);
     } catch (e) {
       if (controller.signal.aborted) return;
@@ -189,12 +182,16 @@ export default function NFTGallery({
   }, [tokens]);
 
   const displayed = useMemo(() => {
-    return tokens.filter(
+    return sortArtworks(tokens.filter(
       (t) =>
         (filter === "all" || tokenStatus(t) === filter) &&
         (media === "all" || mediaCat(t) === media),
-    );
-  }, [tokens, filter, media]);
+    ), order, {
+      date: (token) => token.timestamp,
+      price: (token) => tokenStatus(token) === "for_sale" ? lowestPriceXtz(token) : null,
+      id: (token) => `${token.fa_contract}:${token.token_id}`,
+    });
+  }, [tokens, filter, media, order]);
 
   const tabs: { key: Filter; label: string }[] = [
     { key: "all", label: t.filterAll },
@@ -297,6 +294,7 @@ export default function NFTGallery({
       {/* Filters: status + file type */}
       {!loading && !error && tokens.length > 0 && (
         <div className="flex flex-col gap-3 mb-8">
+          <GalleryOrderSelect value={order} onChange={setOrder} />
           {/* Status */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[10px] tracking-[0.3em] uppercase text-ash/50 w-12 shrink-0">

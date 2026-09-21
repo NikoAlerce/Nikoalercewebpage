@@ -69,7 +69,7 @@ export default function NFTCard({ token, index }: Props) {
             hover ? "scale-105" : "scale-100",
           )}
         >
-          <MediaRenderer token={token} active={hover || kind === "video"} />
+          <MediaRenderer token={token} active={hover} priority={index < 4} />
         </div>
 
         <div className="absolute top-2 left-2 z-10 flex gap-1.5">
