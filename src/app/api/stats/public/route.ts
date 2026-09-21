@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchStats, hasToken } from "@/lib/goatcounter";
+import { fetchStats, hasToken, isStatsRange } from "@/lib/goatcounter";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC analytics — no auth. Deliberately exposes only a harmless subset:
@@ -13,9 +13,10 @@ import { fetchStats, hasToken } from "@/lib/goatcounter";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const range = req.nextUrl.searchParams.get("range") || "all";
+  if (!isStatsRange(range)) return NextResponse.json({ error: "invalid range" }, { status: 400 });
   if (!hasToken()) return NextResponse.json({ enabled: false });
 
-  const range = req.nextUrl.searchParams.get("range") || "all";
   try {
     const data = await fetchStats(range);
     return NextResponse.json(
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       // Cacheable at the edge/CDN too — it's public and only changes slowly.
       { headers: { "cache-control": "public, s-maxage=300, stale-while-revalidate=900" } },
     );
-  } catch (e) {
-    return NextResponse.json({ enabled: false, error: String(e) }, { status: 502 });
+  } catch {
+    return NextResponse.json({ enabled: false, error: "Statistics temporarily unavailable" }, { status: 502, headers: { "cache-control": "no-store" } });
   }
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import RenderBoundary from "./RenderBoundary";
 
 const MetaverseGallery = dynamic(() => import("./MetaverseGallery"), {
   ssr: false,
@@ -17,5 +19,14 @@ const MetaverseGallery = dynamic(() => import("./MetaverseGallery"), {
 });
 
 export default function MetaverseEntry() {
-  return <MetaverseGallery />;
+  return (
+    <RenderBoundary fallback={
+      <div role="alert" className="h-full flex flex-col items-center justify-center gap-6 p-6 text-center text-bone">
+        <p>No se pudo cargar la galería 3D / The 3D gallery could not load.</p>
+        <Link href="/art-on-tezos" className="underline">Ver las obras / View artworks</Link>
+      </div>
+    }>
+      <MetaverseGallery />
+    </RenderBoundary>
+  );
 }

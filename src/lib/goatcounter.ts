@@ -21,6 +21,9 @@ const TOKEN = process.env.GOATCOUNTER_API_TOKEN;
 const SINCE = "2020-01-01T00:00:00Z";
 
 export type Range = "7d" | "30d" | "all";
+export function isStatsRange(value: string): value is Range {
+  return value === "7d" || value === "30d" || value === "all";
+}
 export type Row = { name: string; id?: string; count: number };
 export type Page = { path: string; title: string; count: number };
 
@@ -52,6 +55,7 @@ async function gc<T>(path: string, attempt = 0): Promise<T> {
   const res = await fetch(`${SITE}/api/v0${path}`, {
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
     cache: "no-store", // freshness is handled by our own snapshot cache below
+    signal: AbortSignal.timeout(10000),
   });
   if (res.status === 429 && attempt < 3) {
     const reset = Number(res.headers.get("x-rate-limit-reset")) || 1;
@@ -75,10 +79,25 @@ const SIZE_LABELS: Record<string, string> = {
 // shared across both routes so at most one burst of calls per range per 5 min.
 const snapshots = new Map<string, { at: number; data: Stats }>();
 const SNAPSHOT_TTL = 5 * 60_000; // 5 minutes
+const inFlight = new Map<Range, Promise<Stats>>();
+let queue: Promise<unknown> = Promise.resolve();
 
 export async function fetchStats(range: string): Promise<Stats> {
+  if (!isStatsRange(range)) throw new Error("invalid stats range");
   const cached = snapshots.get(range);
   if (cached && Date.now() - cached.at < SNAPSHOT_TTL) return cached.data;
+  const existing = inFlight.get(range);
+  if (existing) return existing;
+  const pending = queue.then(() => loadStats(range)).finally(() => { inFlight.delete(range); });
+  inFlight.set(range, pending);
+  queue = pending.catch(() => {});
+  return pending;
+}
+
+async function loadStats(range: Range): Promise<Stats> {
+  // Serialize different ranges too; coalescing only identical ranges exceeds
+  // GoatCounter's per-site rate limit when several visitors arrive together.
+  await sleep(300);
 
   const start = range === "7d" ? isoDaysAgo(7) : range === "30d" ? isoDaysAgo(30) : SINCE;
   const q = `start=${encodeURIComponent(start)}`;

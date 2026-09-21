@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ipfsPath } from "@/lib/objkt";
 
 // Server-side IPFS proxy. WebGL textures (canvas / VideoTexture) require CORS, but
 // many public IPFS gateways don't send CORS headers or rate-limit hard. We fetch the
@@ -60,8 +61,9 @@ async function probeGateway(gw: string, cid: string, signal: AbortSignal): Promi
     headers: { range: "bytes=0-1", accept: "video/*,*/*" },
     signal,
   });
-  if (!res.ok) throw new Error(`probe ${gw} -> ${res.status}`);
+  const usable = res.ok && res.headers.get("access-control-allow-origin") === "*";
   try { await res.body?.cancel(); } catch { /* ignore */ }
+  if (!usable) throw new Error(`gateway does not support anonymous CORS: ${gw}`);
   return res.url || gw + cid; // res.url is the resolved (post-redirect) location
 }
 
@@ -99,7 +101,10 @@ async function tryGateway(
   signal: AbortSignal,
 ): Promise<{ res: Response; gw: string }> {
   const res = await fetch(gw + cid, { redirect: "follow", headers: buildHeaders(range), signal });
-  if (!res.ok || !res.body) throw new Error(`gateway ${gw} -> ${res.status}`);
+  if (!res.ok || !res.body) {
+    await res.body?.cancel();
+    throw new Error(`gateway ${gw} -> ${res.status}`);
+  }
   return { res, gw };
 }
 
@@ -119,7 +124,7 @@ function relay(upstream: Response): Response {
   };
   const contentLength = upstream.headers.get("content-length");
   const contentRange = upstream.headers.get("content-range");
-  if (contentLength) headers["content-length"] = contentLength;
+  if (contentLength && !upstream.headers.has("content-encoding")) headers["content-length"] = contentLength;
   if (contentRange) headers["content-range"] = contentRange;
   return new Response(upstream.body, { status: upstream.status, headers });
 }
@@ -131,16 +136,11 @@ export async function GET(req: NextRequest) {
   }
 
   // Already an http(s) URL? pass the CID through our gateways anyway when possible.
-  const cid = uri.startsWith("ipfs://")
-    ? uri.slice("ipfs://".length)
-    : uri.startsWith("http")
-      ? uri.replace(/^https?:\/\/[^/]+\/ipfs\//, "")
-      : uri;
+  const cid = ipfsPath(uri);
 
   const range = req.headers.get("range");
   // Only content-addressed paths are allowed; reject traversal and URL syntax.
-  const [root, ...segments] = cid.split("/");
-  if (cid.length > 2048 || !/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{20,})$/.test(root) || segments.some((part) => !part || part === "." || part === ".." || /[%?#\\]/.test(part))) {
+  if (!cid) {
     return NextResponse.json({ error: "invalid IPFS path" }, { status: 400 });
   }
 

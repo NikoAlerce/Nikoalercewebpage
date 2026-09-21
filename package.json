@@ -9,7 +9,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test:smoke": "node --test tests/smoke.mjs",
-    "test": "node --experimental-strip-types --test tests/objkt.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@airgap/beacon-sdk": "^4.5.1",

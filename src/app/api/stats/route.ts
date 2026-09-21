@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchStats, hasToken } from "@/lib/goatcounter";
+import { fetchStats, hasToken, isStatsRange } from "@/lib/goatcounter";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Private analytics proxy for the GoatCounter dashboard (/stats page). Returns
@@ -27,10 +27,11 @@ export async function GET(req: NextRequest) {
   if (!hasToken()) return NextResponse.json({ enabled: false }, { headers: { "cache-control": "private, no-store" } });
 
   const range = req.nextUrl.searchParams.get("range") || "all";
+  if (!isStatsRange(range)) return NextResponse.json({ error: "invalid range" }, { status: 400 });
   try {
     const data = await fetchStats(range);
     return NextResponse.json(data, { headers: { "cache-control": "private, no-store" } });
-  } catch (e) {
-    return NextResponse.json({ enabled: true, error: String(e) }, { status: 502, headers: { "cache-control": "private, no-store" } });
+  } catch {
+    return NextResponse.json({ enabled: true, error: "Statistics temporarily unavailable" }, { status: 502, headers: { "cache-control": "private, no-store" } });
   }
 }

@@ -33,6 +33,8 @@ npm run test:smoke
 
 `TEST_BASE_URL` permite usar otro puerto. Las pruebas verifican páginas, idioma, metadata, consultas de tienda, validación de API y privacidad de estadísticas. No envían mensajes ni transacciones.
 
+Las pruebas unitarias cubren importes exactos de compra, monedas no nativas, rutas IPFS, recuperación de Objkt, concurrencia de estadísticas y liberación de recursos GIF. Ver `AUDIT.md` para los hallazgos y los límites de la revisión.
+
 ## Colecciones y medios
 
 `src/lib/objkt.ts` mapea `nikoalerce` y `sidequest` a sus wallets. `/api/objkt?alias=...` acepta hasta 300 obras por consulta y un offset no negativo. `/api/tokens?ids=contrato:token` permite recuperar hasta 100 obras específicas. Una caída de Objkt devuelve 502 sin cachear una colección vacía.
@@ -45,9 +47,13 @@ La tienda física es un catálogo de muestra. Sus enlaces abren una consulta por
 
 Las compras NFT mediante Beacon se envían a Tezos. Tras el envío se muestra el enlace a TzKT para verificar el resultado. El sitio no declara una compra confirmada por tiempo transcurrido. La comprobación de una compra real requiere una wallet y autorización del titular.
 
+Solo se permite comprar desde la web cuando el listing tiene un importe entero exacto en mutez y moneda XTZ. Las conversiones de otras monedas se muestran como aproximaciones y se consultan en Objkt. Los importes conservan hasta seis decimales.
+
 ## Estadísticas
 
 Configurar `GOATCOUNTER_API_TOKEN` y `STATS_ACCESS_KEY` en el hosting para habilitar `/stats`. Si falta la clave, el panel privado queda deshabilitado. La clave se transmite mediante `x-stats-key`, nunca en la URL. `/api/stats/public` conserva únicamente el resumen público de visitas y países.
+
+La clave del panel se recuerda en `sessionStorage`, limitada a la pestaña. Los rangos admitidos son `7d`, `30d` y `all`; las consultas simultáneas se agrupan y serializan por proceso para reducir llamadas al proveedor.
 
 ## Dependencias y despliegue
 

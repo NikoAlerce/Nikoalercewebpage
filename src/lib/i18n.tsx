@@ -18,7 +18,8 @@ const COOKIE_KEY = "nk_lang";
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return m ? decodeURIComponent(m[1]) : null;
+  try { return m ? decodeURIComponent(m[1]) : null; }
+  catch { return null; }
 }
 
 const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({

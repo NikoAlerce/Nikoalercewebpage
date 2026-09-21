@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ObjktToken } from "@/lib/types";
-import { detectKind, objktCdnUrl } from "@/lib/objkt";
+import { detectKind, objktCdnUrl, ipfsPath, ipfsToUrl } from "@/lib/objkt";
 import { optimizedVideoUrl } from "@/lib/optimizedMedia";
+import { decodeGifFrames } from "@/lib/gifFrames";
 
 // Cap the working canvas so animated GIFs don't melt the GPU.
 const MAX_CANVAS_PX = 512;
@@ -14,6 +15,7 @@ const MAX_CANVAS_PX = 512;
 // (WebGL textures need CORS; many public gateways don't send CORS headers / rate-limit).
 export function proxied(uri?: string | null, opts?: { redirect?: boolean }): string | null {
   if (!uri) return null;
+  if (!ipfsPath(uri)) return ipfsToUrl(uri);
   const base = `/api/ipfs?uri=${encodeURIComponent(uri)}`;
   // `redirect` videos straight to a CORS-enabled gateway (the proxy 307s instead of
   // streaming the bytes). On Vercel, piping a 40MB mp4 through a serverless function for
@@ -82,11 +84,16 @@ export function useNftMedia(
 
   // ── Static first-frame texture (always) ──
   useEffect(() => {
+    setStaticTex(null);
+    setAspect(null);
+    setLoadError(false);
+    setLoading(true);
     const candidates = [thumbCdn, thumbUrl].filter((u): u is string => !!u);
     if (candidates.length === 0) { setLoadError(true); setLoading(false); return; }
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin("anonymous");
     let cancelled = false;
+    let ownedTexture: THREE.Texture | null = null;
     const timeoutId = setTimeout(() => {
       if (!cancelled) { setLoadError(true); setLoading(false); }
     }, 20000);
@@ -100,7 +107,8 @@ export function useNftMedia(
           tex.colorSpace = THREE.SRGBColorSpace;
           const img = tex.image as HTMLImageElement;
           if (img?.width && img?.height) setAspect(img.width / img.height);
-          setStaticTex((prev) => { prev?.dispose(); return tex; });
+          ownedTexture = tex;
+          setStaticTex(tex);
           setLoadError(false);
           setLoading(false);
         },
@@ -116,7 +124,7 @@ export function useNftMedia(
       );
     };
     tryLoad(0);
-    return () => { cancelled = true; clearTimeout(timeoutId); };
+    return () => { cancelled = true; clearTimeout(timeoutId); ownedTexture?.dispose(); };
   }, [thumbCdn, thumbUrl]);
 
   // ── Animated GIF (active only) — decode every frame with WebCodecs ImageDecoder ──
@@ -145,32 +153,20 @@ export function useNftMedia(
     if (!url || typeof ImageDecoderCtor !== "function") return; // fallback: static texture stays
 
     let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         if (!res.ok || cancelled) return;
         const buf = await res.arrayBuffer();
         if (cancelled) return;
         const type = res.headers.get("content-type") ?? "image/gif";
 
         const decoder: any = new (ImageDecoderCtor as any)({ data: buf, type });
-        await decoder.tracks.ready;
-        const count: number = decoder.tracks.selectedTrack?.frameCount ?? 1;
-        if (count <= 1 || cancelled) { decoder.close?.(); return; }
-
-        const frames: { bitmap: ImageBitmap; duration: number }[] = [];
-        let total = 0;
-        for (let i = 0; i < count; i++) {
-          if (cancelled) break;
-          const { image } = await decoder.decode({ frameIndex: i });
-          const bitmap = await createImageBitmap(image);
-          const durMs = (image.duration ?? 100000) / 1000;
-          image.close?.();
-          frames.push({ bitmap, duration: durMs > 0 ? durMs : 80 });
-          total += durMs > 0 ? durMs : 80;
-        }
-        decoder.close?.();
+        const frames = await decodeGifFrames(decoder, controller.signal);
+        const total = frames.reduce((sum, frame) => sum + frame.duration, 0);
         if (cancelled || frames.length === 0) { frames.forEach((f) => f.bitmap.close()); return; }
+        framesRef.current = frames;
 
         const w = frames[0].bitmap.width;
         const h = frames[0].bitmap.height;
@@ -193,17 +189,18 @@ export function useNftMedia(
         setAspect(w / h);
         setAnimTex((prev) => { prev?.dispose(); return tex; });
       } catch {
+        if (!cancelled) cleanupFrames();
         /* decoding failed → keep static */
       }
     })();
 
     return () => {
       cancelled = true;
+      controller.abort();
       cleanupFrames();
       setAnimTex((prev) => { prev?.dispose(); return null; });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, isAnimated, fullUri]);
+  }, [active, isAnimated, fullUri, optUrl]);
 
   // ── Create + buffer the mp4 as soon as the frame is nearby (active OR playing) ──
   // Keyed on `shouldLoadVideo` (not videoActive) so walking from "nearby" into
@@ -323,11 +320,13 @@ export function usePlaylistMedia(
 
   // Static thumbnail of the current track (shown until its video is ready / when idle).
   useEffect(() => {
+    setStaticTex(null);
     const candidates = [thumbCdn, thumbUrl].filter((u): u is string => !!u);
     if (candidates.length === 0) return;
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin("anonymous");
     let cancelled = false;
+    let ownedTexture: THREE.Texture | null = null;
     const tryLoad = (i: number) => {
       loader.load(
         candidates[i],
@@ -336,14 +335,15 @@ export function usePlaylistMedia(
           tex.colorSpace = THREE.SRGBColorSpace;
           const img = tex.image as HTMLImageElement;
           if (img?.width && img?.height) setAspect(img.width / img.height);
-          setStaticTex((prev) => { prev?.dispose(); return tex; });
+          ownedTexture = tex;
+          setStaticTex(tex);
         },
         undefined,
         () => { if (!cancelled && i + 1 < candidates.length) tryLoad(i + 1); },
       );
     };
     tryLoad(0);
-    return () => { cancelled = true; };
+    return () => { cancelled = true; ownedTexture?.dispose(); };
   }, [thumbCdn, thumbUrl]);
 
   // Play the current track while the screen is active; advance to the next on 'ended'.

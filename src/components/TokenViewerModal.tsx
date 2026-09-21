@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   detectKind,
@@ -15,6 +15,7 @@ import {
   activeListingAmountLeft,
   listingPriceMutez,
   listingBigmapKey,
+  formatXtz,
 } from "@/lib/objkt";
 import { useTokenViewer } from "./TokenViewerContext";
 import { useWallet } from "./WalletContext";
@@ -41,12 +42,39 @@ export default function TokenViewerModal() {
   const [imgGw, setImgGw] = useState(0);
   const [buyState, setBuyState] = useState<BuyState>({ kind: "idle" });
   const [showStuckHint, setShowStuckHint] = useState(false);
+  const purchaseInFlight = useRef(false);
+  const requestVersion = useRef({ value: 0 });
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.focus();
+    const trap = (event: KeyboardEvent) => {
+      // Allow Beacon's own modal to manage its focus while it is open.
+      if (event.key !== "Tab" || !dialog?.contains(document.activeElement)) return;
+      const items = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not(:disabled), input, select, iframe, audio[controls], video[controls], [tabindex="0"]')).filter((el) => el.getClientRects().length > 0);
+      const first = items[0];
+      const last = items.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => {
+      document.removeEventListener("keydown", trap);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [token]);
 
   // Reset image state when the token changes (avoids stale imgGw)
   useEffect(() => {
+    requestVersion.current.value++;
     setImgGw(0);
     setBuyState({ kind: "idle" });
     setShowStuckHint(false);
+    const counter = requestVersion.current;
+    return () => { counter.value++; };
   }, [token?.fa_contract, token?.token_id]);
 
   // After ~25s of "signing", suggest resetting the wallet pairing — the most
@@ -62,6 +90,7 @@ export default function TokenViewerModal() {
   }, [buyState.kind]);
 
   const handleResetWallet = useCallback(async () => {
+    requestVersion.current.value++;
     await resetConnection();
     setBuyState({ kind: "idle" });
     setShowStuckHint(false);
@@ -76,10 +105,15 @@ export default function TokenViewerModal() {
   const listing = token?.listings_active?.[0] ?? null;
 
   const handleBuy = useCallback(async () => {
-    if (!token || !listing) return;
+    if (!token || !listing || purchaseInFlight.current) return;
+    purchaseInFlight.current = true;
+    const version = requestVersion.current.value;
+    try {
+    setBuyState({ kind: "signing" });
     if (!address) {
       const pkh = await connect();
-      if (!pkh) return;
+      if (version !== requestVersion.current.value) return;
+      if (!pkh) { setBuyState({ kind: "idle" }); return; }
     }
     setBuyState({ kind: "signing" });
     const mutez = listingPriceMutez(listing);
@@ -107,16 +141,22 @@ export default function TokenViewerModal() {
       marketplaceContract: listing.marketplace_contract!,
       bigmapKey,
       priceMutez: mutez,
-      currencyId: listing.currency_id ?? 1,
+      currencyId: listing.currency_id!,
       editions: editionsToBuy,
       sellerAddress: listing.seller_address,
     });
+    if (version !== requestVersion.current.value) return;
     if (res.ok) {
       setBuyState({ kind: "pending", opHash: res.opHash });
       // Submission is not confirmation. Keep the explorer link visible; never
       // claim success or emit a purchase event just because 30 seconds elapsed.
     } else {
       setBuyState({ kind: "error", message: res.error });
+    }
+    } catch {
+      if (version === requestVersion.current.value) setBuyState({ kind: "error", message: "Wallet request failed. Check your wallet before trying again." });
+    } finally {
+      purchaseInFlight.current = false;
     }
   }, [address, buy, connect, listing, token]);
 
@@ -132,7 +172,7 @@ export default function TokenViewerModal() {
   // The viewer uses artifact_uri (the real file) instead of the thumbnail.
   const artifact = ipfsToUrl(token.artifact_uri);
   const fallbackImage = ipfsWithGateway(
-    token.artifact_uri ?? token.display_uri ?? token.thumbnail_uri,
+    kind === "image" ? (token.artifact_uri ?? token.display_uri ?? token.thumbnail_uri) : (token.display_uri ?? token.thumbnail_uri),
     imgGw,
   );
 
@@ -151,17 +191,18 @@ export default function TokenViewerModal() {
 
   // Objkt's marketplace contract throws M_NO_SELF_FULFILL if the buyer is the
   // seller — disable the button preemptively when the connected wallet is the
-  // listing's seller_address (case-insensitive: tz1 addresses are case-sensitive,
-  // but normalize anyway in case the indexer ever returns mixed case).
+  // listing's seller_address. Tezos addresses are case-sensitive.
   const isOwnListing =
     !!address &&
     !!listing?.seller_address &&
-    address.toLowerCase() === listing.seller_address.toLowerCase();
+    address === listing.seller_address;
 
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col bg-void/95 backdrop-blur-md"
       role="dialog"
+      ref={dialogRef}
+      aria-labelledby="nft-dialog-title"
       aria-modal="true"
       onClick={(e) => {
         // Close when clicking outside the modal content
@@ -219,7 +260,7 @@ export default function TokenViewerModal() {
         {/* VIEWER */}
         <div className="relative bg-black overflow-hidden min-h-[55vh] lg:min-h-0">
           {kind === "model" && artifact ? (
-            <GlbViewer url={artifact} />
+            <GlbViewer key={token.artifact_uri} url={token.artifact_uri!} />
           ) : kind === "video" && artifact ? (
             <video
               src={artifact}
@@ -248,7 +289,7 @@ export default function TokenViewerModal() {
             <iframe
               src={artifact}
               title={token.name ?? "interactive"}
-              sandbox="allow-scripts allow-same-origin allow-pointer-lock"
+              sandbox="allow-scripts allow-pointer-lock"
               className="w-full h-full bg-black"
               allow="autoplay; fullscreen; xr-spatial-tracking"
             />
@@ -289,7 +330,7 @@ export default function TokenViewerModal() {
                   ? "Sold out"
                   : "Archive"}
               </div>
-              <h3 className="font-display text-2xl md:text-3xl text-bone leading-tight">
+              <h3 id="nft-dialog-title" className="font-display text-2xl md:text-3xl text-bone leading-tight">
                 {token.name ?? "untitled"}
               </h3>
               <p className="mt-2 text-[12px] text-ash">
@@ -298,13 +339,13 @@ export default function TokenViewerModal() {
             </div>
 
             {/* PURCHASE */}
-            {status === "for_sale" && price !== null && (
+            {status === "for_sale" && (
               <div className="border border-white/12 bg-white/[0.03] p-5">
                 <div className="text-[10px] tracking-[0.3em] uppercase text-ash mb-1">
                   Price
                 </div>
                 <div className="font-mono text-3xl text-bone">
-                  {price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ
+                  {price === null ? "See price on Objkt" : `${listing?.currency_id !== 1 ? "≈ " : ""}${formatXtz(price)} XTZ`}
                 </div>
                 {amountLeft > 0 && (
                   <div className="mt-1 text-[11px] tracking-[0.15em] text-ash">
@@ -411,7 +452,7 @@ export default function TokenViewerModal() {
                         ? "Sign in your wallet…"
                         : buyState.kind === "pending"
                         ? "Processing tx…"
-                        : `Buy · ${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ`}
+                        : `Buy · ${formatXtz(price!)} XTZ`}
                     </span>
                     <span className="group-hover:translate-x-1 transition-transform">
                       →
@@ -424,7 +465,7 @@ export default function TokenViewerModal() {
                     rel="noopener noreferrer"
                     className="mt-4 group flex items-center justify-between gap-3 px-5 py-3 bg-accent text-void text-xs tracking-[0.25em] uppercase font-semibold hover:bg-accent-soft transition-colors"
                   >
-                    <span>Buy on Objkt (FA token)</span>
+                    <span>View listing on Objkt</span>
                     <span>↗</span>
                   </a>
                 )}

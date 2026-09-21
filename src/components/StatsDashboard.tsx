@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useLang } from "@/lib/i18n";
+import { readStored, writeStored } from "@/lib/storage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Private analytics dashboard (rendered at /stats). Talks to /api/stats, which
 // holds the GoatCounter API token server-side. Access is gated by a password
-// (STATS_ACCESS_KEY) that we remember in localStorage so you only type it once.
+// (STATS_ACCESS_KEY) that we remember only for this browser tab's session.
 // The whole GoatCounter free plan surfaces here: totals, top pages, referrers,
 // countries, browsers, systems and screen sizes — with a 7d / 30d / all switch.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,37 +95,46 @@ export default function StatsDashboard() {
   const [range, setRange] = useState<RangeKey>("all");
   const [data, setData] = useState<Stats | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "unauth" | "error">("idle");
+  const request = useRef<AbortController | null>(null);
 
   // Restore a saved password on mount, then mark ready. Doing the load only once
   // `ready` is set (below) means there's a SINGLE load path — no null-key probe
   // racing the real load and clobbering good data with the password gate.
   useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
+    const saved = readStored(LS_KEY, true);
+    writeStored(LS_KEY, null); // Retire the previous persistent credential.
     if (saved) setKey(saved);
     setReady(true);
   }, []);
 
   const load = useCallback(
     async (k: string | null, r: RangeKey) => {
+      request.current?.abort();
+      const controller = new AbortController();
+      request.current = controller;
       setState("loading");
       try {
         const params = new URLSearchParams({ range: r });
         const res = await fetch(`/api/stats?${params.toString()}`, {
           cache: "no-store",
           headers: k ? { "x-stats-key": k } : {},
+          signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
         if (res.status === 401) {
           // A stored key that no longer works: drop it so a refresh doesn't keep
           // re-sending a bad password.
-          if (k && typeof window !== "undefined") localStorage.removeItem(LS_KEY);
+          writeStored(LS_KEY, null, true);
           setState("unauth");
           setData(null);
           return;
         }
         const json: Stats = await res.json();
+        if (controller.signal.aborted) return;
         setData(json);
-        setState(json.error ? "error" : "idle");
+        setState(!res.ok || json.error ? "error" : "idle");
       } catch {
+        if (controller.signal.aborted) return;
         setState("error");
       }
     },
@@ -135,18 +145,22 @@ export default function StatsDashboard() {
   // Also refires when the range switches or the user submits a password.
   useEffect(() => {
     if (ready) load(key, range);
+    return () => request.current?.abort();
   }, [ready, key, range, load]);
 
   function submitKey(e: React.FormEvent) {
     e.preventDefault();
     const k = input.trim();
     if (!k) return;
-    localStorage.setItem(LS_KEY, k);
-    setKey(k);
+    writeStored(LS_KEY, k, true);
+    if (key === k) load(k, range);
+    else setKey(k);
   }
 
   function lock() {
-    localStorage.removeItem(LS_KEY);
+    request.current?.abort();
+    writeStored(LS_KEY, null, true);
+    setInput("");
     setKey(null);
     setData(null);
     setState("unauth");
@@ -157,9 +171,10 @@ export default function StatsDashboard() {
     return (
       <Shell t={t}>
         <form onSubmit={submitKey} className="mt-10 max-w-sm space-y-3">
-          <label className="block text-xs uppercase tracking-widest text-ash">{t.passPrompt}</label>
+          <label htmlFor="stats-password" className="block text-xs uppercase tracking-widest text-ash">{t.passPrompt}</label>
           <input
             type="password"
+            id="stats-password"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             autoFocus

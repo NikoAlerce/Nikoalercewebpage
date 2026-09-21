@@ -249,6 +249,31 @@ export const IPFS_GATEWAYS = [
   "https://dweb.link/ipfs/",
 ];
 
+/** Canonical CID/path, never an arbitrary fetch URL or a traversable path. */
+export function ipfsPath(uri: string | null | undefined): string | null {
+  if (!uri || uri.length > 2048) return null;
+  let path = uri.trim();
+  if (/^https?:\/\//i.test(path)) {
+    // Parse the raw path first: URL() would silently normalize dot segments.
+    const match = path.match(/^https?:\/\/[^/]+\/ipfs\/(.*)$/i);
+    if (!match) return null;
+    path = match[1];
+  } else {
+    path = path.replace(/^ipfs:\/\/(?:ipfs\/)?/i, "");
+  }
+  const [cid, ...parts] = path.split("/");
+  if (!/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{20,})$/.test(cid)) return null;
+  if (parts.at(-1) === "") parts.pop();
+  try {
+    const safe = parts.map((part) => {
+      const decoded = decodeURIComponent(part);
+      if (!decoded || decoded === "." || decoded === ".." || /[\\/\u0000-\u001f%?#]/.test(decoded)) throw new Error("Invalid path");
+      return encodeURIComponent(decoded);
+    });
+    return [cid, ...safe].join("/");
+  } catch { return null; }
+}
+
 /**
  * Convierte un URI ipfs:// en una URL HTTP servible usando el primer gateway.
  */
@@ -256,10 +281,12 @@ export function ipfsToUrl(
   uri: string | null | undefined,
 ): string | null {
   if (!uri) return null;
-  if (uri.startsWith("http")) return uri;
-  if (!uri.startsWith("ipfs://")) return uri;
-  const cid = uri.replace("ipfs://", "");
-  return `${IPFS_GATEWAYS[0]}${cid}`;
+  const path = ipfsPath(uri);
+  if (path) return `${IPFS_GATEWAYS[0]}${path}`;
+  try {
+    const url = new URL(uri);
+    return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
 }
 
 /**
@@ -271,14 +298,8 @@ export function ipfsToUrl(
  * these CIDs), so pass the smallest URI you have (thumbnail_uri).
  */
 export function objktCdnUrl(uri: string | null | undefined): string | null {
-  if (!uri) return null;
-  let cid: string | null = null;
-  if (uri.startsWith("ipfs://")) cid = uri.slice("ipfs://".length);
-  else {
-    const m = uri.match(/\/ipfs\/([^/?#]+)/);
-    if (m) cid = m[1];
-  }
-  if (!cid) return null;
+  const cid = ipfsPath(uri);
+  if (!cid || cid.includes("/")) return null;
   return `https://assets.objkt.media/file/assets-003/${cid}/artifact`;
 }
 
@@ -290,9 +311,10 @@ export function ipfsWithGateway(
   gatewayIndex: number,
 ): string | null {
   if (!uri) return null;
-  const cid = uri.startsWith("ipfs://") ? uri.replace("ipfs://", "") : uri;
-  const gw = IPFS_GATEWAYS[gatewayIndex % IPFS_GATEWAYS.length];
-  return `${gw}${cid}`;
+  const cid = ipfsPath(uri);
+  if (!cid) return ipfsToUrl(uri);
+  const index = Number.isInteger(gatewayIndex) ? ((gatewayIndex % IPFS_GATEWAYS.length) + IPFS_GATEWAYS.length) % IPFS_GATEWAYS.length : 0;
+  return `${IPFS_GATEWAYS[index]}${cid}`;
 }
 
 export function objktTokenUrl(t: ObjktToken): string {
@@ -353,23 +375,18 @@ export function tokenStatus(token: Token): Status {
  * Objkt exposes `price` in listing currency and `price_xtz` (mutez) for XTZ-equivalent;
  * either may be present depending on indexer shape.
  */
-function finitePositiveMutez(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v) && v > 0) return Math.floor(v);
-  if (typeof v === "string" && v.trim() !== "") {
-    const n = Number(v);
-    if (Number.isFinite(n) && n > 0) return Math.floor(n);
-  }
-  return null;
+export function safeNat(v: unknown): number | null {
+  if (typeof v !== "number" && (typeof v !== "string" || !/^\d+$/.test(v))) return null;
+  const n = Number(v);
+  return Number.isSafeInteger(n) && n >= 0 ? n : null;
 }
 
 export function listingPriceMutez(
   listing: ObjktListing | null | undefined,
 ): number | null {
-  if (!listing) return null;
-  const p =
-    finitePositiveMutez(listing.price) ??
-    finitePositiveMutez(listing.price_xtz);
-  return p;
+  if (!listing || listing.currency_id !== 1) return null;
+  // A conversion estimate is not a payable amount. Never round or infer it.
+  return safeNat(listing.price);
 }
 
 /** Bigmap key for on-chain fulfill_ask / collect; Objkt may return a string. */
@@ -377,24 +394,21 @@ export function listingBigmapKey(
   listing: ObjktListing | null | undefined,
 ): number | null {
   if (!listing || listing.bigmap_key == null) return null;
-  const n =
-    typeof listing.bigmap_key === "number"
-      ? listing.bigmap_key
-      : Number(listing.bigmap_key);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.floor(n);
+  return safeNat(listing.bigmap_key);
 }
 
 /** Price in XTZ of the creator's lowest active listing. */
 export function lowestPriceXtz(token: Token): number | null {
   const listing = token.listings_active?.[0];
   const mutez =
-    listingPriceMutez(listing) ??
-    (typeof token.lowest_ask === "number" && Number.isFinite(token.lowest_ask)
-      ? token.lowest_ask
-      : null);
+    (listing?.currency_id === 1 ? listingPriceMutez(listing) : safeNat(listing?.price_xtz)) ??
+    safeNat(token.lowest_ask);
   if (mutez === null) return null;
   return mutez / 1_000_000;
+}
+
+export function formatXtz(value: number): string {
+  return new Intl.NumberFormat("en-US", { useGrouping: false, maximumFractionDigits: 6 }).format(value);
 }
 
 /**

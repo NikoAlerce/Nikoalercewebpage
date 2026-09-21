@@ -115,6 +115,8 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (paused || isTouchDevice || !controlsRef.current?.isLocked) return;
+      if (e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
       const k = e.code;
       if (k === "KeyW") keys.current.w = true;
       if (k === "KeyA") keys.current.a = true;
@@ -142,13 +144,23 @@ const PlayerControlsInner = function PlayerControls({ startPosition, positionRef
       if (k === "ShiftLeft") keys.current.ShiftLeft = false;
       if (k === "ShiftRight") keys.current.ShiftRight = false;
     };
+    const reset = () => {
+      for (const key of Object.keys(keys.current) as (keyof typeof keys.current)[]) keys.current[key] = false;
+      currentVelocity.current.set(0, 0, 0);
+    };
+    const hidden = () => { if (document.hidden) reset(); };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
+    window.addEventListener("blur", reset);
+    document.addEventListener("visibilitychange", hidden);
     return () => {
+      reset();
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", reset);
+      document.removeEventListener("visibilitychange", hidden);
     };
-  }, []);
+  }, [paused, isTouchDevice]);
 
   // Seed touch yaw/pitch from the initial camera orientation so look starts where the
   // camera is pointing (the gallery faces -Z → yaw 0).
