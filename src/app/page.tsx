@@ -12,29 +12,31 @@ import { useLang } from "@/lib/i18n";
 const REALMS = {
   en: [
     { n: "01", href: "/art-on-tezos", title: "Art on Tezos", blurb: "Two collections synced live with Tezos — Works (the main gallery) and Sidequest (the experiments) — open to collect on-chain." },
-    { n: "02", href: "/music", title: "Music", blurb: "El Bosquecito Records. Composed, recorded, mixed and mastered in-house — out on every platform." },
-    { n: "03", href: "/metaverse", title: "3D Gallery", blurb: "Walk a first-person gallery of the work, rendered in real time in your browser." },
-    { n: "04", href: "/decentraland", title: "Decentraland", blurb: "Virtual real estate and wearables — designed, built and deployed on-chain." },
-    { n: "05", href: "/shop", title: "Shop", blurb: "Physical objects: prints, sculptures and limited drops with their digital counterparts." },
+    { n: "02", href: "/art-on-evm", title: "Art on EVM", blurb: "Artworks on Base and Ethereum. Explore my collections on Transient." },
+    { n: "03", href: "/music", title: "Music", blurb: "El Bosquecito Records. Composed, recorded, mixed and mastered in-house — out on every platform." },
+    { n: "04", href: "/metaverse", title: "3D Gallery", blurb: "Walk a first-person gallery of the work, rendered in real time in your browser." },
+    { n: "05", href: "/decentraland", title: "Decentraland", blurb: "Virtual real estate and wearables — designed, built and deployed on-chain." },
+    { n: "06", href: "/shop", title: "Shop", blurb: "Physical objects: prints, sculptures and limited drops with their digital counterparts." },
   ],
   es: [
     { n: "01", href: "/art-on-tezos", title: "Arte en Tezos", blurb: "Dos colecciones sincronizadas en vivo con Tezos — Works (la galería principal) y Sidequest (los experimentos) — abiertas para coleccionar on-chain." },
-    { n: "02", href: "/music", title: "Música", blurb: "El Bosquecito Records. Compuesto, grabado, mezclado y masterizado en casa — en todas las plataformas." },
-    { n: "03", href: "/metaverse", title: "Galería 3D", blurb: "Recorré una galería en primera persona de la obra, renderizada en tiempo real en tu navegador." },
-    { n: "04", href: "/decentraland", title: "Decentraland", blurb: "Bienes raíces virtuales y wearables — diseñados, construidos y deployados on-chain." },
-    { n: "05", href: "/shop", title: "Tienda", blurb: "Objetos físicos: prints, esculturas y drops limitados con su contraparte digital." },
+    { n: "02", href: "/art-on-evm", title: "Arte en EVM", blurb: "Obras en Base y Ethereum. Explorá mis colecciones en Transient." },
+    { n: "03", href: "/music", title: "Música", blurb: "El Bosquecito Records. Compuesto, grabado, mezclado y masterizado en casa — en todas las plataformas." },
+    { n: "04", href: "/metaverse", title: "Galería 3D", blurb: "Recorré una galería en primera persona de la obra, renderizada en tiempo real en tu navegador." },
+    { n: "05", href: "/decentraland", title: "Decentraland", blurb: "Bienes raíces virtuales y wearables — diseñados, construidos y deployados on-chain." },
+    { n: "06", href: "/shop", title: "Tienda", blurb: "Objetos físicos: prints, esculturas y drops limitados con su contraparte digital." },
   ],
 };
 
 const T = {
   en: {
     index: "Index",
-    title: "Five ways into the studio.",
+    title: "Six ways into the studio.",
     intro: "One practice, many surfaces — art, sound, video and immersive worlds. Pick a thread and pull.",
   },
   es: {
     index: "Índice",
-    title: "Cinco puertas al estudio.",
+    title: "Seis puertas al estudio.",
     intro: "Una práctica, muchas superficies — arte, sonido, video y mundos inmersivos. Elegí un hilo y tirá.",
   },
 };
@@ -85,9 +87,7 @@ export default function Home() {
             <Link
               key={r.href}
               href={r.href}
-              className={`group relative bg-void hover:bg-ink transition-colors duration-500 p-8 md:p-10 flex flex-col min-h-[15rem] ${
-                r.n === "01" ? "sm:col-span-2 lg:col-span-2" : ""
-              }`}
+              className="group relative bg-void hover:bg-ink transition-colors duration-500 p-8 md:p-10 flex flex-col min-h-[15rem]"
             >
               <div className="flex items-baseline justify-between">
                 <span className="font-mono text-[11px] tracking-[0.3em] text-ash/60 group-hover:text-accent transition-colors duration-500">

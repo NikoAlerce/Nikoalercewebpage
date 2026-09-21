@@ -8,7 +8,7 @@ const get = (path, options) => fetch(new URL(path, base), {
 });
 
 test('public pages render successfully', async () => {
-  for (const path of ['/', '/music', '/shop', '/tools', '/ar-labs', '/decentraland', '/metaverse', '/support', '/art-on-tezos?tab=sidequest']) {
+  for (const path of ['/', '/music', '/shop', '/tools', '/ar-labs', '/decentraland', '/metaverse', '/support', '/art-on-tezos?tab=sidequest', '/art-on-evm']) {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     assert.match(await res.text(), /<html/);
@@ -50,8 +50,14 @@ test('thumbnail optimizer rejects arbitrary hosts and traversal', async () => {
   }
 });
 
-test('Transient tab is directly addressable and linked in the gallery', async () => {
-  const html = await (await get('/art-on-tezos?tab=transient')).text();
-  assert.match(html, /Art on Transient/);
+test('Transient has its own category and old tab links redirect there', async () => {
+  const html = await (await get('/art-on-evm')).text();
+  assert.match(html, /Art on EVM/);
   assert.match(html, /https:\/\/www\.transient\.xyz\/@NikoAlerce/);
+  const oldLink = await get('/art-on-tezos?tab=transient', { redirect: 'manual' });
+  assert.equal(oldLink.status, 308);
+  assert.equal(oldLink.headers.get('location'), '/art-on-evm');
+  const tezos = await (await get('/art-on-tezos')).text();
+  assert.doesNotMatch(tezos, /<button[^>]*>Transient<\/button>/);
+  assert.match(tezos, /href="\/art-on-evm"/);
 });

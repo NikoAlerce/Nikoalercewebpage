@@ -3,7 +3,6 @@
 import { useState } from "react";
 import clsx from "clsx";
 import NFTGallery from "./NFTGallery";
-import TransientGallery from "./TransientGallery";
 import { useLang } from "@/lib/i18n";
 
 // "Art on Tezos" groups the two Objkt collections as sub-categories: Works (the main
@@ -44,19 +43,19 @@ const COLLECTIONS = {
   ],
 };
 
-type Key = "works" | "sidequest" | "transient";
+type Key = "works" | "sidequest";
 
 export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
   const { lang } = useLang();
   const collections = COLLECTIONS[lang];
   const [active, setActive] = useState<Key>(
-    initialTab === "sidequest" || initialTab === "transient" ? initialTab : "works",
+    initialTab === "sidequest" ? "sidequest" : "works",
   );
   const col = collections.find((c) => c.key === active) ?? collections[0];
 
   const tabs = (
     <div className="inline-flex flex-wrap items-center border border-white/12 w-fit max-w-full">
-      {[...collections, { key: "transient" as const, label: "Transient" }].map((c) => (
+      {collections.map((c) => (
         <button
           key={c.key}
           onClick={() => setActive(c.key)}
@@ -73,8 +72,6 @@ export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
       ))}
     </div>
   );
-
-  if (active === "transient") return <TransientGallery tabsSlot={tabs} />;
 
   return (
     <NFTGallery
