@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 // Run against a production server started without analytics credentials.
 const base = process.env.TEST_BASE_URL || 'http://localhost:3000';
@@ -60,4 +61,15 @@ test('Transient has its own category and old tab links redirect there', async ()
   const tezos = await (await get('/art-on-tezos')).text();
   assert.doesNotMatch(tezos, /<button[^>]*>Transient<\/button>/);
   assert.match(tezos, /href="\/art-on-evm"/);
+});
+
+test('Transient animated previews support streaming byte ranges', async () => {
+  const previews = JSON.parse(await readFile(new URL('../src/lib/transientPreviewManifest.json', import.meta.url), 'utf8'));
+  for (const preview of Object.values(previews)) {
+    const res = await get(preview.video, { headers: { range: 'bytes=0-127' } });
+    assert.equal(res.status, 206, preview.video);
+    assert.match(res.headers.get('content-type'), /video\/mp4/);
+    assert.match(res.headers.get('content-range'), /^bytes 0-127\//);
+    assert.equal((await res.arrayBuffer()).byteLength, 128);
+  }
 });
