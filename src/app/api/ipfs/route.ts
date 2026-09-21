@@ -107,6 +107,9 @@ function relay(upstream: Response): Response {
   const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
   const headers: Record<string, string> = {
     "content-type": contentType,
+    // Untrusted NFT HTML/SVG must not execute with this site's origin privileges.
+    "content-security-policy": "sandbox",
+    "x-content-type-options": "nosniff",
     "access-control-allow-origin": "*",
     "accept-ranges": "bytes",
     // IPFS content is content-addressed → the bytes for a CID never change, so cache hard
@@ -135,6 +138,11 @@ export async function GET(req: NextRequest) {
       : uri;
 
   const range = req.headers.get("range");
+  // Only content-addressed paths are allowed; reject traversal and URL syntax.
+  const [root, ...segments] = cid.split("/");
+  if (cid.length > 2048 || !/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{20,})$/.test(root) || segments.some((part) => !part || part === "." || part === ".." || /[%?#\\]/.test(part))) {
+    return NextResponse.json({ error: "invalid IPFS path" }, { status: 400 });
+  }
 
   // 0) Video redirect path: send the <video> straight to a CORS-enabled gateway so the
   // bytes never stream through this serverless function. Removes the double-hop + the

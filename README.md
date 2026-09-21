@@ -1,113 +1,56 @@
-# NIKO ALERCE // THE VOID
+# Niko Alerce — sitio personal
 
-Sitio personal de **Niko Alerce** — artista visual 3D & glitch.
-Estética brutalista oscura, escena 3D en tiempo real con React Three Fiber, y galería NFT sincronizada en vivo con la blockchain de **Tezos** vía la API GraphQL pública de **Objkt**.
+Sitio publicado: https://www.nikoalerce.xyz/
 
-## Stack
+Next.js 15.5, React 19, TypeScript y Tailwind CSS. Las escenas 3D usan React Three Fiber 9, drei 10 y Three.js; las colecciones se consultan mediante Objkt GraphQL. El sitio incluye música, galería 3D, Decentraland, AR Labs, herramientas, catálogo y página de ayuda.
 
-- **Next.js 14** (App Router) + TypeScript + Tailwind CSS
-- **React Three Fiber** + **drei** + **postprocessing** (Bloom, Chromatic Aberration, Noise, Vignette)
-- **graphql-request** contra `https://data.objkt.com/v3/graphql`
-- Fuentes Google: `JetBrains Mono` + `Space Grotesk`
+## Desarrollo
 
-## Estructura
+Usar Node.js 22 o 24.
 
-```
-src/
-  app/
-    layout.tsx          # fuentes, metadata, scanlines globales
-    page.tsx            # composición de secciones
-    globals.css         # glitch, scanlines, vignette CRT
-    api/objkt/route.ts  # proxy + cache (revalidate 300s)
-  components/
-    Hero.tsx            # héroe con escena 3D + marquee
-    Scene3D.tsx         # R3F: orb distorsionado + bloom + chromatic
-    ModelViewer.tsx     # visor de .glb con OrbitControls
-    MediaRenderer.tsx   # decide mp4 / image / glb
-    NFTGallery.tsx      # grid din\u00e1mico desde Objkt
-    NFTCard.tsx
-    Shop.tsx            # productos f\u00edsicos (placeholder checkout)
-    Navbar.tsx
-    Footer.tsx
-    GlitchText.tsx
-  lib/
-    objkt.ts            # cliente GraphQL + queries + helpers IPFS
-    types.ts
-```
-
-## Setup
-
-```bash
-npm install
-cp .env.example .env.local   # opcional, valores por defecto ya funcionan
+```sh
+npm ci
 npm run dev
 ```
 
-Abrir <http://localhost:3000>.
+Abrir http://localhost:3000. `.env.example` documenta las opciones; copiarlas a `.env.local` solo cuando se necesiten. Nunca subir secretos al repositorio.
 
-## Galer\u00eda din\u00e1mica
+## Validación
 
-La galer\u00eda consulta tokens **creados** por un alias de Objkt:
-
-```graphql
-query TokensByAlias($alias: String!) {
-  token(
-    where: {
-      creators: { holder: { alias: { _eq: $alias } } }
-      supply: { _gt: "0" }
-    }
-    order_by: { timestamp: desc }
-    limit: 60
-  ) {
-    token_id name display_uri artifact_uri thumbnail_uri mime
-    fa_contract timestamp supply
-    creators { holder { address alias } }
-  }
-}
-```
-
-Por defecto se consultan los aliases **`nikoalerce`** y **`sidequest`**.
-Cambialos editando `src/app/page.tsx` o seteando `NEXT_PUBLIC_OBJKT_ALIASES` en `.env.local`.
-
-El handler `/api/objkt?alias=...` cachea 5 min con `stale-while-revalidate` para no machacar el endpoint p\u00fablico.
-
-## Manejo de medios
-
-`MediaRenderer.tsx` detecta el `mime` y elige render:
-
-- `video/*` &rarr; `<video autoplay loop muted playsinline>`
-- `model/gltf-binary` &rarr; visor R3F con OrbitControls (carga al hover)
-- `image/*` &rarr; thumbnail v\u00eda CDN de Objkt (`assets.objkt.media`)
-- fallback &rarr; `display_uri` o `artifact_uri` v\u00eda IPFS gateway
-
-## Est\u00e9tica
-
-- Fondo `#000000` absoluto
-- **Scanlines** + **vignette CRT** globales en `globals.css`
-- **Glitch text** con dos pseudo-elementos (rojo/cyan) clipeados
-- En la escena 3D: **Bloom**, **ChromaticAberration**, **Noise**, **Vignette**
-- HDRI `night` de drei + rim lights `#ff0040` y `#00fff0`
-
-## Deploy
-
-Compatible con **Vercel** (recomendado). El route handler se cachea en edge,
-las consultas a Objkt se proxean para evitar CORS y permitir cache.
-
-```bash
+```sh
+npm run lint
+npm run typecheck
+npm test
 npm run build
-npm run start
+npm start
 ```
 
-## Pr\u00f3ximos pasos sugeridos
+Con el servidor de producción en ejecución y sin credenciales de analytics:
 
-- [ ] Subir un `.glb` propio a `/public/models/` y reemplazar el orb procedural por una pieza tuya en el Hero.
-- [ ] Conectar el Shop a Stripe / Shopify Storefront (o pago directo en XTZ con Beacon Wallet).
-- [ ] Filtros de la galer\u00eda por colecci\u00f3n / mime / a\u00f1o.
-- [ ] P\u00e1gina de detalle por token (`/asset/[fa_contract]/[token_id]`) con visor 3D fullscreen.
-- [ ] Modo "live mint" con webhook desde TzKT para notificar drops nuevos.
+```sh
+npm run test:smoke
+```
 
-## Cr\u00e9ditos
+`TEST_BASE_URL` permite usar otro puerto. Las pruebas verifican páginas, idioma, metadata, consultas de tienda, validación de API y privacidad de estadísticas. No envían mensajes ni transacciones.
 
-- API: [Objkt GraphQL](https://data.objkt.com/v3/graphql)
-- Indexer alternativo: [TzKT](https://api.tzkt.io)
-- Inspiraci\u00f3n: brutalismo digital, MS-DOS, demoscene, vaporwave colapsado.
+## Colecciones y medios
+
+`src/lib/objkt.ts` mapea `nikoalerce` y `sidequest` a sus wallets. `/api/objkt?alias=...` acepta hasta 300 obras por consulta y un offset no negativo. `/api/tokens?ids=contrato:token` permite recuperar hasta 100 obras específicas. Una caída de Objkt devuelve 502 sin cachear una colección vacía.
+
+`/api/ipfs` distribuye contenido por gateways con soporte Range. Acepta CIDs con rutas sin traversal; las respuestas llevan una política sandbox para que HTML o SVG no ejecuten código con el origen de la web.
+
+## Tienda y compras NFT
+
+La tienda física es un catálogo de muestra. Sus enlaces abren una consulta por correo; precios, stock, pagos y envíos deben confirmarse con el artista. No hay carrito ni checkout de productos físicos.
+
+Las compras NFT mediante Beacon se envían a Tezos. Tras el envío se muestra el enlace a TzKT para verificar el resultado. El sitio no declara una compra confirmada por tiempo transcurrido. La comprobación de una compra real requiere una wallet y autorización del titular.
+
+## Estadísticas
+
+Configurar `GOATCOUNTER_API_TOKEN` y `STATS_ACCESS_KEY` en el hosting para habilitar `/stats`. Si falta la clave, el panel privado queda deshabilitado. La clave se transmite mediante `x-stats-key`, nunca en la URL. `/api/stats/public` conserva únicamente el resumen público de visitas y países.
+
+## Dependencias y despliegue
+
+Compatible con Vercel. `npm run build` descarga las fuentes de Google y requiere acceso a Internet. La carga del metaverso sin SSR se declara en un componente cliente, como requiere Next.js 15.
+
+PostCSS se fija en 8.5.28 también para dependencias transitivas mediante `overrides`, para incluir sus correcciones de seguridad. Auditoría del 21/09/2026: 0 alertas críticas, 0 altas, 17 moderadas y 11 bajas; las pendientes corresponden a Beacon/Taquito/WalletConnect y sus dependencias criptográficas. Revisar `npm audit` antes de futuros despliegues. Su migración mayor requiere probar el emparejamiento y las compras con wallets compatibles.

@@ -14,22 +14,23 @@ export const dynamic = "force-dynamic";
 const ACCESS_KEY = process.env.STATS_ACCESS_KEY;
 
 export async function GET(req: NextRequest) {
-  // ── Gate: if a password is configured, demand it (query ?key= or header). ──
-  if (ACCESS_KEY) {
-    const key = req.nextUrl.searchParams.get("key") || req.headers.get("x-stats-key");
-    if (key !== ACCESS_KEY) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  // Fail closed: missing configuration must never expose private analytics.
+  if (!ACCESS_KEY) {
+    return NextResponse.json({ enabled: false }, { headers: { "cache-control": "private, no-store" } });
+  }
+  const key = req.headers.get("x-stats-key");
+  if (key !== ACCESS_KEY) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: { "cache-control": "private, no-store" } });
   }
 
   // Token not set yet → tell the UI so it can show setup instructions.
-  if (!hasToken()) return NextResponse.json({ enabled: false });
+  if (!hasToken()) return NextResponse.json({ enabled: false }, { headers: { "cache-control": "private, no-store" } });
 
   const range = req.nextUrl.searchParams.get("range") || "all";
   try {
     const data = await fetchStats(range);
     return NextResponse.json(data, { headers: { "cache-control": "private, no-store" } });
   } catch (e) {
-    return NextResponse.json({ enabled: true, error: String(e) }, { status: 502 });
+    return NextResponse.json({ enabled: true, error: String(e) }, { status: 502, headers: { "cache-control": "private, no-store" } });
   }
 }

@@ -109,8 +109,10 @@ export default function StatsDashboard() {
       setState("loading");
       try {
         const params = new URLSearchParams({ range: r });
-        if (k) params.set("key", k);
-        const res = await fetch(`/api/stats?${params.toString()}`, { cache: "no-store" });
+        const res = await fetch(`/api/stats?${params.toString()}`, {
+          cache: "no-store",
+          headers: k ? { "x-stats-key": k } : {},
+        });
         if (res.status === 401) {
           // A stored key that no longer works: drop it so a refresh doesn't keep
           // re-sending a bad password.

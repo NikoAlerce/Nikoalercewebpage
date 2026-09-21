@@ -26,9 +26,12 @@ const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({
   setLang: () => {},
 });
 
-export function LangProvider({ children }: { children: ReactNode }) {
-  // Server render is always EN; the effect below corrects it before paint settles.
-  const [lang, setLangState] = useState<Lang>("en");
+export function LangProvider({ children, initialLang = "en" }: { children: ReactNode; initialLang?: Lang }) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     const saved = readCookie(COOKIE_KEY); // set by the switch, or by IP in middleware

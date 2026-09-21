@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import clsx from "clsx";
 import TitleCharacter from "@/components/TitleCharacter";
 import NFTCard from "./NFTCard";
@@ -124,33 +124,41 @@ export default function NFTGallery({
 
   const [tokens, setTokens] = useState<ObjktToken[]>([]);
   const [holder, setHolder] = useState<ObjktHolder | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const request = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [media, setMedia] = useState<MediaFilter>("all");
 
   const load = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(
         `/api/objkt?alias=${encodeURIComponent(alias)}&limit=300`,
+        { signal: controller.signal },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ApiResp = await res.json();
+      if (controller.signal.aborted) return;
       // G0dz tokens are excluded server-side via the GraphQL query's _nilike filter.
       const filtered = (data.tokens ?? []).filter(isDisplayableToken);
       setTokens(shuffle(filtered));
       setHolder(data.holder ?? null);
     } catch (e) {
+      if (controller.signal.aborted) return;
       setError(e instanceof Error ? e.message : "unknown");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [alias]);
 
   useEffect(() => {
     load();
+    return () => request.current?.abort();
   }, [load]);
 
   const counts = useMemo(() => {
@@ -378,7 +386,7 @@ export default function NFTGallery({
       )}
 
       {/* Grid */}
-      {!loading && displayed.length > 0 && (
+      {!loading && !error && displayed.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {displayed.map((t, i) => (
             <NFTCard

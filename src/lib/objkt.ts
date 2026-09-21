@@ -6,6 +6,10 @@ export const OBJKT_GRAPHQL =
 
 export const objktClient = new GraphQLClient(OBJKT_GRAPHQL, {
   headers: { "content-type": "application/json" },
+  fetch: (input, init) => fetch(input, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(15000),
+  }),
 });
 
 /**
@@ -146,7 +150,7 @@ export async function fetchTokensByIds(
     return data.token ?? [];
   } catch (err) {
     console.error("[objkt] fetchTokensByIds error", err);
-    return [];
+    throw new Error("Objkt is temporarily unavailable");
   }
 }
 
@@ -182,8 +186,7 @@ export async function resolveAliasToWallet(
     return found;
   } catch (err) {
     console.error("[objkt] resolveAliasToWallet error", alias, err);
-    aliasResolutionCache.set(norm, null);
-    return null;
+    throw new Error("Objkt is temporarily unavailable");
   }
 }
 
@@ -215,7 +218,7 @@ export async function fetchTokensByCreator(
     return data.token ?? [];
   } catch (err) {
     console.error("[objkt] fetchTokensByCreator error", address, err);
-    return [];
+    throw new Error("Objkt is temporarily unavailable");
   }
 }
 

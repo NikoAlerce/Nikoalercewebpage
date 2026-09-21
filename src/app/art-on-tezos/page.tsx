@@ -7,14 +7,15 @@ export const metadata: Metadata = {
     "Art on Tezos by Niko Alerce — two collections synced live with Objkt: Works (the main gallery) and Sidequest (the experiments). Open a piece to collect it on-chain.",
 };
 
-export default function ArtOnTezosPage({
+export default async function ArtOnTezosPage({
   searchParams,
 }: {
-  searchParams: { tab?: string };
+  searchParams: Promise<{ tab?: string }>;
 }) {
+  const { tab } = await searchParams;
   return (
     <div className="pt-20">
-      <ArtOnTezos initialTab={searchParams?.tab} />
+      <ArtOnTezos key={tab ?? "works"} initialTab={tab} />
     </div>
   );
 }

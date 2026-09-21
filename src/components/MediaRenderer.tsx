@@ -15,7 +15,7 @@ type Props = {
  * mid-range laptops & phones.
  */
 function useInView<T extends Element>(rootMargin = "150px 0px"): [
-  React.RefObject<T>,
+  React.RefObject<T | null>,
   boolean,
 ] {
   const ref = useRef<T>(null);

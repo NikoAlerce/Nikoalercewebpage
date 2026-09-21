@@ -32,7 +32,6 @@ type BuyState =
   | { kind: "idle" }
   | { kind: "signing" }
   | { kind: "pending"; opHash: string }
-  | { kind: "success"; opHash: string }
   | { kind: "error"; message: string };
 
 export default function TokenViewerModal() {
@@ -114,18 +113,12 @@ export default function TokenViewerModal() {
     });
     if (res.ok) {
       setBuyState({ kind: "pending", opHash: res.opHash });
-      setTimeout(() => {
-        setBuyState({ kind: "success", opHash: res.opHash });
-        window.dispatchEvent(
-          new CustomEvent("nft-bought", {
-            detail: { tokenId: token.token_id, price },
-          })
-        );
-      }, 30_000);
+      // Submission is not confirmation. Keep the explorer link visible; never
+      // claim success or emit a purchase event just because 30 seconds elapsed.
     } else {
       setBuyState({ kind: "error", message: res.error });
     }
-  }, [address, buy, connect, listing]);
+  }, [address, buy, connect, listing, token]);
 
   if (!token) return null;
 
@@ -320,21 +313,9 @@ export default function TokenViewerModal() {
                 )}
 
                 {/* Purchase state */}
-                {buyState.kind === "success" ? (
-                  <div className="mt-4 p-3 border border-accent/50 bg-accent/10 text-[11px] tracking-[0.15em] text-bone">
-                    ✓ Purchase confirmed
-                    <a
-                      href={`https://tzkt.io/${buyState.opHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block mt-1 text-accent link-underline truncate"
-                    >
-                      {buyState.opHash.slice(0, 12)}… ↗
-                    </a>
-                  </div>
-                ) : buyState.kind === "pending" ? (
-                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone animate-pulse">
-                    ⟳ Transaction sent · waiting for confirmation…
+                {buyState.kind === "pending" ? (
+                  <div className="mt-4 p-3 border border-white/20 bg-white/5 text-[11px] tracking-[0.15em] text-bone">
+                    Transaction sent · check confirmation in the explorer:
                     <a
                       href={`https://tzkt.io/${buyState.opHash}`}
                       target="_blank"
