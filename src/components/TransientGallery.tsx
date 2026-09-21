@@ -17,7 +17,7 @@ function images(image: string | null): string[] {
   return [...(path ? [`/api/thumbnail?source=transient&uri=${encodeURIComponent(path)}`] : []), `https://img.transient.xyz/?${params}`];
 }
 
-export default function TransientGallery({ tabsSlot }: { tabsSlot: React.ReactNode }) {
+export default function TransientGallery() {
   const { lang } = useLang();
   const es = lang === "es";
   const [artworks, setArtworks] = useState<TransientArtwork[]>([]);
@@ -38,15 +38,14 @@ export default function TransientGallery({ tabsSlot }: { tabsSlot: React.ReactNo
   const displayed = useMemo(() => sortArtworks(artworks, order, {
     date: (item) => item.createdAt, price: () => null, id: (item) => item.id,
   }), [artworks, order]);
-  return <section id="art-on-tezos" className="relative py-24 md:py-32 px-6 md:px-10 max-w-[1600px] mx-auto border-t border-white/5">
+  return <section id="art-on-evm" className="relative py-24 md:py-32 px-6 md:px-10 max-w-[1600px] mx-auto border-t border-white/5">
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-12">
       <div className="max-w-2xl">
         <div className="text-[11px] tracking-[0.4em] uppercase text-ash mb-6">Transient · Niko Alerce</div>
         <div className="flex items-center gap-2 md:gap-4">
-          <h2 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">{es ? "Arte en Transient" : "Art on Transient"}</h2>
+          <h1 className="font-graffiti text-bone leading-[1] text-[clamp(2.8rem,10vw,7rem)]">{es ? "Arte en EVM" : "Art on EVM"}</h1>
           <TitleCharacter clip="pointing" size={470} flip className="shrink-0" />
         </div>
-        <div className="mt-6">{tabsSlot}</div>
         <p className="mt-5 max-w-xl text-ash leading-relaxed">{es ? "Mis obras en Transient. Abrí una pieza para explorarla y consultar su disponibilidad." : "My artworks on Transient. Open a piece to explore it and check availability."}</p>
       </div>
       <div className="text-xs text-ash space-y-3">

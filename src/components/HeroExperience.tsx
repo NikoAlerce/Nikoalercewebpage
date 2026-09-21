@@ -14,6 +14,7 @@ const FONT = "/fonts/throwup-fill.otf";
 
 const SECTIONS = [
   { label: "Art on Tezos", href: "/art-on-tezos" },
+  { label: "Art on EVM", href: "/art-on-evm" },
   { label: "Music", href: "/music" },
   { label: "Gallery", href: "/metaverse" },
   { label: "Decentraland", href: "/decentraland" },
@@ -23,6 +24,7 @@ const SECTIONS = [
 ];
 const SECTIONS_LABEL: Record<string, { en: string; es: string }> = {
   "Art on Tezos": { en: "Art on Tezos", es: "Arte en Tezos" },
+  "Art on EVM": { en: "Art on EVM", es: "Arte en EVM" },
   "Music": { en: "Music", es: "Música" },
   "Gallery": { en: "Gallery", es: "Galería" },
   "Decentraland": { en: "Decentraland", es: "Decentraland" },
@@ -47,6 +49,7 @@ const PARTY_Y = 1.28;  // height of the grass platform / the characters (the "pa
 //  font = world size of the word (authored per shot).
 const STATION_CFG: { az: number; polar: number; dist: number; ty: number; aim: number; lx: number; ly: number; font: number; off?: [number, number] }[] = [
   { az: 0.45, polar: 1.54,  dist: 6.9,  ty: 1.05,           aim:  1.7, lx:  0.0,  ly:  0.14, font: 0.24 },                      // 0 Art on Tezos — creature left, big word right
+  { az: 0.95, polar: 1.54,  dist: 6.2,  ty: 1.05,           aim:  1.7, lx:  0.0,  ly:  0.14, font: 0.24 },                      // Art on EVM
   { az: 1.55, polar: 1.585, dist: 1.78, ty: PARTY_Y + 0.12, aim:  0.5, lx:  0.22, ly:  0.42, font: 0.3,  off: [0.08, 0.04] },  // 1 Music — upper-right
   { az: 2.95, polar: 1.595, dist: 1.74, ty: PARTY_Y + 0.10, aim: -0.5, lx: -0.22, ly:  0.30, font: 0.3,  off: [-0.06, 0.08] }, // 2 Gallery — left
   { az: 4.35, polar: 1.580, dist: 1.88, ty: PARTY_Y + 0.14, aim:  0.5, lx:  0.05, ly: -0.04, font: 0.2,  off: [0.05, -0.08] }, // 3 Decentraland — right (long word, smaller)

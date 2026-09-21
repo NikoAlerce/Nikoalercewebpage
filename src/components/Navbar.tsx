@@ -11,6 +11,7 @@ import { readStored, writeStored } from "@/lib/storage";
 export const NAV_LINKS: { href: string; label: string; labelEs?: string; accent?: boolean }[] = [
   { href: "/#top", label: "HOME", labelEs: "INICIO" },
   { href: "/art-on-tezos", label: "ART ON TEZOS", labelEs: "ARTE EN TEZOS" },
+  { href: "/art-on-evm", label: "ART ON EVM", labelEs: "ARTE EN EVM" },
   { href: "/music", label: "MUSIC", labelEs: "MÚSICA" },
   { href: "/metaverse", label: "3D GALLERY", labelEs: "GALERÍA 3D" },
   { href: "/decentraland", label: "DECENTRALAND", labelEs: "DECENTRALAND" },
@@ -116,14 +117,14 @@ export default function Navbar() {
           scrolled ? "py-2" : "py-4",
         )}
       >
-        <Link href="/" className="flex items-center gap-2.5 group py-3">
+        <Link href="/" className="flex items-center gap-2.5 group py-3 shrink-0 whitespace-nowrap">
           <span className="w-1.5 h-1.5 rounded-full bg-accent group-hover:bg-bone transition-colors" />
           <span className="font-display font-semibold text-bone text-xl md:text-2xl leading-none tracking-tight">
             Niko Alerce
           </span>
         </Link>
 
-        <ul className="hidden lg:flex items-center gap-5 xl:gap-7 font-sans text-[11px] tracking-[0.16em] uppercase">
+        <ul className="hidden 2xl:flex items-center gap-5 font-sans text-[11px] tracking-[0.12em] uppercase whitespace-nowrap">
           {NAV_LINKS.map((l) => (
             <li key={l.href} className="relative group">
               <Link
@@ -146,7 +147,7 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden 2xl:flex items-center gap-3">
           {/* Language switch — manual override for the browser-language autodetect. */}
           <div className="flex items-center border border-white/15 rounded-full overflow-hidden font-sans text-[10px] tracking-[0.1em]">
             {(["en", "es"] as const).map((l) => (
@@ -182,7 +183,7 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="lg:hidden flex items-center gap-4">
+        <div className="2xl:hidden flex items-center gap-4">
           {/* Compact language toggle (tap = switch) */}
           <button
             aria-label="language"
@@ -202,7 +203,7 @@ export default function Navbar() {
       </nav>
 
       {open && (
-        <ul className="lg:hidden flex flex-col bg-void/95 border-t border-white/5 px-6 py-4 gap-4 text-xs uppercase tracking-[0.2em]">
+        <ul className="2xl:hidden flex flex-col bg-void/95 border-t border-white/5 px-6 py-4 gap-4 text-xs uppercase tracking-[0.2em] max-h-[calc(100dvh-8rem)] overflow-y-auto">
           {NAV_LINKS.map((l) => (
             <li key={l.href}>
               <Link
