@@ -248,6 +248,8 @@ export default function MetaverseGallery() {
   const [tokens, setTokens] = useState<ObjktToken[]>([]);
   const [playlist, setPlaylist] = useState<ObjktToken[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(true);
+  const [tokenError, setTokenError] = useState(false);
+  const [reloadTokens, setReloadTokens] = useState(0);
   const [score, setScore] = useState(0);
   const [discoveredIds, setDiscoveredIds] = useState<Set<string>>(new Set());
   const [boughtIds, setBoughtIds] = useState<Set<string>>(new Set());
@@ -291,16 +293,19 @@ export default function MetaverseGallery() {
 
   // Fetch SideQuest collection only, sort cheapest → priciest
   useEffect(() => {
+    const controller = new AbortController();
+    setLoadingTokens(true);
+    setTokenError(false);
     const aliases = ["sidequest"];
     Promise.all(
       aliases.map((a) =>
-        fetch(`/api/objkt?alias=${a}&limit=300`)
-          .then((r) => r.json())
+        fetch(`/api/objkt?alias=${a}&limit=300`, { signal: controller.signal })
+          .then((r) => { if (!r.ok) throw new Error("Collection unavailable"); return r.json(); })
           .then((d) => (d.tokens ?? []) as ObjktToken[])
-          .catch(() => [] as ObjktToken[])
       )
     )
       .then((lists) => {
+        if (controller.signal.aborted) return;
         // Merge + de-dupe by contract/token_id
         const seen = new Set<string>();
         const merged: ObjktToken[] = [];
@@ -320,9 +325,10 @@ export default function MetaverseGallery() {
         });
         setTokens(merged);
       })
-      .catch(console.error)
-      .finally(() => setLoadingTokens(false));
-  }, []);
+      .catch(() => { if (!controller.signal.aborted) setTokenError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingTokens(false); });
+    return () => controller.abort();
+  }, [reloadTokens]);
 
   // Fetch the curated playlist tokens (kept in the user-specified order).
   useEffect(() => {
@@ -808,6 +814,12 @@ export default function MetaverseGallery() {
           <div className="text-[9px] tracking-[0.4em] uppercase">
             {loadingTokens ? (
               <span className="text-accent animate-pulse">Syncing Tezos artworks…</span>
+            ) : tokenError ? (
+              <span role="alert" className="text-bone">
+                Artworks unavailable. <button className="underline text-accent" onClick={(event) => {
+                  event.stopPropagation(); setReloadTokens((value) => value + 1);
+                }}>Retry</button>
+              </span>
             ) : (
               <span className="text-bone/80">
                 {tokens.length} artworks · {FRAME_SPOTS.length} frames active

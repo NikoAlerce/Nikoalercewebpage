@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from "react";
 
 // On-screen touch controls for the 3D gallery (mobile only). A left analog joystick feeds
 // `moveRef` (x = strafe, y = forward, each -1..1); dragging the right look-pad accumulates
@@ -25,6 +25,18 @@ export default function MobileControls({ moveRef, lookRef, jumpRef, targeted, on
   const joyOrigin = useRef<Vec>({ x: 0, y: 0 });
   const lookId = useRef<number | null>(null);
   const lookLast = useRef<Vec>({ x: 0, y: 0 });
+  useEffect(() => {
+    const reset = () => {
+      moveRef.current = { x: 0, y: 0 };
+      lookRef.current = { dx: 0, dy: 0 };
+      jumpRef.current = false;
+      joyId.current = null;
+      lookId.current = null;
+      setThumb({ x: 0, y: 0 });
+    };
+    window.addEventListener("blur", reset);
+    return () => { window.removeEventListener("blur", reset); reset(); };
+  }, [moveRef, lookRef, jumpRef]);
 
   // ── Movement joystick ──
   const onJoyDown = (e: ReactPointerEvent) => {
@@ -82,6 +94,7 @@ export default function MobileControls({ moveRef, lookRef, jumpRef, targeted, on
         onPointerMove={onLookMove}
         onPointerUp={onLookUp}
         onPointerCancel={onLookUp}
+        onLostPointerCapture={onLookUp}
       />
 
       {/* Movement joystick — bottom-left */}
@@ -91,6 +104,7 @@ export default function MobileControls({ moveRef, lookRef, jumpRef, targeted, on
         onPointerMove={onJoyMove}
         onPointerUp={onJoyUp}
         onPointerCancel={onJoyUp}
+        onLostPointerCapture={onJoyUp}
       >
         <div
           className="w-14 h-14 rounded-full bg-cyan-400/30 border border-cyan-400/70 shadow-[0_0_16px_rgba(0,255,240,0.4)]"
@@ -101,9 +115,10 @@ export default function MobileControls({ moveRef, lookRef, jumpRef, targeted, on
       {/* Jump button — bottom-right */}
       <button
         className="absolute bottom-10 right-8 w-20 h-20 rounded-full border border-white/30 bg-black/40 backdrop-blur text-bone text-[10px] tracking-[0.3em] font-bold active:bg-white/20 pointer-events-auto"
-        onPointerDown={(e) => { e.preventDefault(); jumpRef.current = true; }}
+        onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); jumpRef.current = true; }}
         onPointerUp={() => { jumpRef.current = false; }}
         onPointerCancel={() => { jumpRef.current = false; }}
+        onLostPointerCapture={() => { jumpRef.current = false; }}
       >
         JUMP
       </button>

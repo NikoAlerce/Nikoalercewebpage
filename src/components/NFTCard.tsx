@@ -8,6 +8,7 @@ import {
   tokenStatus,
   lowestPriceXtz,
   editionsLabel,
+  formatXtz,
 } from "@/lib/objkt";
 import { useTokenViewer } from "./TokenViewerContext";
 import type { ObjktToken } from "@/lib/types";
@@ -109,7 +110,7 @@ export default function NFTCard({ token, index }: Props) {
             <span className="text-ash">{editions}</span>
             {price !== null && status === "for_sale" && (
               <span className="text-bone font-mono">
-                {price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)} XTZ
+                {token.listings_active?.[0]?.currency_id !== 1 ? "≈ " : ""}{formatXtz(price)} XTZ
               </span>
             )}
           </div>

@@ -6,12 +6,14 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import {
   Regions,
   type NodeDistributions,
 } from "@airgap/beacon-types";
+import { safeNat } from "@/lib/objkt";
 
 type WalletState = {
   address: string | null;
@@ -277,6 +279,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const buying = useRef(false);
+  const connectionPending = useRef(false);
 
   // Register for active-account updates only. We deliberately do NOT initialise
   // Beacon on page load — eager init() kicks off wallet pairing/connection
@@ -292,6 +296,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(async (): Promise<string | null> => {
+    if (connectionPending.current) return null;
+    connectionPending.current = true;
     setConnecting(true);
     setError(null);
     try {
@@ -326,6 +332,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setError(msg);
       return null;
     } finally {
+      connectionPending.current = false;
       setConnecting(false);
     }
   }, []);
@@ -405,30 +412,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           error: "THIS LISTING USES AN FA TOKEN. BUY IT FROM OBJKT.",
         };
       }
-      const amt = Math.floor(Number(priceMutez));
-      if (!Number.isFinite(amt) || amt <= 0) {
+      const amt = safeNat(priceMutez);
+      if (amt === null) {
         return {
           ok: false,
           error: "LISTING PRICE IS INVALID. TRY AGAIN OR USE OBJKT.",
         };
       }
-      const askKey = Math.floor(Number(bigmapKey));
-      if (!Number.isFinite(askKey) || askKey < 0) {
+      const askKey = safeNat(bigmapKey);
+      if (askKey === null || !/^KT1[1-9A-HJ-NP-Za-km-z]{33}$/.test(marketplaceContract)) {
         return {
           ok: false,
           error: "INVALID LISTING REFERENCE. OPEN THIS PIECE ON OBJKT.",
         };
       }
-      const editionsBuy = Math.max(1, Math.floor(Number(editions)));
+      const editionsBuy = safeNat(editions);
+      if (editionsBuy === null || editionsBuy < 1) return { ok: false, error: "INVALID EDITION COUNT" };
       // priceMutez from Objkt indexers is per edition for XTZ listings; the
       // contract expects attach_amount == unit_price_mutez * editions_buy.
-      const totalMutez = Math.floor(amt * editionsBuy);
-      if (!Number.isFinite(totalMutez) || totalMutez <= 0) {
+      const totalMutez = amt * editionsBuy;
+      if (!Number.isSafeInteger(totalMutez)) {
         return {
           ok: false,
           error: "INVALID TOTAL PRICE. RELOAD AND TRY AGAIN OR USE OBJKT.",
         };
       }
+      if (buying.current) return { ok: false, error: "A PURCHASE REQUEST IS ALREADY IN PROGRESS" };
+      buying.current = true;
       try {
         const { Tezos, wallet } = await getOrInitWallet();
         const active = await wallet.client.getActiveAccount();
@@ -440,7 +450,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // Detect it before the simulation so the user gets a clear message.
         if (
           sellerAddress &&
-          active.address.toLowerCase() === sellerAddress.toLowerCase()
+          active.address === sellerAddress
         ) {
           return {
             ok: false,
@@ -499,11 +509,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // raw failwith arrives as part of `err.message` or inside a nested
         // `errors[]` field on `MichelsonStorageView` / `TezosOperationError`.
         const blob =
-          (err as { message?: string }).message +
+          (err as { message?: string } | null)?.message +
           " " +
           JSON.stringify(
-            (err as { errors?: unknown; data?: unknown }).errors ??
-              (err as { data?: unknown }).data ??
+            (err as { errors?: unknown; data?: unknown } | null)?.errors ??
+              (err as { data?: unknown } | null)?.data ??
               "",
           );
         if (/M_NO_SELF_FULFILL/.test(blob)) {
@@ -522,6 +532,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           message = "Insufficient XTZ balance to cover price + gas.";
         }
         return { ok: false, error: message };
+      } finally {
+        buying.current = false;
       }
     },
     [],

@@ -32,7 +32,7 @@ const grotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nikoalerce.art"),
+  metadataBase: new URL("https://www.nikoalerce.xyz"),
   title: {
     default: "Niko Alerce — 3D Artist, Animator & Music Producer",
     template: "%s — Niko Alerce",
@@ -68,17 +68,17 @@ export const metadata: Metadata = {
   // `icons`/`openGraph.images` entries needed here.
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const lang = cookieStore.get("nk_lang")?.value || "en";
+  const cookieStore = await cookies();
+  const lang = cookieStore.get("nk_lang")?.value === "es" ? "es" : "en";
   return (
     <html lang={lang} className={`${mono.variable} ${grotesk.variable} ${graffiti.variable}`}>
       <body className="bg-void text-bone antialiased">
-        <AppShell>{children}</AppShell>
+        <AppShell initialLang={lang}>{children}</AppShell>
       </body>
     </html>
   );

@@ -59,6 +59,7 @@ export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
         <button
           key={c.key}
           onClick={() => setActive(c.key)}
+          aria-pressed={active === c.key}
           className={clsx(
             "px-5 py-2.5 text-[12px] tracking-[0.18em] uppercase border-r border-white/12 last:border-r-0 transition-colors",
             active === c.key
@@ -74,6 +75,7 @@ export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
 
   return (
     <NFTGallery
+      key={col.alias}
       id="art-on-tezos"
       alias={col.alias}
       title={lang === "es" ? "Arte en Tezos" : "Art on Tezos"}

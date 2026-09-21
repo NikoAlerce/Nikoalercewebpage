@@ -54,16 +54,17 @@ const T = {
     description: "Physical objects from the studio — limited editions that carry the work into the analog world.",
     underConstruction: "Under construction · store not yet live",
     specShipping: "Shipping",
-    specShippingVal: "Worldwide",
+    specShippingVal: "To be confirmed",
     specPayment: "Payment",
     specStock: "Stock",
-    specStockVal: "Limited",
-    inStock: "In stock",
+    specStockVal: "Preview",
+    inStock: "Preview",
     coming: "Coming",
     soldOut: "Sold out",
-    addToCart: "Add to cart",
-    notifyMe: "Notify me",
-    checkoutNote: "Checkout integration ready — Stripe / Shopify / Tezos",
+    addToCart: "Ask about this item",
+    notifyMe: "Ask about availability",
+    paymentPending: "To be confirmed",
+    checkoutNote: "Preview catalog · online checkout is not available. Contact us to confirm prices, availability and shipping.",
   },
   es: {
     kicker: "Tienda",
@@ -71,16 +72,17 @@ const T = {
     description: "Objetos físicos del estudio — ediciones limitadas que llevan la obra al mundo analógico.",
     underConstruction: "En construcción · tienda aún no activa",
     specShipping: "Envío",
-    specShippingVal: "Mundial",
+    specShippingVal: "A confirmar",
     specPayment: "Pago",
     specStock: "Stock",
-    specStockVal: "Limitado",
-    inStock: "En stock",
+    specStockVal: "Vista previa",
+    inStock: "Vista previa",
     coming: "Próximamente",
     soldOut: "Agotado",
-    addToCart: "Agregar al carrito",
-    notifyMe: "Avisame",
-    checkoutNote: "Integración de checkout lista — Stripe / Shopify / Tezos",
+    addToCart: "Consultar producto",
+    notifyMe: "Consultar disponibilidad",
+    paymentPending: "A confirmar",
+    checkoutNote: "Catálogo de muestra · compra online aún no disponible. Escribinos para confirmar precios, disponibilidad y envío.",
   },
 };
 
@@ -121,7 +123,7 @@ export default function Shop() {
         <dl className="text-[12px] font-sans shrink-0 md:min-w-[15rem]">
           {[
             { k: t.specShipping, v: t.specShippingVal },
-            { k: t.specPayment, v: "Card · USDT · XTZ" },
+            { k: t.specPayment, v: t.paymentPending },
             { k: t.specStock, v: t.specStockVal },
           ].map((r) => (
             <div
@@ -167,16 +169,16 @@ export default function Shop() {
               </div>
               <p className="mt-1 text-[11px] text-ash">{p.meta}</p>
 
-              <button
-                disabled={p.status !== "available"}
-                className="mt-4 w-full text-[11px] tracking-[0.2em] uppercase border border-white/10 px-3 py-2 hover:border-accent hover:text-accent disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:text-ash transition-colors"
+              <a
+                href={`mailto:alercebolson@gmail.com?subject=${encodeURIComponent(`${t.sectionTitle}: ${p.title}`)}`}
+                className="mt-4 block text-center w-full text-[11px] tracking-[0.2em] uppercase border border-white/10 px-3 py-2 hover:border-accent hover:text-accent transition-colors"
               >
                 {p.status === "available"
                   ? t.addToCart
                   : p.status === "soon"
                   ? t.notifyMe
                   : "—"}
-              </button>
+              </a>
             </div>
           </article>
         ))}

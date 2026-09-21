@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { readStored, writeStored } from "@/lib/storage";
 
 // Sitewide ambient track (public/audio.mp3). Loops quietly while you browse.
 // Browsers block autoplay-with-sound until a user gesture, so if the initial play()
@@ -22,7 +23,7 @@ export default function BackgroundMusic() {
 
   // Load saved preference once.
   useEffect(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const saved = readStored(STORAGE_KEY);
     if (saved === "off") setEnabled(false);
     setReady(true);
   }, []);
@@ -46,7 +47,7 @@ export default function BackgroundMusic() {
   // Drive playback from (enabled && !inGallery).
   useEffect(() => {
     const a = audioRef.current;
-    if (!a) return;
+    if (!a || !ready) return;
     if (!(enabled && !inGallery)) {
       a.pause();
       return;
@@ -76,12 +77,12 @@ export default function BackgroundMusic() {
       cancelled = true;
       cleanup();
     };
-  }, [enabled, inGallery]);
+  }, [enabled, inGallery, ready]);
 
   const toggle = () => {
     const next = !enabled;
     setEnabled(next);
-    localStorage.setItem(STORAGE_KEY, next ? "on" : "off");
+    writeStored(STORAGE_KEY, next ? "on" : "off");
     // This click is itself a user gesture, so play() will be allowed.
     const a = audioRef.current;
     if (!a) return;

@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { View } from "@react-three/drei";
 import { usePathname } from "next/navigation";
 import { anyCharacterVisible, subscribeCharacterVisibility } from "@/lib/characterVisibility";
+import RenderBoundary from "./RenderBoundary";
 
 // ONE shared WebGL context for every title character on the page.
 //
@@ -30,6 +31,7 @@ export default function CharacterStage() {
   if (pathname === "/metaverse") return null;
 
   return (
+    <RenderBoundary>
     <Canvas
       frameloop={anyVisible ? "always" : "never"}
       eventSource={typeof document !== "undefined" ? document.body : undefined}
@@ -47,5 +49,6 @@ export default function CharacterStage() {
     >
       <View.Port />
     </Canvas>
+    </RenderBoundary>
   );
 }

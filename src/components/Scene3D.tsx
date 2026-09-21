@@ -157,7 +157,7 @@ type VoidMaterialImpl = THREE.ShaderMaterial & {
 
 declare module "@react-three/fiber" {
   interface ThreeElements {
-    voidMaterial: import("@react-three/fiber").Object3DNode<VoidMaterialImpl, typeof VoidMaterial>;
+    voidMaterial: import("@react-three/fiber").ThreeElement<typeof VoidMaterial>;
   }
 }
 

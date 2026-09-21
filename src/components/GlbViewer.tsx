@@ -21,7 +21,8 @@ import {
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { IPFS_GATEWAYS, ipfsWithGateway } from "@/lib/objkt";
+import { IPFS_GATEWAYS, ipfsWithGateway, ipfsPath } from "@/lib/objkt";
+import RenderBoundary from "./RenderBoundary";
 
 type Hdri =
   | "studio"
@@ -92,9 +93,25 @@ function Model({
   // Clonamos preservando bones/skeleton para que cada apertura del modal
   // arranque desde un estado limpio (useGLTF cachea la escena).
   const cloned = useMemo<THREE.Object3D>(
-    () => cloneSkeleton(scene as THREE.Object3D),
+    () => {
+      const copy = cloneSkeleton(scene as THREE.Object3D);
+      copy.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
+        }
+      });
+      return copy;
+    },
     [scene],
   );
+
+  useEffect(() => () => {
+    cloned.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach((m) => m.dispose());
+      }
+    });
+  }, [cloned]);
 
   // useAnimations clona internamente y devuelve actions enlazadas a groupRef
   const { actions, names } = useAnimations(animations, groupRef);
@@ -192,6 +209,7 @@ function Model({
   return (
     <group ref={groupRef}>
       <primitive
+        dispose={null}
         object={cloned}
         position={transform.offset.toArray()}
         scale={transform.scale}
@@ -292,24 +310,23 @@ export default function GlbViewer({ url }: { url: string }) {
   const [resetKey, setResetKey] = useState(0);
 
   const resolvedUrl = useMemo(() => {
-    if (url.startsWith("http")) return url;
-    if (url.startsWith("ipfs://")) return ipfsWithGateway(url, gatewayIdx)!;
-    return url;
+    return ipfsWithGateway(url, gatewayIdx) ?? url;
+  }, [url, gatewayIdx]);
+
+  const retryGateway = useCallback(() => {
+    if (ipfsPath(url) && gatewayIdx < IPFS_GATEWAYS.length - 1) setGatewayIdx((i) => i + 1);
+    else setHardError(true);
   }, [url, gatewayIdx]);
 
   // Si demora demasiado en cargar, probar otro IPFS gateway
-  const ready = info.size.y > 0;
+  const ready = info.meshes > 0;
   useEffect(() => {
     if (ready || hardError) return;
     const t = setTimeout(() => {
-      if (gatewayIdx < IPFS_GATEWAYS.length - 1) {
-        setGatewayIdx((i) => i + 1);
-      } else {
-        setHardError(true);
-      }
+      retryGateway();
     }, 30000);
     return () => clearTimeout(t);
-  }, [resolvedUrl, ready, hardError, gatewayIdx]);
+  }, [resolvedUrl, ready, hardError, retryGateway]);
 
   // Reset metadata cuando cambia la URL del modelo
   useEffect(() => {
@@ -334,6 +351,7 @@ export default function GlbViewer({ url }: { url: string }) {
 
   return (
     <div className="relative w-full h-full bg-void overflow-hidden">
+      <RenderBoundary key={resolvedUrl + "_" + resetKey} onError={retryGateway}>
       <Canvas
         key={resolvedUrl + "_" + resetKey}
         dpr={[1, 2]}
@@ -407,8 +425,9 @@ export default function GlbViewer({ url }: { url: string }) {
           />
         </EffectComposer>
       </Canvas>
+      </RenderBoundary>
 
-      <Loader />
+      {!hardError && <Loader />}
 
       {hardError && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">

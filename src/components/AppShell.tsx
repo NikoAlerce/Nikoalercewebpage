@@ -9,11 +9,11 @@ import CharacterStage from "./CharacterStage";
 import Analytics from "./Analytics";
 import { TokenViewerProvider } from "./TokenViewerContext";
 import { WalletProvider } from "./WalletContext";
-import { LangProvider } from "@/lib/i18n";
+import { LangProvider, type Lang } from "@/lib/i18n";
 
-export default function AppShell({ children }: { children: ReactNode }) {
+export default function AppShell({ children, initialLang }: { children: ReactNode; initialLang: Lang }) {
   return (
-    <LangProvider>
+    <LangProvider initialLang={initialLang}>
     <WalletProvider>
       <TokenViewerProvider>
         <Navbar />

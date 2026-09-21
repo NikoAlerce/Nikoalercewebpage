@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useWallet } from "./WalletContext";
 import { useLang } from "@/lib/i18n";
+import { readStored, writeStored } from "@/lib/storage";
 
 export const NAV_LINKS: { href: string; label: string; labelEs?: string; accent?: boolean }[] = [
   { href: "/#top", label: "HOME", labelEs: "INICIO" },
@@ -31,11 +32,11 @@ export default function Navbar() {
   const { lang, setLang } = useLang();
 
   useEffect(() => {
-    setBanner(localStorage.getItem("nikoalerce:banner-fire2") !== "dismissed");
+    setBanner(readStored("nikoalerce:banner-fire2") !== "dismissed");
   }, []);
   const dismissBanner = () => {
     setBanner(false);
-    localStorage.setItem("nikoalerce:banner-fire2", "dismissed");
+    writeStored("nikoalerce:banner-fire2", "dismissed");
   };
 
   useEffect(() => {
