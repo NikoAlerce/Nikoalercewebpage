@@ -3,6 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import NFTGallery from "./NFTGallery";
+import TransientGallery from "./TransientGallery";
 import { useLang } from "@/lib/i18n";
 
 // "Art on Tezos" groups the two Objkt collections as sub-categories: Works (the main
@@ -43,25 +44,25 @@ const COLLECTIONS = {
   ],
 };
 
-type Key = "works" | "sidequest";
+type Key = "works" | "sidequest" | "transient";
 
 export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
   const { lang } = useLang();
   const collections = COLLECTIONS[lang];
   const [active, setActive] = useState<Key>(
-    initialTab === "sidequest" ? "sidequest" : "works",
+    initialTab === "sidequest" || initialTab === "transient" ? initialTab : "works",
   );
   const col = collections.find((c) => c.key === active) ?? collections[0];
 
   const tabs = (
-    <div className="inline-flex items-center border border-white/12 w-fit">
-      {collections.map((c) => (
+    <div className="inline-flex flex-wrap items-center border border-white/12 w-fit max-w-full">
+      {[...collections, { key: "transient" as const, label: "Transient" }].map((c) => (
         <button
           key={c.key}
           onClick={() => setActive(c.key)}
           aria-pressed={active === c.key}
           className={clsx(
-            "px-5 py-2.5 text-[12px] tracking-[0.18em] uppercase border-r border-white/12 last:border-r-0 transition-colors",
+            "px-3 sm:px-5 py-2.5 text-[11px] sm:text-[12px] tracking-[0.12em] uppercase border-r border-white/12 last:border-r-0 transition-colors",
             active === c.key
               ? "bg-white/[0.04] text-bone border-b-2 border-b-accent"
               : "text-ash hover:text-bone",
@@ -72,6 +73,8 @@ export default function ArtOnTezos({ initialTab }: { initialTab?: string }) {
       ))}
     </div>
   );
+
+  if (active === "transient") return <TransientGallery tabsSlot={tabs} />;
 
   return (
     <NFTGallery

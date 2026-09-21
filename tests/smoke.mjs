@@ -43,3 +43,15 @@ test('private analytics fails closed without a configured access key', async () 
   assert.deepEqual(await res.json(), { enabled: false });
   assert.match(res.headers.get('cache-control'), /no-store/);
 });
+
+test('thumbnail optimizer rejects arbitrary hosts and traversal', async () => {
+  for (const uri of ['https://example.com/file.jpg', '../secret', 'Qm' + 'a'.repeat(44) + '/%2e%2e/secret']) {
+    assert.equal((await get('/api/thumbnail?uri=' + encodeURIComponent(uri))).status, 400);
+  }
+});
+
+test('Transient tab is directly addressable and linked in the gallery', async () => {
+  const html = await (await get('/art-on-tezos?tab=transient')).text();
+  assert.match(html, /Art on Transient/);
+  assert.match(html, /https:\/\/www\.transient\.xyz\/@NikoAlerce/);
+});
