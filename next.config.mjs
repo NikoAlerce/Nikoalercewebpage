@@ -22,6 +22,10 @@ const nextConfig = {
       "'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval' https: blob: data:";
     return [
       {
+        source: "/transient-previews/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
         source: "/:path*",
         headers: [
           {

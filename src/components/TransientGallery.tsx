@@ -2,20 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { TransientArtwork } from "@/lib/transient";
-import { ipfsPath } from "@/lib/objkt";
 import { sortArtworks, type GalleryOrder } from "@/lib/gallerySort";
 import { useLang } from "@/lib/i18n";
 import TitleCharacter from "./TitleCharacter";
 import GalleryOrderSelect from "./GalleryOrderSelect";
-import ArtworkThumbnail from "./ArtworkThumbnail";
-
-function images(image: string | null): string[] {
-  if (!image) return [];
-  const params = new URLSearchParams({ url: image, w: "640", output: "webp", n: "0", we: "" });
-  params.sort();
-  const path = ipfsPath(image);
-  return [...(path ? [`/api/thumbnail?source=transient&uri=${encodeURIComponent(path)}`] : []), `https://img.transient.xyz/?${params}`];
-}
+import TransientPreview from "./TransientPreview";
 
 export default function TransientGallery() {
   const { lang } = useLang();
@@ -54,16 +45,16 @@ export default function TransientGallery() {
       </div>
     </div>
     {loading ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-label={es ? "Cargando obras" : "Loading artworks"}>
-      {Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-square bg-ink animate-pulse" />)}
+      {Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-[4/5] bg-ink animate-pulse" />)}
     </div> : error ? <div role="alert" className="border border-accent/40 p-6 text-bone">
       <p>{es ? "No se pudo conectar con Transient." : "Could not reach Transient."}</p>
       <button className="mt-4 border border-white/20 px-4 py-2" onClick={() => setRetry((value) => value + 1)}>{es ? "Reintentar" : "Retry"}</button>
     </div> : <>
       <div className="mb-8"><GalleryOrderSelect value={order} onChange={setOrder} prices={false} /></div>
       {!displayed.length && <p className="text-ash">{es ? "Todavía no hay obras para mostrar." : "No artworks yet."}</p>}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        {displayed.map((item, index) => <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="group bg-ink border border-white/5 hover:border-accent/60">
-          <div className="relative aspect-square overflow-hidden bg-black"><ArtworkThumbnail sources={images(item.image)} alt={item.name} priority={index < 4} /></div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 items-start">
+        {displayed.map((item) => <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="group bg-ink border border-white/5 hover:border-accent/60">
+          <TransientPreview image={item.image} alt={item.name} />
           <div className="p-3 border-t border-white/5"><h3 className="text-xs text-bone group-hover:text-accent truncate">{item.name} ↗</h3>
             <p className="mt-1 text-[10px] text-ash">{item.collection} · {item.chain}</p></div>
         </a>)}
