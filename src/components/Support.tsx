@@ -78,6 +78,7 @@ function VideoClip({ src, caption }: { src: string; caption: string }) {
 const T = {
   en: {
     kicker: "Emergency · we need your help",
+    writtenOn: "Written on July 4, 2026, two days after the second fire.",
     titleA: (
       <>
         There are kinds of grief
@@ -126,7 +127,7 @@ const T = {
         <Photo src="/fire-approaching.webp" caption="January — the fire reaching home" />
         <Photo src="/fire-aftermath.webp" caption="January — what was left" />
       </InlineMedia>,
-      <p key="s13">During those months, our dog Roger was killed by a neighbor&apos;s dog.</p>,
+      <p key="s13">During those months, Roger was killed by a neighbor&apos;s dog.</p>,
       <p key="s14">Even now, writing that sentence hurts.</p>,
       <p key="s15">
         We were still trying to gather the pieces of our lives when we lost another
@@ -135,7 +136,7 @@ const T = {
       <p key="s16">Then our community held us up once again.</p>,
       <p key="s17">
         Bosque Gracias has never been just a place. It is a way of living, creating,
-        and taking care of one another. Rocío and her family offered us the house the
+        and taking care of one another. A family from the forest offered us the house the
         government had built for them. Since they were temporarily living in domes
         while rebuilding their own home, they invited us to stay there instead.
       </p>,
@@ -276,6 +277,7 @@ const T = {
   },
   es: {
     kicker: "Emergencia · necesitamos tu ayuda",
+    writtenOn: "Escrito el 4 de julio de 2026, dos días después del segundo incendio.",
     titleA: (
       <>
         Hay dolores para los que
@@ -336,7 +338,7 @@ const T = {
       <p key="s17">
         Bosque Gracias nunca fue solamente un lugar. Siempre fue una forma de
         vivir, de crear y de sostenernos entre todos. Por eso, cuando ya no
-        sabíamos hacia dónde ir, Rocío y su familia hicieron lugar para nosotros.
+        sabíamos hacia dónde ir, una familia del bosque hizo lugar para nosotros.
         Nos prestaron la casa que el gobierno les había construido, mientras ellos
         seguían viviendo en unos domos y reconstruyendo su hogar. Gracias a ellos
         pudimos volver al bosque con nuestros animales y sentir, por un momento,
@@ -722,7 +724,11 @@ export default function Support({ forceLang }: { forceLang?: Lang }) {
       </div>
 
       {/* ══════════ THE ARTICLE ══════════ */}
-      <h2 className="mt-16 font-graffiti text-bone leading-[1.05] text-[clamp(2rem,6vw,4.2rem)]">
+      {/* Dateline — when Niko wrote the essay */}
+      <p className="mt-16 font-sans text-[10px] tracking-[0.25em] uppercase text-ash/60">
+        {t.writtenOn}
+      </p>
+      <h2 className="mt-3 font-graffiti text-bone leading-[1.05] text-[clamp(2rem,6vw,4.2rem)]">
         {t.titleA}
         <span className="text-accent">.</span>
       </h2>
