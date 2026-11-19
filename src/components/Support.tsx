@@ -7,7 +7,7 @@ import { useLang, type Lang } from "@/lib/i18n";
 // ─────────────────────────────────────────────────────────────────────────────
 // Emergency support campaign — bilingual (EN/ES). Updated after the second fire
 // (July 2026): the first home was lost to the January Epuyén wildfires; the
-// rebuilt home was then lost to a heater malfunction, along with the couple's
+// rebuilt home was then lost to a heating-installation failure, along with the couple's
 // pets. Language follows the site-wide switch; /ayuda forces Spanish.
 //
 // Layout: the donation methods sit ABOVE the article headline (donate first,
@@ -90,7 +90,7 @@ const T = {
       <p key="s2">For me, 2026 became that year.</p>,
       <p key="s3">
         In January, the wildfire that swept through Epuyén destroyed the home where
-        Maru and I had lived for five years. It was much more than a house. We had
+        Maru and I had lived for almost three years. It was much more than a house. We had
         built our home, our studio, and our everyday life there. It was where our
         little family grew, surrounded by the forest and the community of Bosque
         Gracias, a place we had chosen not just to live, but to belong.
@@ -107,7 +107,7 @@ const T = {
       <p key="s6">We weren&apos;t.</p>,
       <p key="s7">
         The land where our house stood wasn&apos;t legally ours. Even though we had
-        helped build the house, lived there for five years, and called it home, we
+        helped build the house, lived there for almost three years, and called it home, we
         were excluded from the reconstruction program because we didn&apos;t own the
         property.
       </p>,
@@ -141,16 +141,15 @@ const T = {
       </p>,
       <p key="s18">Because of them, we were able to return to the forest with our animals.</p>,
       <p key="s19">For a brief moment, life felt like it was beginning to settle again.</p>,
-      <p key="s20">It lasted twenty days.</p>,
+      <p key="s20">It lasted less than a month.</p>,
       <Divider key="d2" />,
       <p key="s21">
-        One morning we lit the wood stove, just as we always did. About twenty
-        minutes later, we smelled smoke.
+        One morning we lit the wood stove, just as we always did. A while later, we
+        smelled smoke.
       </p>,
       <p key="s22">
-        When we saw the flames, we did everything we could to stop them. We ran in
-        and out of the house trying to put the fire out until it became impossible
-        to go back inside. By then, the house was completely engulfed.
+        When we saw the flames, we tried to control them, until it became
+        impossible. By then, the house was completely engulfed.
       </p>,
       <p key="s23">All we could do was watch.</p>,
       <p key="s24">
@@ -180,7 +179,7 @@ const T = {
         every difficult one. They had survived the first wildfire with us.
       </p>,
       <p key="s32">
-        We never imagined we would lose them only twenty days after finding our way
+        We never imagined we would lose them less than a month after finding our way
         back home.
       </p>,
       <p key="s33">
@@ -188,9 +187,9 @@ const T = {
         friends, and endless questions.
       </p>,
       <p key="s34">
-        The first findings point to a chain of failures: a poorly built wood stove, a
-        defective installation, and construction materials that may not have been
-        suitable. Perhaps one day we will know exactly how the fire began.
+        The first findings point to a chain of failures: a defective heating
+        installation and construction materials that may not have been suitable.
+        Perhaps one day we will know exactly how the fire began.
       </p>,
       <p key="s35">But no explanation changes the outcome.</p>,
       <Divider key="d4" />,
@@ -228,8 +227,8 @@ const T = {
     tlJulLabel: "July 2026",
     tlJul: (
       <>
-        While rebuilding, a heater malfunction set fire to the place we were living
-        in. We lost everything we had recovered — and our beloved pets.
+        While rebuilding, a failure in the heating installation set fire to the
+        place we were living in. We lost everything we had recovered — and our beloved pets.
       </>
     ),
     waysTitle: "Ways to help",
@@ -289,7 +288,7 @@ const T = {
       <p key="s2">Para mí, 2026 fue ese año.</p>,
       <p key="s3">
         En enero, el incendio de Epuyén se llevó la casa donde vivíamos con Maru.
-        Era mucho más que un techo. Durante cinco años construimos ahí nuestro
+        Era mucho más que un techo. Durante casi tres años construimos ahí nuestro
         hogar, nuestro taller, nuestro refugio y el lugar donde crecía nuestra
         familia. Vivíamos en Bosque Gracias, una comunidad que elegimos como forma
         de vida y de la que nos sentimos parte.
@@ -306,7 +305,7 @@ const T = {
       <p key="s6">Pero no fue así.</p>,
       <p key="s7">
         La tierra donde vivíamos no estaba a nuestro nombre. Habíamos ayudado a
-        construir esa casa, la habitábamos desde hacía cinco años y era nuestro
+        construir esa casa, la habitábamos desde hacía casi tres años y era nuestro
         hogar. Sin embargo, para el Estado eso no alcanzó. Como no éramos los
         propietarios legales del terreno, quedamos afuera del programa de
         viviendas.
@@ -352,14 +351,12 @@ const T = {
         Éramos una familia con una ausencia enorme, la de Roger, pero estábamos
         sanando.
       </p>,
-      <p key="s21">Esa tranquilidad duró apenas veinte días.</p>,
+      <p key="s21">Esa tranquilidad duró menos de un mes.</p>,
       <Divider key="d2" />,
       <p key="s22">
-        Una mañana prendimos la estufa, como hacíamos siempre. Unos veinte minutos
-        después sentimos olor a humo. Cuando vimos el fuego intentamos apagarlo.
-        Entramos y salimos de la casa varias veces buscando controlar las llamas,
-        hasta que llegó un momento en que ya era imposible volver a entrar. El
-        fuego había tomado toda la estructura.
+        Una mañana prendimos la estufa, como hacíamos siempre. Al rato sentimos
+        olor a humo. Cuando vimos el fuego intentamos controlar las llamas, hasta
+        que ya fue imposible. El fuego había tomado toda la estructura.
       </p>,
       <p key="s23">Salimos y no nos quedó otra que mirar.</p>,
       <p key="s24">
@@ -387,7 +384,7 @@ const T = {
         Con Maru compartimos más de diez años con ellos. Crecieron con nosotros.
         Nos acompañaron en cada mudanza, en cada proyecto, en los días buenos y en
         los malos. Eran parte de nuestra familia. Habían sobrevivido al incendio de
-        enero. Nunca imaginamos que veinte días después de volver al bosque los
+        enero. Nunca imaginamos que menos de un mes después de volver al bosque los
         íbamos a perder para siempre.
       </p>,
       <p key="s31">
@@ -395,8 +392,8 @@ const T = {
         amigos y preguntas. Todos buscaban entender qué había pasado.
       </p>,
       <p key="s32">
-        Las primeras conclusiones hablan de una sucesión de fallas. Una estufa mal
-        construida, una instalación deficiente y materiales que posiblemente no
+        Las primeras conclusiones hablan de una sucesión de fallas: una
+        instalación de la calefacción deficiente y materiales que posiblemente no
         eran los adecuados. Tal vez algún día sepamos exactamente cómo empezó el
         fuego.
       </p>,
@@ -441,8 +438,8 @@ const T = {
     tlJulLabel: "Julio 2026",
     tlJul: (
       <>
-        Mientras reconstruíamos, una falla en la estufa incendió el lugar donde
-        estábamos viviendo. Perdimos todo lo que habíamos recuperado — y a nuestras
+        Mientras reconstruíamos, una falla en la instalación de la calefacción
+        incendió el lugar donde estábamos viviendo. Perdimos todo lo que habíamos recuperado — y a nuestras
         mascotas queridas.
       </>
     ),
